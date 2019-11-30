@@ -2,27 +2,46 @@ Class = {};
 
 function Class:Clone(talbe)
     local object = {};
-    for key, value in pairs(talbe) do
-        object[key] = value;
-    end
+        for key, value in pairs(talbe) do
+            object[key] = value;
+        end
+        object.__index = object;
+
+        object.__newindex = function (table,key,value)
+            local tobject = table;
+            while tobject ~= nil do
+                for _key, _value in pairs(tobject) do
+                    if key == _key then
+                        rawset(tobject,key,value);
+                    end
+                end
+                tobject = tobject.super;
+            end
+        end
+
+        if getmetatable(talbe) ~= nil then
+            object.super = self:Clone(getmetatable(talbe))
+            setmetatable(object,object.super);
+        end
+    return object;
+end
+function Class:Create(object,name,father)
     if object.constructor == nil then
         function object:constructor()
 
         end
     end
-    object.super = nil;
-    if getmetatable(talbe) ~= nil then
-        object.super = self:Clone(getmetatable(talbe))
-        setmetatable(object,object.super);
-    end
-    object.__index = object;
-    return object;
-end
-function Class:Create(object,name,father)
-    object.__index = object;
     if father ~= nil then
         setmetatable(object,Class[father]);
+    else
+        setmetatable(object,
+        {
+            __call = function(...)
+                    object:constructor(...);
+            end;
+        });
     end
+
     Class[name] = object;
 end
 function Class:New(name,...)
@@ -84,14 +103,27 @@ end
 Class:Create(String,"String");
 end)();
 
+
 (function()
-    local Char = {};
-    Char.char = {};
-    function Char:constructor()
-        self.super:constructor("QWQ");
+    local Component = {};
+    Component.x = 0;
+    Component.y = 0;
+    function Component:constructor(x,y)
+        self.x = x;
+        self.y = y;
     end
-    Class:Create(Char,"Char","String");
+    Class:Create(Component,"Component");
 end)();
 
 
-o1 = Class:New("Char");
+(function()
+    local Box = {};
+    function Box:constructor()
+        self.super(1,2);
+    end
+    Class:Create(Box,"Box","Component");
+end)();
+
+c1 = Class:New("String","qwq");
+
+print(c1:charAt(1));
