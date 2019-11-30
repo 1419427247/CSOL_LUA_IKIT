@@ -1,40 +1,9 @@
-Class = {};
-function Class:Create(name,father)
-	local object={};
-	Class[name]=object;
-	setmetatable(object,Class[father] or {});
-	object.__index=object;
-	function object:constructor()
+function Game.Rule:OnPlayerConnect(player)
 
-	end
-	return object;
-end
-function Class:New(name,...)
-	local object = {};
-	setmetatable(object,Class[name]);
-	object.super=getmetatable(object);
-	object.__index=object;
-
-	object:constructor(...);
-	return object;
 end
 
-Component=Class:Create("Component");
-function Component:constructor()
-	print("我是组件");
+
+function Game.Rule:OnRoundStartFinished()
+	print(Game.Weapon.CreateAndDrop(Common.WEAPON.M134Minigun, {x=46,y=20,z=8}));
 end
-Component.x=15;
-
-Box=Class:Create("Box","Component");
-function Box:constructor()
-	print("我是盒子");
-end
-
-c1=Class:New("Box");
-
-print(c1.x);
-
-
-
-
 
