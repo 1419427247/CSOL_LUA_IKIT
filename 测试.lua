@@ -131,22 +131,18 @@ end
 		Class:Create(Box,"Box","Component");
 	end)();
 
--- c1 = Class:New("Box",32,0);
+c1 = Class:New("Box",32,0);
 
--- while c1~=nil do
---     print("table")
---     for key, value in pairs(c1) do
---         if type(value) == "number" then
---             print(key .. ":" .. value);
---         else
---             print(key);
---         end
---     end
---     c1 = getmetatable(c1);
--- end
+load("print(c1.x)")();
 
-for key, value in pairs(_G) do
-    print(key);
+while c1~=nil do
+	print("table")
+	for key, value in pairs(c1) do
+		if type(value) == "number" then
+			print(key .. ":" .. value);
+		else
+			print(key);
+		end
+	end
+	c1 = getmetatable(c1);
 end
-
-print(_VERSION)
