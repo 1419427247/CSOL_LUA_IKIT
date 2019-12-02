@@ -101,48 +101,93 @@ end
 	end)();
 
 (function()
-		local Component = {};
-		Component.x = 0;
-		Component.y = 0;
-		function Component:constructor(x,y)
-			self.x = x;
-            self.y = y;
-        end
-        
-		function Component:paint()
-			print(self.x .. "Component" .. self.y);
-        end
-        
-		Class:Create(Component,"Component");
-	end)();
+
+	local Event = {
+		eventSet = {};
+	};
+
+	function Event:constructor()
+
+	end
+
+	function Event:addEvent(event)
+		if not self.eventSet[event] then
+			self.eventSet[event] = {};
+			return;
+		end
+		error("Event: '" ..event.."' already exists");
+	end
+
+	function Event:addEventListener()
+
+	end
+
+	function Event:removeEventListener()
+
+	end
+	Class:Create(Event,"Event");
+end)();
 
 
 (function()
-        local Box = {};
-        function Box:constructor(x,y)
-            self.super(x,y);
-		end
-
-		function Box:paint()
-			self.super:paint();
-			print("box");
-        end
-
-		Class:Create(Box,"Box","Component");
-	end)();
-
-c1 = Class:New("Box",32,0);
-
-load("print(c1.x)")();
-
-while c1~=nil do
-	print("table")
-	for key, value in pairs(c1) do
-		if type(value) == "number" then
-			print(key .. ":" .. value);
-		else
-			print(key);
-		end
+	local Frame = {
+		width = 0;
+		height = 0;
+		children = {};
+	};
+	function Frame:constructor(widht,height)
+		self.width = widht;
+		self.height = height;
 	end
-	c1 = getmetatable(c1);
-end
+
+	function Frame:paint()
+
+	end
+
+	Class:Create(Frame,"Frame");
+end)();
+
+
+(function()
+		local Component = {
+			x = 0,
+			y = 0,
+			width = 0,
+			height = 0,
+		};
+		function Component:constructor(table)
+			self.x = table.x or 0;
+			self.y = table.y or 0;
+			self.width = table.width or 0;
+			self.height = table.height or 0;
+		end
+		--获取焦点事件
+		function Component:onfocus()
+
+		end
+		--失去焦点事件
+		function Component:onblur()
+
+		end
+		--键盘抬起事件
+		function Component:keydown()
+
+		end
+		--键盘按下事件
+		function Component:keyup()
+
+		end
+		--键盘按下抬起事件
+		function Component:keypress()
+
+		end
+
+		Class:Create(Component,"Component");
+end)();
+
+
+c1 = Class:New("Event");
+c1:addEvent("onclick");
+
+
+print(c1["onclick"]);
