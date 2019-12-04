@@ -28,6 +28,7 @@ function Class:Clone(talbe)
 	end
 	return object;
 end
+
 function Class:Create(object,name,father)
 	if object.constructor == nil then
         function object:constructor()
@@ -38,7 +39,6 @@ function Class:Create(object,name,father)
 	else
 		setmetatable(object,{});
 	end
-
 	Class[name] = object;
 end
 function Class:New(name,...)
@@ -83,8 +83,13 @@ end
 			return table.concat(string);
 		end
 
+
 		function String:__tostring()
 			return table.concat(self.array);
+		end
+
+		function String:__len()
+			return self.length;
 		end
 
 		function String:__eq(string)
@@ -101,28 +106,38 @@ end
 	end)();
 
 (function()
-
-	local Event = {
-		eventSet = {};
-	};
-
-	function Event:constructor()
-
-	end
-
-	function Event:addEvent(event)
-		if not self.eventSet[event] then
-			self.eventSet[event] = {};
-			return;
+	local Event = {};
+	function Event:__add(event)
+		if not self[event] then
+			rawset(self,event,setmetatable({},{
+				__add = function(lis,handle)
+					table.insert(lis,handle);
+					return lis;
+				end,
+				 __sub = function(lis,handle)
+					for i = 1, #lis, 1 do
+						if lis[i] == handle then
+							table.remove(lis,i);
+							break;
+						end
+					end
+					return lis;
+				end
+			}));
+			return self;
 		end
 		error("Event: '" ..event.."' already exists");
 	end
 
-	function Event:addEventListener()
-
+	function Event:__sub(event)
+		if self[event] then
+			rawset(self,event,nil);
+			return self;
+		end
+		error("Event: '" ..event.."' does not exist");
 	end
 
-	function Event:removeEventListener()
+	function Event:constructor()
 
 	end
 	Class:Create(Event,"Event");
@@ -130,7 +145,25 @@ end)();
 
 
 (function()
+	local Windows = {
+		root = {};
+	};
+	function Windows:constructor(frame)
+		local function paint(node,component)
+			for i = 1, #component.children, 1 do
+				paint(component.children[i]);
+			end
+		end
+		paint(self.root,frame);
+	end
+
+	Class:Create(Windows,"Windows");
+end)();
+
+(function()
 	local Frame = {
+		x = 0,
+		y = 0,
 		width = 0;
 		height = 0;
 		children = {};
@@ -140,26 +173,23 @@ end)();
 		self.height = height;
 	end
 
-	function Frame:paint()
-
-	end
-
 	Class:Create(Frame,"Frame");
 end)();
 
 
 (function()
 		local Component = {
-			x = 0,
-			y = 0,
-			width = 0,
-			height = 0,
+			tag = "Component";
+			style = {
+				x = 0,
+				y = 0,
+				width = 0,
+				height = 0,
+			},
+			children = {},
 		};
-		function Component:constructor(table)
-			self.x = table.x or 0;
-			self.y = table.y or 0;
-			self.width = table.width or 0;
-			self.height = table.height or 0;
+		function Component:constructor(tag)
+			self.tag = tag;
 		end
 		--获取焦点事件
 		function Component:onfocus()
@@ -186,8 +216,9 @@ end)();
 end)();
 
 
-c1 = Class:New("Event");
-c1:addEvent("onclick");
 
-
-print(c1["onclick"]);
+-- c1 = Class:New("Component",{x = 15,y = 33,width = 33,height = 345;});
+-- function c1:keyup()
+-- 	print("QAQ");
+-- end
+		--table.remove(self,1);
