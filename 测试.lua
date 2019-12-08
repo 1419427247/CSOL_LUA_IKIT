@@ -208,13 +208,32 @@ end)();
 	function Frame:constructor(widht,height)
 		self.root = {};
 
+		self.x = 0;
+		self.y = 0;
+		self.width = widht;
+		self.height = height;
+
 	end
 	
-	function Frame:add()
-		
+	function Frame:add(component)
+		component.father = self;
+		table.insert(self.root,component);
 	end
 
-	function Frame:paint()
+	function Frame:reset(component)
+		component = component or self.root;
+		component.x = component.father.x + component.father.width * (component.style.left /100);
+		component.y = component.father.y + component.father.height * (component.style.top /100);
+
+		component.width = component.father.width * (component.style.left /100);
+		component.height = component.father.height * (component.style.top /100);
+
+		for i = 1, #component.children, 1 do
+			self:reset(component.children[i]);
+		end
+	end
+
+	function Frame:paint(component)
 
 	end
 
@@ -224,9 +243,15 @@ end)();
 (function()
 		local Component = {};
 		function Component:constructor(tag)
+			
+			self.x = 0;
+			self.y = 0;
+			self.width = 0;
+			self.height = 0;
+
 			self.style = {
-				x = 0,
-				y = 0,
+				left = 0,
+				top = 0,
 				width = 0,
 				height = 0,
 				backgroundcolor = {red = 0,green = 0,blue=0,alpha=0};
@@ -266,8 +291,11 @@ end)();
 		Class.Create(Component,"Component");
 end)();
 
-Event= Class.New("Event");
+c1 = Class.New("Component");
+c1.style.left=5;
+c1.style.top=5;
 
-Event = Event+"QWQ";
+f1 = Class.New("Frame",300,300);
+f1:add(c1);
+f1:reset(c1);
 
-Event["QWQ"]();
