@@ -1,6 +1,8 @@
-Class = {};
+Class = (function()
 
-function Class:Is(table,string)
+local class = {};
+
+local function instanceof(table,string)
 	if type(table) == "table" and  type(string) == "string" then
 		local object = table;
 		while object ~= nil do
@@ -14,9 +16,7 @@ function Class:Is(table,string)
 	return false;
 end
 
-
-
-function Class:Clone(talbe)
+local function clone(talbe)
 	local object = {};
 	for key, value in pairs(talbe) do
 		object[key] = value;
@@ -45,13 +45,13 @@ function Class:Clone(talbe)
 		return table.super:__tostring();
 	end
 	if getmetatable(talbe) ~= nil then
-		object.super = self:Clone(getmetatable(talbe))
+		object.super = clone(getmetatable(talbe))
 		setmetatable(object,object.super);
 	end
 	return object;
 end
 
-function Class:Create(object,name,father)
+local function create(object,name,father)
 	if object.constructor == nil then
         function object:constructor()
         end
@@ -60,7 +60,7 @@ function Class:Create(object,name,father)
 		return name;
 	end;
 	if father ~= nil then
-		setmetatable(object,Class[father]);
+		setmetatable(object,class[father]);
 	else
 		setmetatable(object,{
 			type = function()
@@ -71,13 +71,22 @@ function Class:Create(object,name,father)
 			end
 		});
 	end
-	Class[name] = object;
+	class[name] = object;
 end
-function Class:New(name,...)
-	local object = self:Clone(Class[name]);
+
+local function new(name,...)
+	local object = clone(class[name]);
 	object:constructor(...);
 	return setmetatable({},object);
 end
+
+return {
+	Instanceof = instanceof;
+	Clone = clone;
+	Create = create;
+	New = new;
+};
+end)();
 
 (function()
 		local function charSize(str, index)
@@ -134,7 +143,7 @@ end
 				return true;
 			end
 		end
-		Class:Create(String,"String");
+		Class.Create(String,"String");
 	end)();
 
 (function()
@@ -189,7 +198,7 @@ end)();
 		paint(self.root,frame);
 	end
 
-	Class:Create(Windows,"Windows");
+	Class.Create(Windows,"Windows");
 end)();
 
 (function()
@@ -232,7 +241,7 @@ end)();
 			
 		end
 		
-		Class:Create(Component,"Component");
+		Class.Create(Component,"Component");
 end)();
 
 (function()
@@ -246,8 +255,12 @@ end)();
 		};
 		self.super.style = style;
 	end
+	
+	function Frame:toString()
+		return "QAQ";
+	end
 
-	Class:Create(Frame,"Frame","Component");
+	Class.Create(Frame,"Frame","Component");
 end)();
 
 (function()
@@ -255,19 +268,11 @@ end)();
 	function Plane:constructor(widht,height)
 		
 	end
-	function Plane:toString()
-		return "QAQ";
-	end
-	Class:Create(Plane,"Plane","Component");
+	Class.Create(Plane,"Plane","Frame");
 end)();
 
-f = Class:New("Frame",500,500);
+f = Class.New("Frame",500,500);
 
-c1 = Class:New("Component",{x = 15,y = 33,width = 33,height = 345;});
+c1 = Class.New("Component",{x = 15,y = 33,width = 33,height = 345;});
 
-f.add(c1);
-
-print(c1)
-
-
-QWQ
+print(Class.New("Plane",111,111));
