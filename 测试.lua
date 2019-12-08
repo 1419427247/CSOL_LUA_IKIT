@@ -33,7 +33,8 @@ local function clone(talbe)
 			end
 			tobject = getmetatable(tobject);
 		end
-		error("error: cannot find symbol : " .. key)
+		rawset(table,key,value);
+		--error("error: cannot find symbol : " .. key)
 	end
     object.__call = function(table,...)
         table:constructor(...);
@@ -98,10 +99,11 @@ end)();
 			return 1
 		end
 		local String = {};
-		String.array = {};
-		String.length = 0;
+
 		function String:constructor(string)
-			if string then
+			self.array = {};
+			self.length = 0;
+			if type(string) == "string" then
 				local currentIndex = 1;
 				while currentIndex <= #string do
 					self.length = self.length +1;
@@ -109,6 +111,11 @@ end)();
 					table.insert(self.array,string.sub(string,currentIndex,currentIndex+cs-1));
 					currentIndex = currentIndex + cs;
 				end
+			elseif type(string) == "table" then
+				for i = 1, string.length, 1 do
+					table.insert(self.array,string.array[i]);
+				end
+				self.length = string.length;
 			end
 		end
 
@@ -124,8 +131,11 @@ end)();
 			return table.concat(string);
 		end
 
+		function String:isEmpty()
+			return self.length == 0;
+		end
 
-		function String:__tostring()
+		function String:toString()
 			return table.concat(self.array);
 		end
 
@@ -143,6 +153,7 @@ end)();
 				return true;
 			end
 		end
+
 		Class.Create(String,"String");
 	end)();
 
@@ -152,6 +163,9 @@ end)();
 		if not self[event] then
 			rawset(self,event,setmetatable({},{
 				__add = function(lis,handle)
+					-- if type(handle) ~= "function" then
+					-- 	error("It is not a function");
+					-- end
 					table.insert(lis,handle);
 					return lis;
 				end,
@@ -163,6 +177,11 @@ end)();
 						end
 					end
 					return lis;
+				end,
+				__call = function(table,...)
+					for __, value in pairs(table) do
+						value(...);
+					end
 				end
 			}));
 			return self;
@@ -181,38 +200,41 @@ end)();
 	function Event:constructor()
 
 	end
-	Class:Create(Event,"Event");
+	Class.Create(Event,"Event");
 end)();
 
-
 (function()
-	local Windows = {
-		root = {};
-	};
-	function Windows:constructor(frame)
-		local function paint(node,component)
-			for i = 1, #component.children, 1 do
-				paint(component.children[i]);
-			end
-		end
-		paint(self.root,frame);
+	local Frame = {};
+	function Frame:constructor(widht,height)
+		self.root = {};
+
+	end
+	
+	function Frame:add()
+		
 	end
 
-	Class.Create(Windows,"Windows");
+	function Frame:paint()
+
+	end
+
+	Class.Create(Frame,"Frame");
 end)();
 
 (function()
-		local Component = {
-			tag = "Component",
-			style = {
+		local Component = {};
+		function Component:constructor(tag)
+			self.style = {
 				x = 0,
 				y = 0,
 				width = 0,
 				height = 0,
-			},
-			children = {},
-		};
-		function Component:constructor(tag)
+				backgroundcolor = {red = 0,green = 0,blue=0,alpha=0};
+				border = 1;
+			};
+			self.tag = "Component";
+			self.father = nil;
+			self.children = {};
 			self.tag = tag;
 		end
 
@@ -244,35 +266,8 @@ end)();
 		Class.Create(Component,"Component");
 end)();
 
-(function()
-	local Frame = {};
-	function Frame:constructor(widht,height)
-		local style = {
-			x = 0,
-			y = 0,
-			width = widht,
-			height = height,
-		};
-		self.super.style = style;
-	end
-	
-	function Frame:toString()
-		return "QAQ";
-	end
+Event= Class.New("Event");
 
-	Class.Create(Frame,"Frame","Component");
-end)();
+Event = Event+"QWQ";
 
-(function()
-	local Plane = {};
-	function Plane:constructor(widht,height)
-		
-	end
-	Class.Create(Plane,"Plane","Frame");
-end)();
-
-f = Class.New("Frame",500,500);
-
-c1 = Class.New("Component",{x = 15,y = 33,width = 33,height = 345;});
-
-print(Class.New("Plane",111,111));
+Event["QWQ"]();
