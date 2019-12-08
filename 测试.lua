@@ -269,5 +269,5 @@ f.add(c1);
 
 print(c1)
 
-
+QWQ
 -- c2 = Class:New("Component",{x = 15,y = 33,width = 33,height = 345;});
