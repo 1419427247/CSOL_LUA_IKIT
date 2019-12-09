@@ -67,8 +67,8 @@ local function create(object,name,father)
 			type = function()
 				return "Object";
 			end,
-			toString = function()
-				return "Object";
+			toString = function(table)
+				return table.type();
 			end
 		});
 	end
@@ -205,12 +205,12 @@ end)();
 
 (function()
 	local Frame = {};
-	function Frame:constructor(widht,height)
+	function Frame:constructor(width,height)
 		self.root = {};
 
 		self.x = 0;
 		self.y = 0;
-		self.width = widht;
+		self.width = width;
 		self.height = height;
 
 	end
@@ -222,11 +222,13 @@ end)();
 
 	function Frame:reset(component)
 		component = component or self.root;
+
+
 		component.x = component.father.x + component.father.width * (component.style.left /100);
 		component.y = component.father.y + component.father.height * (component.style.top /100);
 
-		component.width = component.father.width * (component.style.left /100);
-		component.height = component.father.height * (component.style.top /100);
+		component.width = component.father.width * (component.style.width /100);
+		component.height = component.father.height * (component.style.height /100);
 
 		for i = 1, #component.children, 1 do
 			self:reset(component.children[i]);
@@ -248,7 +250,8 @@ end)();
 			self.y = 0;
 			self.width = 0;
 			self.height = 0;
-
+			self.array = {};
+			self.isfocus = false;
 			self.style = {
 				left = 0,
 				top = 0,
@@ -256,6 +259,8 @@ end)();
 				height = 0,
 				backgroundcolor = {red = 0,green = 0,blue=0,alpha=0};
 				border = 1;
+				bordercolor = {red = 0,green = 0,blue=0,alpha=0};
+				letterspacing = 0;
 			};
 			self.tag = "Component";
 			self.father = nil;
@@ -265,6 +270,10 @@ end)();
 
 		function Component:add(component)
 			table.insert(self.children,component);
+		end
+
+		function Component:isFocuse()
+			return self.isfocus;
 		end
 
 		--获取焦点事件
@@ -287,15 +296,56 @@ end)();
 		function Component:keypress()
 			
 		end
-		
+	
+		function Component:paint()
+
+		end
+
+		function Component:toString()
+			return self.x .. "_" .. self.y .. "_" .. self.width .. "_" .. self.height;
+		end
+
 		Class.Create(Component,"Component");
 end)();
 
-c1 = Class.New("Component");
+(function()
+	local Lable = {};
+	
+	function Lable:constructor()
+		self.super();
+	end
+
+	function Lable:paint()
+
+	end
+
+	Class.Create(Lable,"Lable","Component");
+end)();
+
+(function()
+	local Edit = {};
+	
+	function Edit:constructor()
+		self.super();
+	end
+
+	function Edit:paint()
+
+	end
+
+	Class.Create(Edit,"Edit","Lable");
+end)();
+
+
+c1 = Class.New("Edit");
 c1.style.left=5;
 c1.style.top=5;
+c1.style.width=100;
+c1.style.height=80;
 
-f1 = Class.New("Frame",300,300);
+f1 = Class.New("Frame",500,300);
 f1:add(c1);
 f1:reset(c1);
 
+
+print(c1);
