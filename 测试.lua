@@ -341,8 +341,30 @@ end)();
 end)();
 
 
-c1 = Class.New("String","QWQ");
+(function()
+	local List = {};
+	
+	function List:constructor()
+		self.super();
+	end
 
-f1 = Class.New("String",c1);
+	function List:paint()
 
-print(f1);
+	end
+
+	Class.Create(List,"List","Component");
+end)();
+
+(function()
+	local Plane = {};
+	
+	function Plane:constructor()
+		self.super();
+	end
+
+	function Plane:paint()
+
+	end
+
+	Class.Create(Plane,"Plane","Component");
+end)();
