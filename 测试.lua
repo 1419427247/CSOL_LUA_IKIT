@@ -1,6 +1,36 @@
 Class = (function()
 
 local class = {};
+class["Object"] = {
+	type = "Object",
+	__newindex = function (table,key,value)
+		local tobject = table;
+		while tobject ~= nil do
+			for _key, _value in pairs(tobject) do
+				if key == _key then
+					rawset(tobject,key,value);
+					return;
+				end
+			end
+			tobject = getmetatable(tobject);
+		end
+		rawset(table,key,value);
+		--error("error: cannot find symbol : " .. key)
+	end,
+	__call = function(table,...)
+		table:constructor(...);
+	end,
+	__tostring = function(table)
+		if table.toString ~= nil then
+			return table:toString();
+		end
+		return table.super:__tostring();
+	end,
+	toString = function(table)
+		return table.type;
+	end
+};
+
 
 local function instanceof(table,string)
 	if type(table) == "table" and  type(string) == "string" then
@@ -34,48 +64,18 @@ local function clone(talbe)
 end
 
 local function create(object,name,father)
+	
 	if object.constructor == nil then
         function object:constructor()
         end
 	end
-	object.type = function()
-		return name;
-	end;
+
 	if father ~= nil then
 		setmetatable(object,class[father]);
 	else
-		setmetatable(object,{
-			__newindex = function (table,key,value)
-				local tobject = table;
-				while tobject ~= nil do
-					for _key, _value in pairs(tobject) do
-						if key == _key then
-							rawset(tobject,key,value);
-							return;
-						end
-					end
-					tobject = getmetatable(tobject);
-				end
-				rawset(table,key,value);
-				--error("error: cannot find symbol : " .. key)
-			end,
-			__call = function(table,...)
-				table:constructor(...);
-			end,
-			__tostring = function(table)
-				if table.toString ~= nil then
-					return table:toString();
-				end
-				return table.super:__tostring();
-			end,
-			type = function()
-				return "Object";
-			end,
-			toString = function(table)
-				return table.type();
-			end
-		});
+		setmetatable(object,class["Object"]);
 	end
+	rawset(object,"type",name);
 	class[name] = object;
 end
 
@@ -156,6 +156,10 @@ end)();
 				end
 				return true;
 			end
+		end
+
+		function String:__call(index)
+			return self.array[index];
 		end
 
 		Class.Create(String,"String");
@@ -368,3 +372,11 @@ end)();
 
 	Class.Create(Plane,"Plane","Component");
 end)();
+
+
+
+a = Class.New("String","1234");
+b = Class.New("Frame");
+
+print(a);
+
