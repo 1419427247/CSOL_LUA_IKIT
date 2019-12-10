@@ -21,32 +21,13 @@ local function clone(talbe)
 	for key, value in pairs(talbe) do
 		object[key] = value;
 	end
-	object.__index = object;
-	object.__newindex = function (table,key,value)
-		local tobject = table;
-		while tobject ~= nil do
-			for _key, _value in pairs(tobject) do
-				if key == _key then
-					rawset(tobject,key,value);
-					return;
-				end
-			end
-			tobject = getmetatable(tobject);
-		end
-		rawset(table,key,value);
-		--error("error: cannot find symbol : " .. key)
-	end
-    object.__call = function(table,...)
-        table:constructor(...);
-	end;
-	object.__tostring = function(table)
-		if table.toString ~= nil then
-			return table:toString();
-		end
-		return table.super:__tostring();
-	end
+
 	if getmetatable(talbe) ~= nil then
 		object.super = clone(getmetatable(talbe))
+		object.__newindex = object.super.__newindex;
+		object.__call = object.super.__call;
+		object.__tostring = object.super.__tostring;
+		object.__index = object;
 		setmetatable(object,object.super);
 	end
 	return object;
@@ -64,6 +45,29 @@ local function create(object,name,father)
 		setmetatable(object,class[father]);
 	else
 		setmetatable(object,{
+			__newindex = function (table,key,value)
+				local tobject = table;
+				while tobject ~= nil do
+					for _key, _value in pairs(tobject) do
+						if key == _key then
+							rawset(tobject,key,value);
+							return;
+						end
+					end
+					tobject = getmetatable(tobject);
+				end
+				rawset(table,key,value);
+				--error("error: cannot find symbol : " .. key)
+			end,
+			__call = function(table,...)
+				table:constructor(...);
+			end,
+			__tostring = function(table)
+				if table.toString ~= nil then
+					return table:toString();
+				end
+				return table.super:__tostring();
+			end,
 			type = function()
 				return "Object";
 			end,
@@ -337,15 +341,8 @@ end)();
 end)();
 
 
-c1 = Class.New("Edit");
-c1.style.left=5;
-c1.style.top=5;
-c1.style.width=100;
-c1.style.height=80;
+c1 = Class.New("String","QWQ");
 
-f1 = Class.New("Frame",500,300);
-f1:add(c1);
-f1:reset(c1);
+f1 = Class.New("String",c1);
 
-
-print(c1);
+print(f1);
