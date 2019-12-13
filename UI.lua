@@ -212,14 +212,21 @@ Class = (function()
         Class.Create(Event,"Event");
     end)();
     
+    (function ()
+        
+    end)();
+
+
     (function()
         local Frame = {};
         function Frame:constructor(width,height)
             self.graphics = {
                 root = {};
                 color = {red = 0,green = 0,blue=0,alpha=0};
-                drawRect =  function(x,y,width,height)
-                --table.insert(self.root,xxx);
+                drawRect =  function(graphics,x,y,width,height)
+                    local box = UI.Box.Create();
+                    box:Set({x=x,y=y,width=width,height=height,r=self.color.r,g=self.color.g,b=self.color.b,a=self.color.a});
+                    table.insert(self.root,box);
                 end,
                 drawText = function(x,y,width,height)
                     
@@ -390,6 +397,5 @@ Class = (function()
     
     
     b = Class.New("Frame");
+    b.graphics.drawRect(0,0,100,100)
 
-    c = Class.New("Edit");
-    print(c.type)
