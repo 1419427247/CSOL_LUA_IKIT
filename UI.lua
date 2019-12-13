@@ -1,6 +1,7 @@
 Class = (function()
 
     local class = {};
+
     class["Object"] = {
         type = "Object",
         __newindex = function (table,key,value)
@@ -30,7 +31,6 @@ Class = (function()
             return table.type;
         end
     };
-    
     
     local function instanceof(table,string)
         if type(table) == "table" and  type(string) == "string" then
@@ -165,7 +165,8 @@ Class = (function()
             Class.Create(String,"String");
         end)();
     
-    (function()
+    
+        (function()
         local Event = {};
         function Event:__add(event)
             if not self[event] then
@@ -214,8 +215,17 @@ Class = (function()
     (function()
         local Frame = {};
         function Frame:constructor(width,height)
+            self.graphics = {
+                color = {red = 0,green = 0,blue=0,alpha=0};
+                drawRect =  function(x,y,width,height)
+                --table.insert(self.root,xxx);
+                end,
+                drawText = function(x,y,width,height)
+                    
+                end,
+            }
             self.root = {};
-    
+            
             self.x = 0;
             self.y = 0;
             self.width = width;
@@ -243,8 +253,12 @@ Class = (function()
             end
         end
     
+        
         function Frame:paint(component)
-    
+            component.paint(self.graphics);
+            for i = 1, #component.children,1 do
+                component.children.paint(self.graphics);
+            end
         end
     
         Class.Create(Frame,"Frame");
@@ -252,7 +266,8 @@ Class = (function()
     
     (function()
             local Component = {};
-            function Component:constructor(tag)
+            function Component:constructor(id)
+                self.id = id or self.type;
                 
                 self.x = 0;
                 self.y = 0;
@@ -270,10 +285,9 @@ Class = (function()
                     bordercolor = {red = 0,green = 0,blue=0,alpha=0};
                     letterspacing = 0;
                 };
-                self.tag = "Component";
+                self.tag = self.type;
                 self.father = nil;
                 self.children = {};
-                self.tag = tag;
             end
     
             function Component:add(component)
@@ -320,7 +334,7 @@ Class = (function()
         local Lable = {};
         
         function Lable:constructor()
-            self.super();
+            self.super(self.type);
         end
     
         function Lable:paint()
@@ -334,7 +348,7 @@ Class = (function()
         local Edit = {};
         
         function Edit:constructor()
-            self.super();
+            self.super(self.type);
         end
     
         function Edit:paint()
@@ -346,24 +360,24 @@ Class = (function()
     
     
     (function()
-        local List = {};
+        local ListBox = {};
         
-        function List:constructor()
-            self.super();
+        function ListBox:constructor()
+            self.super(self.type);
         end
     
-        function List:paint()
+        function ListBox:paint()
     
         end
     
-        Class.Create(List,"List","Component");
+        Class.Create(ListBox,"ListBox","Component");
     end)();
     
     (function()
         local Plane = {};
         
         function Plane:constructor()
-            self.super();
+            self.super(self.type);
         end
     
         function Plane:paint()
@@ -375,9 +389,7 @@ Class = (function()
     
     
     
-    a = Class.New("String","1234");
     b = Class.New("Frame");
-    
-    print(a);
-    
-    
+
+    c = Class.New("Edit");
+    print(c.type)
