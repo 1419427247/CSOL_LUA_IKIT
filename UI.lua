@@ -216,6 +216,7 @@ Class = (function()
         local Frame = {};
         function Frame:constructor(width,height)
             self.graphics = {
+                root = {};
                 color = {red = 0,green = 0,blue=0,alpha=0};
                 drawRect =  function(x,y,width,height)
                 --table.insert(self.root,xxx);
@@ -240,11 +241,10 @@ Class = (function()
     
         function Frame:reset(component)
             component = component or self.root;
-    
-    
+
             component.x = component.father.x + component.father.width * (component.style.left /100);
             component.y = component.father.y + component.father.height * (component.style.top /100);
-    
+
             component.width = component.father.width * (component.style.width /100);
             component.height = component.father.height * (component.style.height /100);
     
@@ -319,8 +319,8 @@ Class = (function()
                 
             end
         
-            function Component:paint()
-    
+            function Component:paint(graphics)
+                graphics.drawRect(self.x,self.y,self.width,self.height);
             end
     
             function Component:toString()
@@ -351,7 +351,7 @@ Class = (function()
             self.super(self.type);
         end
     
-        function Edit:paint()
+        function Edit:paint(graphics)
     
         end
     
@@ -366,7 +366,7 @@ Class = (function()
             self.super(self.type);
         end
     
-        function ListBox:paint()
+        function ListBox:paint(graphics)
     
         end
     
@@ -380,7 +380,7 @@ Class = (function()
             self.super(self.type);
         end
     
-        function Plane:paint()
+        function Plane:paint(graphics)
     
         end
     
