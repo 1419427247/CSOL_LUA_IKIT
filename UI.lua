@@ -1,4 +1,4 @@
-Class = (function()
+Instanceof,Clone,Create,New = (function()
 
     local class = {};
 
@@ -85,12 +85,8 @@ Class = (function()
         return setmetatable({},object);
     end
     
-    return {
-        Instanceof = instanceof;
-        Clone = clone;
-        Create = create;
-        New = new;
-    };
+    return instanceof,clone,create,new;
+        
     end)();
     
     (function()
@@ -162,11 +158,11 @@ Class = (function()
                 return self.array[index];
             end
     
-            Class.Create(String,"String");
+            Create(String,"String");
         end)();
     
     
-        (function()
+    (function()
         local Event = {};
         function Event:__add(event)
             if not self[event] then
@@ -209,68 +205,32 @@ Class = (function()
         function Event:constructor()
     
         end
-        Class.Create(Event,"Event");
+        Create(Event,"Event");
     end)();
     
     (function ()
-        
-    end)();
+        local Graphics = {};
 
-
-    (function()
-        local Frame = {};
-        function Frame:constructor(width,height)
-            self.graphics = {
-                root = {};
-                color = {red = 0,green = 0,blue=0,alpha=0};
-                drawRect =  function(graphics,x,y,width,height)
-                    local box = UI.Box.Create();
-                    box:Set({x=x,y=y,width=width,height=height,r=self.color.r,g=self.color.g,b=self.color.b,a=self.color.a});
-                    table.insert(self.root,box);
-                end,
-                drawText = function(x,y,width,height)
-                    
-                end,
-            }
+        function Graphics:constructor()
             self.root = {};
+            self.color = {red = 255,green = 255,blue=255,alpha=255};
+        end
+
+        function Graphics:drawRect(x,y,width,height)
+            local box = UI.Box.Create();
+            box:Set({x=x,y=y,width=width,height=height,r=self.color.red,g=self.color.green,b=self.color.blue,a=self.color.alpha});
+            box:Show();
+            table.insert(self.root,box);
+        end;
+    
+        function Graphics:drawText(x,y,string)
             
-            self.x = 0;
-            self.y = 0;
-            self.width = width;
-            self.height = height;
-    
         end
-        
-        function Frame:add(component)
-            component.father = self;
-            table.insert(self.root,component);
-        end
-    
-        function Frame:reset(component)
-            component = component or self.root;
 
-            component.x = component.father.x + component.father.width * (component.style.left /100);
-            component.y = component.father.y + component.father.height * (component.style.top /100);
-
-            component.width = component.father.width * (component.style.width /100);
-            component.height = component.father.height * (component.style.height /100);
-    
-            for i = 1, #component.children, 1 do
-                self:reset(component.children[i]);
-            end
-        end
-    
+        Create(Graphics,"Graphics");
         
-        function Frame:paint(component)
-            component.paint(self.graphics);
-            for i = 1, #component.children,1 do
-                component.children.paint(self.graphics);
-            end
-        end
-    
-        Class.Create(Frame,"Frame");
     end)();
-    
+
     (function()
             local Component = {};
             function Component:constructor(id)
@@ -280,16 +240,17 @@ Class = (function()
                 self.y = 0;
                 self.width = 0;
                 self.height = 0;
-                self.array = {};
                 self.isfocus = false;
                 self.style = {
                     left = 0,
                     top = 0,
                     width = 0,
                     height = 0,
+                    position = "relative",
                     backgroundcolor = {red = 0,green = 0,blue=0,alpha=0};
                     border = 1;
                     bordercolor = {red = 0,green = 0,blue=0,alpha=0};
+                    newline = false;
                     letterspacing = 0;
                 };
                 self.tag = self.type;
@@ -297,44 +258,146 @@ Class = (function()
                 self.children = {};
             end
     
-            function Component:add(component)
-                table.insert(self.children,component);
-            end
-    
             function Component:isFocuse()
                 return self.isfocus;
             end
     
+            function Component:add(...)
+                local components = {...};
+                for i = 1, #components, 1 do
+                    components[i].father = self;
+                    table.insert(self.children,components[i]);
+                end
+                return self;
+            end
+
             --获取焦点事件
             function Component:onfocus()
-    
+                
             end
             --失去焦点事件
             function Component:onblur()
-    
+                
             end
             --键盘抬起事件
-            function Component:keydown()
+            function Component:keydown(keycode)
     
             end
             --键盘按下事件
-            function Component:keyup()
+            function Component:keyup(keycode)
     
             end
             --键盘按下抬起事件
-            function Component:keypress()
+            function Component:keypress(keycode)
                 
             end
         
             function Component:paint(graphics)
-                graphics.drawRect(self.x,self.y,self.width,self.height);
+                --graphics.drawRect(self.x,self.y,self.width,self.height);
             end
     
             function Component:toString()
                 return self.x .. "_" .. self.y .. "_" .. self.width .. "_" .. self.height;
             end
     
-            Class.Create(Component,"Component");
+            Create(Component,"Component");
+    end)();
+
+    (function()
+        local Frame = {};
+        function Frame:constructor(width,height)
+            self.super:constructor();
+            self.super.width = width or 300;
+            self.super.height = height or 300;
+            self.graphics = New("Graphics");
+        end
+    
+        function Frame:reset(component)
+        local components = {};
+        if component == nil then
+            for i = 1, #self.children, 1 do
+                table.insert(components,self.children[i]);
+            end
+        else
+            table.insert(components,component);
+        end
+
+        local i = 1;
+        while i < #components + 1 do
+            if components[i].style.position == "relative" then
+                components[i].width = components[i].father.width * (components[i].style.width /100);
+                components[i].height = components[i].father.height * (components[i].style.height /100);
+
+                if i == 1 then
+                    components[i].x = self.x + components[i].father.width * (components[i].style.left /100);
+                    components[i].y = self.y + components[i].father.height * (components[i].style.top /100);
+                else
+                    if components[i].style.newline == true then
+                        local j = i - 1;
+                        local temp = components[j];
+                        while temp.father == components[j].father do
+                            if temp.style.newline == true then
+                                components[i].x = components[i].father.width * (components[i].style.left /100);
+                                components[i].y = temp.y + temp.height + components[i].father.height * (components[i].style.top /100);
+                                break;
+                            end
+                            j = j - 1;
+                            if j < 1 then
+                                break;
+                            end
+                            temp = components[j];
+                        end
+                        if j == 0 then
+                            components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
+                            components[i].y = components[i].father.children[1].y + components[i].father.children[1].height + components[i].father.height * (components[i].style.top /100);
+                        end
+                    else
+                        components[i].x = components[i - 1].x + components[i - 1].width + components[i].father.width * (components[i].style.left /100);
+                        components[i].y = components[i - 1].y + components[i].father.height * (components[i].style.top /100);
+                    end
+                end
+
+            elseif components[i].style.position == "absolute" then
+                components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
+                components[i].y = components[i].father.y + components[i].father.height * (components[i].style.top /100);
+            end
+
+            for j = 1, #components[i].children, 1 do
+                table.insert(components,components[i].children[j]);
+            end
+
+            i = i + 1;
+        end
+        end
+    
+        function Frame:paint(component)
+            if component == nil then
+                for i = 1, #self.children, 1 do
+                    self:paint(self.children[i]);
+                end
+            else
+                component:paint(self.graphics);
+                for i = 1, #component.children, 1 do
+                    self:paint(component.children[i]);
+                end
+            end
+        end
+    
+        function Frame:findById(id,component)
+            component = component or self;
+            if id == component.id then
+                return component;
+            end
+            for i = 1, #component.children, 1 do
+                self:findById(id,component.children[i]);
+            end
+            return nil;
+        end
+
+        function Frame:findByTag(tag)
+            
+        end
+        Create(Frame,"Frame","Component");
     end)();
     
     (function()
@@ -348,7 +411,7 @@ Class = (function()
     
         end
     
-        Class.Create(Lable,"Lable","Component");
+        Create(Lable,"Lable","Component");
     end)();
     
     (function()
@@ -362,7 +425,7 @@ Class = (function()
     
         end
     
-        Class.Create(Edit,"Edit","Lable");
+        Create(Edit,"Edit","Lable");
     end)();
     
     
@@ -377,7 +440,7 @@ Class = (function()
     
         end
     
-        Class.Create(ListBox,"ListBox","Component");
+        Create(ListBox,"ListBox","Component");
     end)();
     
     (function()
@@ -386,16 +449,22 @@ Class = (function()
         function Plane:constructor()
             self.super(self.type);
         end
-    
+
         function Plane:paint(graphics)
-    
+            
         end
     
-        Class.Create(Plane,"Plane","Component");
+        Create(Plane,"Plane","Component");
     end)();
     
-    
-    
-    b = Class.New("Frame");
-    b.graphics.drawRect(0,0,100,100)
+    Frame = New("Frame",300,300);
+    Component1 = New("Component");
+    Component1.style.left = 15;
+    Component1.style.width = 15;
 
+    Component2 = New("Component");
+
+    Frame:add(Component1,Component2);
+
+    Frame:reset();
+    Frame:paint();
