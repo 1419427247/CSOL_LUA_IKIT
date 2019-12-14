@@ -31,7 +31,7 @@ Instanceof,Clone,Create,New = (function()
             return table.type;
         end
     };
-    
+
     local function instanceof(table,string)
         if type(table) == "table" and  type(string) == "string" then
             local object = table;
@@ -45,13 +45,13 @@ Instanceof,Clone,Create,New = (function()
         end
         return false;
     end
-    
+
     local function clone(talbe)
         local object = {};
         for key, value in pairs(talbe) do
             object[key] = value;
         end
-    
+
         if getmetatable(talbe) ~= nil then
             object.super = clone(getmetatable(talbe))
             object.__newindex = object.super.__newindex;
@@ -62,14 +62,14 @@ Instanceof,Clone,Create,New = (function()
         end
         return object;
     end
-    
+
     local function create(object,name,father)
-        
+
         if object.constructor == nil then
             function object:constructor()
             end
         end
-    
+
         if father ~= nil then
             setmetatable(object,class[father]);
         else
@@ -78,17 +78,17 @@ Instanceof,Clone,Create,New = (function()
         rawset(object,"type",name);
         class[name] = object;
     end
-    
+
     local function new(name,...)
         local object = clone(class[name]);
         object:constructor(...);
         return setmetatable({},object);
     end
-    
+
     return instanceof,clone,create,new;
-        
+
     end)();
-    
+
     (function()
             local function charSize(str, index)
                 local curByte = string.byte(str, index)
@@ -99,7 +99,7 @@ Instanceof,Clone,Create,New = (function()
                 return 1
             end
             local String = {};
-    
+
             function String:constructor(string)
                 self.array = {};
                 self.length = 0;
@@ -118,11 +118,11 @@ Instanceof,Clone,Create,New = (function()
                     self.length = string.length;
                 end
             end
-    
+
             function String:charAt(index)
                 return self.array[index];
             end
-    
+
             function String:substring(beginIndex,endIndex)
                 local string = {};
                 for i = beginIndex, endIndex, 1 do
@@ -130,19 +130,19 @@ Instanceof,Clone,Create,New = (function()
                 end
                 return table.concat(string);
             end
-    
+
             function String:isEmpty()
                 return self.length == 0;
             end
-    
+
             function String:toString()
                 return table.concat(self.array);
             end
-    
+
             function String:__len()
                 return self.length;
             end
-    
+
             function String:__eq(string)
                 return self.length == string.length and function()
                     for i = 1, self.length, 1 do
@@ -153,17 +153,22 @@ Instanceof,Clone,Create,New = (function()
                     return true;
                 end
             end
-    
+
             function String:__call(index)
                 return self.array[index];
             end
-    
+
             Create(String,"String");
         end)();
-    
-    
+
+
     (function()
         local Event = {};
+
+        function Event:constructor()
+
+        end
+
         function Event:__add(event)
             if not self[event] then
                 rawset(self,event,setmetatable({},{
@@ -193,7 +198,7 @@ Instanceof,Clone,Create,New = (function()
             end
             error("Event: '" ..event.."' already exists");
         end
-    
+
         function Event:__sub(event)
             if self[event] then
                 rawset(self,event,nil);
@@ -201,13 +206,36 @@ Instanceof,Clone,Create,New = (function()
             end
             error("Event: '" ..event.."' does not exist");
         end
-    
-        function Event:constructor()
-    
-        end
+
         Create(Event,"Event");
     end)();
-    
+
+    Event = New("Event");
+
+
+    Event = Event + "OnKeyDown";
+    Event = Event + "OnKeyUp";
+    Event = Event + "OnInput";
+
+    -- function UI.Event:OnKeyDown(inputs)
+    --     for i = 1, #Event["OnKeyDown"], 1 do
+    --         Event["OnKeyDown"][i].keydown(inputs);
+    --     end
+    -- end
+
+    -- function UI.Event:OnKeyUp (inputs)
+    --     for i = 1, #Event["OnKeyUp"], 1 do
+    --         Event["OnKeyUp"][i].keyup(inputs);
+    --     end
+    -- end
+
+    -- function UI.Event:OnInput(inputs)
+    --     for i = 1, #Event["OnInput"], 1 do
+    --         Event["OnInput"][i].keypress(inputs);
+    --     end
+    -- end
+
+
     (function ()
         local Graphics = {};
 
@@ -222,20 +250,19 @@ Instanceof,Clone,Create,New = (function()
             box:Show();
             table.insert(self.root,box);
         end;
-    
+
         function Graphics:drawText(x,y,string)
-            
+
         end
 
         Create(Graphics,"Graphics");
-        
+
     end)();
 
     (function()
             local Component = {};
             function Component:constructor(id)
                 self.id = id or self.type;
-                
                 self.x = 0;
                 self.y = 0;
                 self.width = 0;
@@ -247,7 +274,7 @@ Instanceof,Clone,Create,New = (function()
                     width = 0,
                     height = 0,
                     position = "relative",
-                    backgroundcolor = {red = 0,green = 0,blue=0,alpha=0};
+                    backgroundcolor = {red = 0,green = 0,blue=0,alpha=255};
                     border = 1;
                     bordercolor = {red = 0,green = 0,blue=0,alpha=0};
                     newline = false;
@@ -256,12 +283,12 @@ Instanceof,Clone,Create,New = (function()
                 self.tag = self.type;
                 self.father = nil;
                 self.children = {};
+
+                Event["OnKeyDown"] = Event["OnKeyDown"] + self;
+                Event["OnKeyUp"] = Event["OnKeyUp"] + self;
+                Event["OnInput"] = Event["OnInput"] + self;
             end
-    
-            function Component:isFocuse()
-                return self.isfocus;
-            end
-    
+            
             function Component:add(...)
                 local components = {...};
                 for i = 1, #components, 1 do
@@ -271,47 +298,91 @@ Instanceof,Clone,Create,New = (function()
                 return self;
             end
 
+            function Component:getIndex()
+                for i = 1, #self.father.children, 1 do
+                    if self == self.father.children[i] then
+                        return i;
+                    end
+                end
+            end
+
+            function Component:setFocus(bool)
+                if bool then
+                    self:onfocus();
+                else
+                    self:onblur();
+                end
+            end
+
             --获取焦点事件
             function Component:onfocus()
-                
+
             end
             --失去焦点事件
             function Component:onblur()
-                
+
             end
             --键盘抬起事件
-            function Component:keydown(keycode)
-    
+            function Component:keydown(inputs)
+
             end
             --键盘按下事件
-            function Component:keyup(keycode)
-    
+            function Component:keyup(inputs)
+
             end
             --键盘按下抬起事件
-            function Component:keypress(keycode)
-                
+            function Component:keypress(inputs)
+                if inputs[UI.KEY.UP] == true then
+                    local index = self:getIndex();
+                    if index == 1 then
+                        self:setFocus(false);
+                        self.father.children[#self.father.children]:setFocus(true);
+                    end
+                elseif inputs[UI.KEY.DOWN] == true then
+                    local index = self:getIndex();
+                    if index == #self.father.children then
+                        self:setFocus(false);
+                        self.father.children[1]:setFocus(true);
+                    end
+                elseif inputs[UI.KEY.LEFT] == true then
+                    if self.father~= nil then
+                        self:setFocus(false);
+                        self.father:setFocus(true);
+                    end
+                elseif inputs[UI.KEY.RIGHT] == true then
+                    if #self.children > 0 then
+                        self:setFocus(false);
+                        self.children[1]:setFocus(true);
+                    end
+                end
             end
-        
+
             function Component:paint(graphics)
-                --graphics.drawRect(self.x,self.y,self.width,self.height);
+                graphics.color = self.style.backgroundcolor;
+                graphics:drawRect(self.x,self.y,self.width,self.height);
+                if self.border > 0 then
+                    graphics.color = self.style.bordercolor;
+                end
+
+
             end
-    
+
             function Component:toString()
                 return self.x .. "_" .. self.y .. "_" .. self.width .. "_" .. self.height;
             end
-    
+
             Create(Component,"Component");
     end)();
 
     (function()
         local Frame = {};
-        function Frame:constructor(width,height)
-            self.super:constructor();
+        function Frame:constructor(width,height,id)
+            self.super:constructor(id);
             self.super.width = width or 300;
             self.super.height = height or 300;
             self.graphics = New("Graphics");
         end
-    
+
         function Frame:reset(component)
         local components = {};
         if component == nil then
@@ -369,7 +440,7 @@ Instanceof,Clone,Create,New = (function()
             i = i + 1;
         end
         end
-    
+
         function Frame:paint(component)
             if component == nil then
                 for i = 1, #self.children, 1 do
@@ -381,90 +452,149 @@ Instanceof,Clone,Create,New = (function()
                     self:paint(component.children[i]);
                 end
             end
+        
+        function Frame:on()
+
         end
-    
-        function Frame:findById(id,component)
-            component = component or self;
-            if id == component.id then
-                return component;
+        
+        end
+
+        function Frame:findById(id)
+            local function forEach(id,component)
+                if id == component.id then
+                    return component;
+                end
+                for i = 1, #component.children, 1 do
+                    local temp = forEach(id,component.children[i]);
+                    if temp~=nil then
+                        return temp;
+                    end
+                end
+                return nil;
             end
-            for i = 1, #component.children, 1 do
-                self:findById(id,component.children[i]);
-            end
-            return nil;
+            
+            return forEach(id,self);
         end
 
         function Frame:findByTag(tag)
-            
+            local components = {};
+
+            local function forEach(tag,component)
+                if component.tag == tag then
+                    table.insert(components,component);
+                end
+                for i = 1, #component.children, 1 do
+                    forEach(tag,component.children[i]);
+                end
+            end
+            forEach(tag,self);
+            return components;
         end
+
+        -- function Frame:keydown(inputs)
+        --     for i = 1, #self.children, 1 do
+        --         self.children[i]:keydown(inputs);
+        --     end
+        -- end
+
+        -- function Frame:keyup(inputs)
+        --     for i = 1, #self.children, 1 do
+        --         self.children[i]:keyup(inputs);
+        --     end
+        -- end
+
+        -- function Frame:keypress(inputs)
+        --     for i = 1, #self.children, 1 do
+        --         self.children[i]:keypress(inputs);
+        --     end
+        -- end
+
         Create(Frame,"Frame","Component");
     end)();
-    
+
     (function()
         local Lable = {};
-        
-        function Lable:constructor()
-            self.super(self.type);
+
+        function Lable:constructor(id)
+            self.super(id);
         end
-    
+
         function Lable:paint()
-    
+
         end
-    
+
         Create(Lable,"Lable","Component");
     end)();
-    
+
     (function()
         local Edit = {};
-        
-        function Edit:constructor()
-            self.super(self.type);
+
+        function Edit:constructor(id)
+            self.super(id);
         end
-    
+
         function Edit:paint(graphics)
-    
+
         end
-    
+
         Create(Edit,"Edit","Lable");
     end)();
-    
-    
+
+
     (function()
         local ListBox = {};
-        
-        function ListBox:constructor()
-            self.super(self.type);
+
+        function ListBox:constructor(id)
+            self.super(id);
         end
-    
+
         function ListBox:paint(graphics)
-    
+
         end
-    
+
         Create(ListBox,"ListBox","Component");
     end)();
-    
+
     (function()
         local Plane = {};
-        
-        function Plane:constructor()
-            self.super(self.type);
+
+        function Plane:constructor(id)
+            self.super(id);
         end
 
         function Plane:paint(graphics)
-            
+
         end
-    
+
         Create(Plane,"Plane","Component");
     end)();
-    
+
+
     Frame = New("Frame",300,300);
-    Component1 = New("Component");
+
+    Component1 = New("Component",2);
+    Component1.style.width = 30;
+    Component1.style.height = 30;
     Component1.style.left = 15;
     Component1.style.width = 15;
+    Component1.tag = "QWQ";
 
-    Component2 = New("Component");
+    Component2 = New("Component",1);
+    Component2.style.width = 30;
+    Component2.style.height = 30;
+    Component2.style.left = 15;
+    Component2.style.width = 15;
+    Component2.tag = "QWQ";
+
+    Component2.keyup = function(i)
+        print(i);
+    end
 
     Frame:add(Component1,Component2);
 
     Frame:reset();
-    Frame:paint();
+    --Frame:paint();
+
+        for i = 1, #Event["OnKeyUp"], 1 do
+            Event["OnKeyUp"][i].keyup(123);
+        end
