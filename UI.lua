@@ -20,15 +20,6 @@ Instanceof,Clone,Create,New = (function()
         end,
         __call = function(table,...)
             table:constructor(...);
-        end,
-        __tostring = function(table)
-            if table.toString ~= nil then
-                return table:toString();
-            end
-            return table.super:__tostring();
-        end,
-        toString = function(table)
-            return table.type;
         end
     };
 
@@ -36,7 +27,7 @@ Instanceof,Clone,Create,New = (function()
         if type(table) == "table" and  type(string) == "string" then
             local object = table;
             while object ~= nil do
-                if object.type() == string then
+                if object.type == string then
                     return true;
                 else
                     object = getmetatable(object);
@@ -217,23 +208,32 @@ Instanceof,Clone,Create,New = (function()
     Event = Event + "OnKeyUp";
     Event = Event + "OnInput";
 
-    -- function UI.Event:OnKeyDown(inputs)
-    --     for i = 1, #Event["OnKeyDown"], 1 do
-    --         Event["OnKeyDown"][i].keydown(inputs);
-    --     end
-    -- end
+    function UI.Event:OnKeyDown(inputs)
+        for i = 1, #Event["OnKeyDown"], 1 do
+            if Event["OnInput"][i].isfocus == true then
+                Event["OnKeyDown"][i]:keydown(inputs);
+                return;
+            end
+        end
+    end
 
-    -- function UI.Event:OnKeyUp (inputs)
-    --     for i = 1, #Event["OnKeyUp"], 1 do
-    --         Event["OnKeyUp"][i].keyup(inputs);
-    --     end
-    -- end
+    function UI.Event:OnKeyUp (inputs)
+        for i = 1, #Event["OnKeyUp"], 1 do
+            if Event["OnInput"][i].isfocus == true then
+                Event["OnKeyUp"][i]:keyup(inputs);
+                return;
+            end
+        end
+    end
 
-    -- function UI.Event:OnInput(inputs)
-    --     for i = 1, #Event["OnInput"], 1 do
-    --         Event["OnInput"][i].keypress(inputs);
-    --     end
-    -- end
+    function UI.Event:OnInput(inputs)
+        for i = 1, #Event["OnInput"], 1 do
+            if Event["OnInput"][i].isfocus == true then
+                Event["OnInput"][i]:keyinput(inputs);
+                return;
+            end
+        end
+    end
 
 
     (function ()
@@ -253,6 +253,13 @@ Instanceof,Clone,Create,New = (function()
 
         function Graphics:drawText(x,y,string)
 
+        end
+
+        function Graphics:clean()
+            for i = 1, #self.root, 1 do
+                self.root[i]:Hide();
+            end
+            self.root = {};
         end
 
         Create(Graphics,"Graphics");
@@ -281,7 +288,7 @@ Instanceof,Clone,Create,New = (function()
                     letterspacing = 0;
                 };
                 self.tag = self.type;
-                self.father = nil;
+                self.father = 0;
                 self.children = {};
 
                 Event["OnKeyDown"] = Event["OnKeyDown"] + self;
@@ -300,18 +307,19 @@ Instanceof,Clone,Create,New = (function()
 
             function Component:getIndex()
                 for i = 1, #self.father.children, 1 do
-                    if self == self.father.children[i] then
+                    if self.id == self.father.children[i].id then
                         return i;
                     end
                 end
             end
 
             function Component:setFocus(bool)
-                if bool then
+                if bool == true then
                     self:onfocus();
                 else
                     self:onblur();
                 end
+                self.isfocus = bool;
             end
 
             --获取焦点事件
@@ -328,24 +336,28 @@ Instanceof,Clone,Create,New = (function()
             end
             --键盘按下事件
             function Component:keyup(inputs)
-
-            end
-            --键盘按下抬起事件
-            function Component:keypress(inputs)
                 if inputs[UI.KEY.UP] == true then
-                    local index = self:getIndex();
-                    if index == 1 then
+                    if self.father~= 0 then
+                        local index = self:getIndex();
                         self:setFocus(false);
-                        self.father.children[#self.father.children]:setFocus(true);
+                        if index == 1 then
+                            self.father.children[#self.father.children]:setFocus(true);
+                        else
+                            self.father.children[index - 1]:setFocus(true);
+                        end
                     end
                 elseif inputs[UI.KEY.DOWN] == true then
-                    local index = self:getIndex();
-                    if index == #self.father.children then
+                    if self.father~= 0 then
+                        local index = self:getIndex();
                         self:setFocus(false);
-                        self.father.children[1]:setFocus(true);
+                        if index == #self.father.children then
+                             self.father.children[1]:setFocus(true);
+                        else
+                             self.father.children[index + 1]:setFocus(true);
+                        end
                     end
                 elseif inputs[UI.KEY.LEFT] == true then
-                    if self.father~= nil then
+                    if self.father~= 0 then
                         self:setFocus(false);
                         self.father:setFocus(true);
                     end
@@ -356,19 +368,21 @@ Instanceof,Clone,Create,New = (function()
                     end
                 end
             end
+            --键盘按下抬起事件
+            function Component:keyinput(inputs)
+
+            end
 
             function Component:paint(graphics)
                 graphics.color = self.style.backgroundcolor;
                 graphics:drawRect(self.x,self.y,self.width,self.height);
-                if self.border > 0 then
+                if self.style.border > 0 then
                     graphics.color = self.style.bordercolor;
                 end
-
-
             end
 
-            function Component:toString()
-                return self.x .. "_" .. self.y .. "_" .. self.width .. "_" .. self.height;
+            function Component:repaint()
+                self.father:repaint();
             end
 
             Create(Component,"Component");
@@ -378,8 +392,8 @@ Instanceof,Clone,Create,New = (function()
         local Frame = {};
         function Frame:constructor(width,height,id)
             self.super:constructor(id);
-            self.super.width = width or 300;
-            self.super.height = height or 300;
+            self.super.width = width or UI.ScreenSize().width;
+            self.super.height = height or UI.ScreenSize().height;
             self.graphics = New("Graphics");
         end
 
@@ -452,11 +466,11 @@ Instanceof,Clone,Create,New = (function()
                     self:paint(component.children[i]);
                 end
             end
-        
-        function Frame:on()
-
         end
-        
+
+        function Frame:repaint()
+            self.graphics:clean();
+            self:paint();
         end
 
         function Frame:findById(id)
@@ -491,23 +505,17 @@ Instanceof,Clone,Create,New = (function()
             return components;
         end
 
-        -- function Frame:keydown(inputs)
-        --     for i = 1, #self.children, 1 do
-        --         self.children[i]:keydown(inputs);
-        --     end
-        -- end
+        function Frame:keydown(inputs)
 
-        -- function Frame:keyup(inputs)
-        --     for i = 1, #self.children, 1 do
-        --         self.children[i]:keyup(inputs);
-        --     end
-        -- end
+        end
 
-        -- function Frame:keypress(inputs)
-        --     for i = 1, #self.children, 1 do
-        --         self.children[i]:keypress(inputs);
-        --     end
-        -- end
+        function Frame:keyup(inputs)
+
+        end
+
+        function Frame:keypress(inputs)
+
+        end
 
         Create(Frame,"Frame","Component");
     end)();
@@ -572,29 +580,38 @@ Instanceof,Clone,Create,New = (function()
 
     Frame = New("Frame",300,300);
 
-    Component1 = New("Component",2);
+    Component1 = New("Component",1);
     Component1.style.width = 30;
     Component1.style.height = 30;
-    Component1.style.left = 15;
-    Component1.style.width = 15;
-    Component1.tag = "QWQ";
 
-    Component2 = New("Component",1);
+    Component2 = New("Component",2);
     Component2.style.width = 30;
     Component2.style.height = 30;
-    Component2.style.left = 15;
-    Component2.style.width = 15;
-    Component2.tag = "QWQ";
 
-    Component2.keyup = function(i)
-        print(i);
-    end
+    Component3 = New("Component",3);
+    Component3.style.width = 30;
+    Component3.style.height = 30;
 
-    Frame:add(Component1,Component2);
+    Frame:add(Component1,Component2,Component3);
+    Frame:setFocus(true);
 
     Frame:reset();
-    --Frame:paint();
+    Frame:paint();
 
-        for i = 1, #Event["OnKeyUp"], 1 do
-            Event["OnKeyUp"][i].keyup(123);
-        end
+    function Component1:onfocus()
+        self.style.backgroundcolor = {red = 251,green = 251,blue=251,alpha=255};
+        self:repaint();
+    end
+    function Component1:onblur()
+        self.style.backgroundcolor = {red = 0,green = 0,blue=0,alpha=255};
+        self:repaint();
+    end
+
+    function Component2:onfocus()
+        self.style.backgroundcolor = {red = 251,green = 251,blue=251,alpha=255};
+        self:repaint();
+    end
+    function Component2:onblur()
+        self.style.backgroundcolor = {red = 0,green = 0,blue=0,alpha=255};
+        self:repaint();
+    end
