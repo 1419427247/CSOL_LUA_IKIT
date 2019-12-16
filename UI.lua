@@ -1,6 +1,3 @@
-
-
-
 Clone,Create,New = (function()
 
     local class = {};
@@ -49,7 +46,6 @@ Clone,Create,New = (function()
             object.super = clone(getmetatable(talbe))
             object.__newindex = object.super.__newindex;
             object.__call = object.super.__call;
-            object.__tostring = object.super.__tostring;
             object.__index = object;
             setmetatable(object,object.super);
         end
@@ -106,8 +102,9 @@ Clone,Create,New = (function()
                     for i = 1, string.length, 1 do
                         table.insert(self.array,string.array[i]);
                     end
-                    self.length = string.length;
+                    self.length =  string.length;
                 end
+
             end
 
             function String:charAt(index)
@@ -143,6 +140,26 @@ Clone,Create,New = (function()
                     end
                     return true;
                 end
+            end
+
+            function String:__add(string)
+                if type(string) == "string" then
+                    local currentIndex = 1;
+                    while currentIndex <= #string do
+                        self.length = self.length +1;
+                        local cs = charSize(string, currentIndex);
+                        table.insert(self.array,string.sub(string,currentIndex,currentIndex+cs-1));
+                        currentIndex = currentIndex + cs;
+                        self.length =   self.length + 1;
+                    end
+                elseif type(string) == "table" then
+
+                    for i = 1, string.length, 1 do
+                        table.insert(self.array,string.array[i]);
+                    end
+                    self.length = self.length +  string.length;
+                end
+                return self;
             end
 
             function String:__call(index)
@@ -562,11 +579,11 @@ Clone,Create,New = (function()
             end
 
             function Component:OnKeyDown(inputs)
-                print(inputs);
+
             end
             
             function Component:OnKeyDown(inputs)
-                print(inputs);                
+
             end
 
 
@@ -602,19 +619,26 @@ Clone,Create,New = (function()
         Create(Lable,"Lable","Component");
     end)();
 
-    -- (function()
-    --     local Edit = {};
+    (function()
+        local Edit = {};
 
-    --     function Edit:constructor(id)
-    --         self.super(id);
-    --     end
+        function Edit:constructor(id)
+            self.super(id);
+            self.text = New("String");
+        end
 
-    --     function Edit:paint(graphics)
+        function Edit:paint(graphics)
+            self.super:paint(graphics);
+        end
 
-    --     end
+        function Edit:OnKeyDown(inputs)
+            -- if inputs[UI.key] then
+                -- 
+            -- end
+        end
 
-    --     Create(Edit,"Edit","Lable");
-    -- end)();
+        Create(Edit,"Edit","Lable");
+    end)();
 
 
     -- (function()
@@ -663,3 +687,17 @@ Clone,Create,New = (function()
     Event["OnKeyUp"](123);
 
     Component1:setFocus(true);
+
+
+
+    str1 = New("String","QWQ阿");
+
+    str2 = New("String","QWQ");
+
+    str1 = str1 + str2;
+
+    for i = 1, str1.length, 2 do
+        print(string.byte(str1:charAt(i)));
+    end
+
+    print(table.concat(str1.array));
