@@ -68,6 +68,7 @@ Clone,Create,New = (function()
 
     local function new(name,...)
         local object = clone(class[name]);
+        object.type = name;
         object:constructor(...);
         return setmetatable({},object);
     end
@@ -123,6 +124,25 @@ Clone,Create,New = (function()
                 return self.length == 0;
             end
 
+            function String:append(string)
+                if type(string) == "string" then
+                    local currentIndex = 1;
+                    while currentIndex <= #string do
+                        self.length = self.length +1;
+                        local cs = charSize(string, currentIndex);
+                        table.insert(self.array,string.sub(string,currentIndex,currentIndex+cs-1));
+                        currentIndex = currentIndex + cs;
+                        self.length =   self.length + 1;
+                    end
+                elseif type(string) == "table" then
+
+                    for i = 1, string.length, 1 do
+                        table.insert(self.array,string.array[i]);
+                    end
+                    self.length = self.length +  string.length;
+                end
+            end
+
             function String:toString()
                 return table.concat(self.array);
             end
@@ -143,22 +163,7 @@ Clone,Create,New = (function()
             end
 
             function String:__add(string)
-                if type(string) == "string" then
-                    local currentIndex = 1;
-                    while currentIndex <= #string do
-                        self.length = self.length +1;
-                        local cs = charSize(string, currentIndex);
-                        table.insert(self.array,string.sub(string,currentIndex,currentIndex+cs-1));
-                        currentIndex = currentIndex + cs;
-                        self.length =   self.length + 1;
-                    end
-                elseif type(string) == "table" then
-
-                    for i = 1, string.length, 1 do
-                        table.insert(self.array,string.array[i]);
-                    end
-                    self.length = self.length +  string.length;
-                end
+                self:append(string);
                 return self;
             end
 
@@ -216,6 +221,10 @@ Clone,Create,New = (function()
         end
 
         function Event:addEventListener(type,event)
+            if type(event) ~= "function" then
+                error("It is not a function");
+                    return;
+            end
             table.insert(self[type],event);
         end
 
@@ -243,13 +252,13 @@ Clone,Create,New = (function()
     Event = Event + "OnKeyUp";
 
 
-    -- function UI.Event:OnKeyDown(inputs)
-    --     Event["OnKeyDown"](inputs);
-    -- end
+    function UI.Event:OnKeyDown(inputs)
+        Event["OnKeyDown"](inputs);
+    end
 
-    -- function UI.Event:OnKeyUp (inputs)
-    --     Event["OnKeyUp"](inputs);
-    -- end
+    function UI.Event:OnKeyUp (inputs)
+        Event["OnKeyUp"](inputs);
+    end
 
 
     (function ()
@@ -353,6 +362,7 @@ Clone,Create,New = (function()
                 self.root[i]:Hide();
             end
             self.root = {};
+            collectgarbage("collect");
         end
 
         Create(Graphics,"Graphics");
@@ -364,8 +374,8 @@ Clone,Create,New = (function()
         function Frame:constructor(width,height)
             self.x=0;
             self.y=0;
-            self.width = width or 100--UI.ScreenSize().width;
-            self.height = height or 100--UI.ScreenSize().height;
+            self.width = width or UI.ScreenSize().width;
+            self.height = height or UI.ScreenSize().height;
             self.graphics = New("Graphics");
             self.children = {};
 
@@ -465,6 +475,7 @@ Clone,Create,New = (function()
         end
 
         function Frame:repaint()
+            print(#self.graphics.root)
             self.graphics:clean();
             self:paint();
         end
@@ -534,24 +545,15 @@ Clone,Create,New = (function()
                     newline = false,
                     fontsize = 15,
                     letterspacing = 50,
-                    textalign = "center",
+                    textalign = "left",
                 };
                 self.father = 0;
                 self.children = {};
             end
 
-            function Component:add(...)
-                local components = {...};
-                for i = 1, #components, 1 do
-                    components[i].father = self;
-                    table.insert(self.children,components[i]);
-                end
-                return self;
-            end
-
             function Component:paint(graphics)
-                -- graphics.color = self.style.backgroundcolor;
-                -- graphics:drawRect(self.x,self.y,self.width,self.height);
+                graphics.color = self.style.backgroundcolor;
+                graphics:drawRect(self.x,self.y,self.width,self.height);
                 -- if self.style.border > 0 then
                 --     graphics.color = self.style.bordercolor;
                 --     graphics:drawRect(self.x,self.y,self.width,self.style.border);
@@ -562,11 +564,11 @@ Clone,Create,New = (function()
             end
 
             function Component:onBlur()
-                print(self.tag .. "lost");
+                
             end
 
             function Component:onFocus()
-                print(self.tag .. "get");
+
             end
 
             function Component:setFocus(bool)
@@ -581,17 +583,16 @@ Clone,Create,New = (function()
             function Component:OnKeyDown(inputs)
 
             end
-            
-            function Component:OnKeyDown(inputs)
+
+            function Component:OnKeyUp(inputs)
 
             end
 
 
             function Component:repaint()
-                print(self.tag)
                 self.father:repaint();
             end
-            
+
             Create(Component,"Component");
     end)();
 
@@ -602,18 +603,21 @@ Clone,Create,New = (function()
             self.super(id);
             self.tag = "Lable";
             self.text = New("String",text);
+            self.color = {red = 0,green = 0,blue=0,alpha=255};
+
         end
 
         function Lable:paint(graphics)
-            -- self.super:paint(graphics);
-            -- local w,h = graphics:getTextSize(self.style.fontsize,self.style.letterspacing,self.text);
-            -- if self.style.textalign == "center" then
-            --     graphics:drawText(self.x + (self.width - w)/2,self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
-            -- elseif self.style.textalign == "left" then
-            --     graphics:drawText(self.x,self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
-            -- elseif self.style.textalign == "rigth" then
-            --     graphics:drawText(self.x + (self.width - w),self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
-            -- end
+            self.super:paint(graphics);
+            graphics.color = self.color;
+            local w,h = graphics:getTextSize(self.style.fontsize,self.style.letterspacing,self.text);
+            if self.style.textalign == "center" then
+                graphics:drawText(self.x + (self.width - w)/2,self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
+            elseif self.style.textalign == "left" then
+                graphics:drawText(self.x,self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
+            elseif self.style.textalign == "rigth" then
+                graphics:drawText(self.x + (self.width - w),self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
+            end
         end
 
         Create(Lable,"Lable","Component");
@@ -624,7 +628,6 @@ Clone,Create,New = (function()
 
         function Edit:constructor(id)
             self.super(id);
-            self.text = New("String");
         end
 
         function Edit:paint(graphics)
@@ -632,9 +635,25 @@ Clone,Create,New = (function()
         end
 
         function Edit:OnKeyDown(inputs)
-            -- if inputs[UI.key] then
-                -- 
-            -- end
+            self.super:OnKeyDown(inputs);
+            for key, value in pairs(inputs) do
+                if value == true then
+                    if key >=0 and key <= 9 then
+                        self.text:append(string.char(key+49));
+                    end
+                    if key >= 10 and key <= 36 then
+                        self.text:append(string.char(key+87));
+                    end
+                    if key == 37 then
+                        self.text:append(' ');
+                    end
+                end
+            end
+            self:repaint();
+        end
+
+        function Edit:getText()
+            return self.text;
         end
 
         Create(Edit,"Edit","Lable");
@@ -662,8 +681,33 @@ Clone,Create,New = (function()
             self.super(id);
         end
 
-        function Plane:paint(graphics)
+        function Plane:add(...)
+            local components = {...};
+            for i = 1, #components, 1 do
+                components[i].father = self;
+                table.insert(self.children,components[i]);
+            end
+            return self;
+        end
 
+        function Plane:OnKeyDown(inputs)
+            
+        end
+
+        function Plane:OnKeyUp(inputs)
+            if inputs[UI.Key.UP] == true then
+                
+            elseif inputs[UI.Key.DOWN] == true then
+
+            elseif inputs[UI.Key.LEFT] == true then
+
+            elseif inputs[UI.Key.RIGHT] == true then
+                
+            end
+        end
+
+        function Plane:paint(graphics)
+            self.super:paint(graphics);
         end
 
         Create(Plane,"Plane","Component");
@@ -672,32 +716,23 @@ Clone,Create,New = (function()
 
     Frame = New("Frame");
     Frame:add(
-        New("Lable",1,"qwq")
+        New("Edit",1),
+        New("Lable",2,"abc")
     );
 
     Component1 = Frame:findById(1);
     Component1.style.top = 40;
-    Component1.style.width = 100;
-    Component1.style.height = 8;
+    Component1.style.width = 30;
+    Component1.style.height = 20;
+
+    Component2 = Frame:findById(2);
+    Component2.style.width = 30;
+    Component2.style.height = 20;
+    Component2.style.newline = true;
+
+    print(Component1.type);
 
     Frame:reset();
     Frame:paint();
 
-    Event["OnKeyDown"](123);
-    Event["OnKeyUp"](123);
-
     Component1:setFocus(true);
-
-
-
-    str1 = New("String","QWQ阿");
-
-    str2 = New("String","QWQ");
-
-    str1 = str1 + str2;
-
-    for i = 1, str1.length, 2 do
-        print(string.byte(str1:charAt(i)));
-    end
-
-    print(table.concat(str1.array));
