@@ -512,7 +512,7 @@ Clone,Create,New = (function()
                     height = 0,
                     position = "relative",
                     backgroundcolor = {red = 255,green = 255,blue=255,alpha=255},
-                    border = 1,
+                    border = {top = 0,left = 0,right = 0,bottom = 0},
                     bordercolor = {red = 0,green = 0,blue=0,alpha=255},
                     newline = false,
                     fontsize = 15,
@@ -544,12 +544,29 @@ Clone,Create,New = (function()
                 -- end
             end
 
+            function Component:onBlur()
+                print(self.tag .. "lost");
+            end
+
+            function Component:onFocus()
+                print(self.tag .. "get");
+            end
+
+            function Component:setFocus(bool)
+                self.isfocus = bool;
+                if bool == true then
+                    self:onFocus();
+                else
+                    self:onBlur();
+                end
+            end
+
             function Component:OnKeyDown(inputs)
-                
+                print(inputs);
             end
             
             function Component:OnKeyDown(inputs)
-                
+                print(inputs);                
             end
 
 
@@ -641,3 +658,8 @@ Clone,Create,New = (function()
 
     Frame:reset();
     Frame:paint();
+
+    Event["OnKeyDown"](123);
+    Event["OnKeyUp"](123);
+
+    Component1:setFocus(true);
