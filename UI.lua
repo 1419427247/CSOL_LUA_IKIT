@@ -3,6 +3,7 @@ Clone,Create,New = (function()
     local class = {};
 
     class["Object"] = {
+        type = "Object",
         __newindex = function (table,key,value)
             local tobject = table;
             while tobject ~= nil do
@@ -41,12 +42,11 @@ Clone,Create,New = (function()
         for key, value in pairs(talbe) do
             object[key] = value;
         end
-
+        object.__index = object;
         if getmetatable(talbe) ~= nil then
             object.super = clone(getmetatable(talbe))
             object.__newindex = object.super.__newindex;
             object.__call = object.super.__call;
-            object.__index = object;
             setmetatable(object,object.super);
         end
         return object;
@@ -67,10 +67,10 @@ Clone,Create,New = (function()
     end
 
     local function new(name,...)
-        local object = clone(class[name]);
+        local object = setmetatable({},clone(class[name]));
         object.type = name;
         object:constructor(...);
-        return setmetatable({},object);
+        return object;
     end
 
     return clone,create,new;
@@ -124,20 +124,19 @@ Clone,Create,New = (function()
                 return self.length == 0;
             end
 
-            function String:append(string)
+            function String:insert(string,pos)
+                pos = pos or #self.array + 1;
                 if type(string) == "string" then
                     local currentIndex = 1;
                     while currentIndex <= #string do
-                        self.length = self.length +1;
                         local cs = charSize(string, currentIndex);
-                        table.insert(self.array,string.sub(string,currentIndex,currentIndex+cs-1));
+                        table.insert(self.array,pos,string.sub(string,currentIndex,currentIndex+cs-1));
                         currentIndex = currentIndex + cs;
-                        self.length =   self.length + 1;
+                        self.length = self.length + 1;
                     end
                 elseif type(string) == "table" then
-
                     for i = 1, string.length, 1 do
-                        table.insert(self.array,string.array[i]);
+                        table.insert(self.array,pos,string.array[i]);
                     end
                     self.length = self.length +  string.length;
                 end
@@ -163,8 +162,14 @@ Clone,Create,New = (function()
             end
 
             function String:__add(string)
-                self:append(string);
+                self:insert(string);
                 return self;
+            end
+
+            function String:__concat(string)
+                local str1 = New("String",self);
+                str1:insert(string);
+                return str1;
             end
 
             function String:__call(index)
@@ -351,22 +356,21 @@ Clone,Create,New = (function()
             end
         end
 
-        function Graphics:getTextSize(size,letterSpacing,string)
-            local width = (string.length - 1) * letterSpacing + 3 * size;
-            local height = 5 * size;
+        function Graphics:getTextSize(text,fontsize,letterspacing)
+            local width = (text.length - 1) * letterspacing + 3 * fontsize;
+            local height = 5 * fontsize;
             return width,height;
         end
 
         function Graphics:clean()
             for i = 1, #self.root, 1 do
-                self.root[i]:Hide();
+                self.root[i] = nil;
             end
             self.root = {};
             collectgarbage("collect");
         end
 
         Create(Graphics,"Graphics");
-
     end)();
 
     (function()
@@ -378,12 +382,12 @@ Clone,Create,New = (function()
             self.height = height or UI.ScreenSize().height;
             self.graphics = New("Graphics");
             self.children = {};
-
+            self.focused = 0;
             Event["OnKeyDown"] = Event["OnKeyDown"] + function (inputs)
-                self:OnKeyDown(inputs);
+                self:onKeyDown(inputs);
             end;
             Event["OnKeyUp"] = Event["OnKeyUp"] + function (inputs)
-                self:OnKeyUp(inputs);
+                self:onKeyUp(inputs);
             end;
         end
 
@@ -396,64 +400,19 @@ Clone,Create,New = (function()
             return self;
         end
 
-        function Frame:reset(component)
-            local components = {};
-            if component == nil then
-                for i = 1, #self.children, 1 do
-                    table.insert(components,self.children[i]);
-                end
-            else
-                table.insert(components,component);
+        function Frame:setFocus(component)
+            if self.focused ~= 0 then
+                self.focused:onBlur();
             end
-
-            local i = 1;
-            while i < #components + 1 do
-                if components[i].style.position == "relative" then
-                    components[i].width = components[i].father.width * (components[i].style.width /100);
-                    components[i].height = components[i].father.height * (components[i].style.height /100);
-
-                    if i == 1 then
-                        components[i].x = self.x + components[i].father.width * (components[i].style.left /100);
-                        components[i].y = self.y + components[i].father.height * (components[i].style.top /100);
-                    else
-                        if components[i].style.newline == true then
-                            local j = i - 1;
-                            local temp = components[j];
-                            while temp.father == components[j].father do
-                                if temp.style.newline == true then
-                                    components[i].x = components[i].father.width * (components[i].style.left /100);
-                                    components[i].y = temp.y + temp.height + components[i].father.height * (components[i].style.top /100);
-                                    break;
-                                end
-                                j = j - 1;
-                                if j < 1 then
-                                    break;
-                                end
-                                temp = components[j];
-                            end
-                            if j == 0 then
-                                components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
-                                components[i].y = components[i].father.children[1].y + components[i].father.children[1].height + components[i].father.height * (components[i].style.top /100);
-                            end
-                        else
-                            components[i].x = components[i - 1].x + components[i - 1].width + components[i].father.width * (components[i].style.left /100);
-                            components[i].y = components[i - 1].y + components[i].father.height * (components[i].style.top /100);
-                        end
-                    end
-
-                elseif components[i].style.position == "absolute" then
-                    components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
-                    components[i].y = components[i].father.y + components[i].father.height * (components[i].style.top /100);
-                end
-
-                for j = 1, #components[i].children, 1 do
-                    table.insert(components,components[i].children[j]);
-                end
-
-                i = i + 1;
-            end
+            self.focused = component;
+            self.focused:onFocus();
         end
 
+        function Frame:close()
+            self.focused = 0;
+            self.graphics:clean();
+        end
+        
         function Frame:forEach(fun)
             local function forEach(component)
                 if fun(component) == false then
@@ -468,14 +427,60 @@ Clone,Create,New = (function()
             end
         end
 
+        function Frame:reset(components)
+            local components = components or self.children;
+                for i = 1, #components, 1 do
+                    if components[i].style.position == "relative" then
+                        components[i].width = components[i].father.width * (components[i].style.width /100);
+                        components[i].height = components[i].father.height * (components[i].style.height /100);
+                        if i == 1 then
+                            components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
+                            components[i].y = components[i].father.y + components[i].father.height * (components[i].style.top /100);
+                        else
+                            if components[i].style.newline == true then
+                                local j = i - 1;
+                                local temp = components[j];
+                                while temp.father == components[j].father do
+                                    if temp.style.newline == true then
+                                        components[i].x = components[i].father.width * (components[i].style.left /100);
+                                        components[i].y = temp.y + temp.height + components[i].father.height * (components[i].style.top /100);
+                                        break;
+                                    end
+                                    j = j - 1;
+                                    if j < 1 then
+                                        break;
+                                    end
+                                    temp = components[j];
+                                end
+                                if j == 0 then
+                                    components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
+                                    components[i].y = components[i].father.children[1].y + components[i].father.children[1].height + components[i].father.height * (components[i].style.top /100);
+                                end
+                            else
+                                components[i].x = components[i - 1].x + components[i - 1].width + components[i].father.width * (components[i].style.left /100);
+                                components[i].y = components[i - 1].y + components[i].father.height * (components[i].style.top /100);
+                            end
+                        end
+                    elseif components[i].style.position == "absolute" then
+                        components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
+                        components[i].y = components[i].father.y + components[i].father.height * (components[i].style.top /100);
+                    end
+                end
+
+                for i = 1, #components,1 do
+                    self:reset(components[i].children);
+                end
+        end
+
         function Frame:paint()
             self:forEach(function(component)
-                component:paint(self.graphics);
+                if component.visible == true then
+                    component:paint(self.graphics);
+                end
             end);
         end
 
         function Frame:repaint()
-            print(#self.graphics.root)
             self.graphics:clean();
             self:paint();
         end
@@ -501,22 +506,16 @@ Clone,Create,New = (function()
             return components;
         end
 
-        function Frame:OnKeyDown(inputs)
-            self:forEach(function(component)
-                if component.isfocus == true then
-                    component:OnKeyDown(inputs)
-                    return false;
-                end
-            end);
+        function Frame:onKeyDown(inputs)
+            if self.focused ~= 0 then
+                self.focused:onKeyDown(inputs)
+            end
         end
 
-        function Frame:OnKeyUp(inputs)
-            self:forEach(function(component)
-                if component.isfocus == true then
-                    component:OnKeyUp(inputs)
-                    return false;
-                end
-            end);
+        function Frame:onKeyUp(inputs)
+            if self.focused ~= 0 then
+                self.focused:onKeyUp(inputs)
+            end
         end
 
         Create(Frame,"Frame");
@@ -527,12 +526,12 @@ Clone,Create,New = (function()
             local Component = {};
             function Component:constructor(id)
                 self.id = id;
-                self.tag = "Component";
+                self.tag = self.type;
+                self.visible = true;
                 self.x = 0;
                 self.y = 0;
                 self.width = 0;
                 self.height = 0;
-                self.isfocus = false;
                 self.style = {
                     left = 0,
                     top = 0,
@@ -540,54 +539,69 @@ Clone,Create,New = (function()
                     height = 0,
                     position = "relative",
                     backgroundcolor = {red = 255,green = 255,blue=255,alpha=255},
-                    border = {top = 0,left = 0,right = 0,bottom = 0},
+                    border = {top = 1,left = 1,right = 1,bottom = 1},
                     bordercolor = {red = 0,green = 0,blue=0,alpha=255},
                     newline = false,
-                    fontsize = 15,
-                    letterspacing = 50,
+                    fontsize = 5,
+                    letterspacing = 25,
                     textalign = "left",
                 };
                 self.father = 0;
                 self.children = {};
             end
 
-            function Component:paint(graphics)
-                graphics.color = self.style.backgroundcolor;
-                graphics:drawRect(self.x,self.y,self.width,self.height);
-                -- if self.style.border > 0 then
-                --     graphics.color = self.style.bordercolor;
-                --     graphics:drawRect(self.x,self.y,self.width,self.style.border);
-                --     graphics:drawRect(self.x + self.width - self.style.border,self.y,self.style.border,self.height);
-                --     graphics:drawRect(self.x,self.y + self.height - self.style.border,self.width,self.style.border);
-                --     graphics:drawRect(self.x,self.y,self.style.border,self.height);
-                -- end
-            end
-
-            function Component:onBlur()
-                
-            end
-
-            function Component:onFocus()
-
-            end
-
-            function Component:setFocus(bool)
-                self.isfocus = bool;
-                if bool == true then
-                    self:onFocus();
-                else
-                    self:onBlur();
+            function Component:getIndex()
+                for i = 1, #self.father.children, 1 do
+                    if self.father.children[i] == self then
+                        return i;
+                    end
                 end
             end
 
-            function Component:OnKeyDown(inputs)
+            function Component:paint(graphics)
+                graphics.color = self.style.backgroundcolor;
+                graphics:drawRect(self.x,self.y,self.width,self.height);
+
+                graphics.color = self.style.bordercolor;
+                if self.style.border.top > 0 then
+                    graphics:drawRect(self.x,self.y,self.width,self.style.border.top);
+                end
+                if self.style.border.right > 0 then
+                    graphics:drawRect(self.x + self.width - self.style.border.right,self.y,self.style.border.right,self.height);
+                end
+                if self.style.border.bottom > 0 then
+                    graphics:drawRect(self.x,self.y + self.height - self.style.border.bottom,self.width,self.style.border.bottom);
+                end
+                if self.style.border.left > 0 then
+                    graphics:drawRect(self.x,self.y,self.style.border.left,self.height);
+                end
+            end
+
+            function Component:onBlur()
+                self.style.backgroundcolor.red = self.style.backgroundcolor.red - 128;
+                self.style.backgroundcolor.green = self.style.backgroundcolor.green - 128;
+                self.style.backgroundcolor.blue = self.style.backgroundcolor.blue - 128;
+                self:repaint();
+            end
+
+            function Component:onFocus()
+                self.style.backgroundcolor.red = self.style.backgroundcolor.red + 128;
+                self.style.backgroundcolor.green = self.style.backgroundcolor.green + 128;
+                self.style.backgroundcolor.blue = self.style.backgroundcolor.blue + 128;
+                self:repaint();
+            end
+
+            function Component:onKeyDown(inputs)
 
             end
 
-            function Component:OnKeyUp(inputs)
+            function Component:onKeyUp(inputs)
 
             end
 
+            function Component:setFocus(component)
+                self.super:setFocus(component);
+            end
 
             function Component:repaint()
                 self.father:repaint();
@@ -601,7 +615,6 @@ Clone,Create,New = (function()
 
         function Lable:constructor(id,text)
             self.super(id);
-            self.tag = "Lable";
             self.text = New("String",text);
             self.color = {red = 0,green = 0,blue=0,alpha=255};
 
@@ -610,7 +623,7 @@ Clone,Create,New = (function()
         function Lable:paint(graphics)
             self.super:paint(graphics);
             graphics.color = self.color;
-            local w,h = graphics:getTextSize(self.style.fontsize,self.style.letterspacing,self.text);
+            local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
             if self.style.textalign == "center" then
                 graphics:drawText(self.x + (self.width - w)/2,self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
             elseif self.style.textalign == "left" then
@@ -628,25 +641,63 @@ Clone,Create,New = (function()
 
         function Edit:constructor(id)
             self.super(id);
+            self.cursor = 1;
         end
 
         function Edit:paint(graphics)
             self.super:paint(graphics);
+            local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
+
+            if self.style.textalign == "center" then
+                graphics:drawRect(self.x + (self.width - w)/2 + (self.cursor - 1) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+                self.y + (self.height - h) / 2,
+                self.style.fontsize / 2,
+                self.style.fontsize * 5);
+            elseif self.style.textalign == "left" then
+                graphics:drawRect(self.x + (self.cursor - 1) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+                self.y + (self.height - h) / 2,
+                self.style.fontsize / 2,
+                self.style.fontsize * 5);
+            elseif self.style.textalign == "rigth" then
+                graphics:drawRect(self.x + (self.cursor - 1) * self.style.letterspacing + (self.width - w) - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+                self.y + (self.height - h) / 2,
+                self.style.fontsize / 2,
+                self.style.fontsize * 5);
+            end
         end
 
-        function Edit:OnKeyDown(inputs)
-            self.super:OnKeyDown(inputs);
+        function Edit:onKeyDown(inputs)
+            self.super:onKeyDown(inputs);
             for key, value in pairs(inputs) do
                 if value == true then
-                    if key >=0 and key <= 9 then
-                        self.text:append(string.char(key+49));
+                    if key >=0 and key <= 8 then
+                        self.text:insert(string.char(key+49),self.cursor);
+                        self.cursor = self.cursor + 1;
                     end
-                    if key >= 10 and key <= 36 then
-                        self.text:append(string.char(key+87));
+                    if key == 9 then
+                        self.text:insert('0',self.cursor);
+                        self.cursor = self.cursor + 1;
+                    end
+                    if key >= 10 and key <= 35 then
+                        self.text:insert(string.char(key+87),self.cursor);
+                        self.cursor = self.cursor + 1;
                     end
                     if key == 37 then
-                        self.text:append(' ');
+                        self.text:insert(' ',self.cursor);
+                        self.cursor = self.cursor + 1;
                     end
+                    if key == 41 then
+                        if self.cursor > 1 then
+                            self.cursor = self.cursor - 1;
+                        end
+                    end
+                    if key == 42 then
+                        if self.cursor < self.text.length + 1 then
+                            print(self.text.length)
+                            self.cursor = self.cursor + 1;
+                        end
+                    end
+                    print(key)
                 end
             end
             self:repaint();
@@ -659,26 +710,36 @@ Clone,Create,New = (function()
         Create(Edit,"Edit","Lable");
     end)();
 
+       (function()
+        local Button = {};
 
-    -- (function()
-    --     local ListBox = {};
+        function Button:constructor(id,text)
+            self.super(id,text);
+        end
 
-    --     function ListBox:constructor(id)
-    --         self.super(id);
-    --     end
+        function Button:paint(graphics)
+            self.super:paint(graphics);
+        end
 
-    --     function ListBox:paint(graphics)
+        function Button:onKeyDown(inputs)
+            if inputs[UI.KEY.MOUSE1] == true then
+                self:onMouseClick();
+            end
+        end
 
-    --     end
+        function Button:onMouseClick()
+            
+        end
 
-    --     Create(ListBox,"ListBox","Component");
-    -- end)();
+        Create(Button,"Button","Lable");
+    end)();
 
     (function()
         local Plane = {};
 
         function Plane:constructor(id)
             self.super(id);
+            self.index = 1;
         end
 
         function Plane:add(...)
@@ -690,20 +751,58 @@ Clone,Create,New = (function()
             return self;
         end
 
-        function Plane:OnKeyDown(inputs)
-            
+        function Plane:onFocus()
+            if #self.children == 0 then
+                return;
+            end
+            self.children[self.index]:onFocus();
         end
 
-        function Plane:OnKeyUp(inputs)
-            if inputs[UI.Key.UP] == true then
-                
-            elseif inputs[UI.Key.DOWN] == true then
-
-            elseif inputs[UI.Key.LEFT] == true then
-
-            elseif inputs[UI.Key.RIGHT] == true then
-                
+        function Plane:onBlur()
+            if #self.children == 0 then
+                return;
             end
+            self.children[self.index]:onBlur();
+        end
+
+        function Plane:onKeyDown(inputs)
+            if #self.children == 0 then
+                return;
+            end
+            if inputs[UI.KEY.UP] == true then
+                self.children[self.index]:onBlur();
+                if self.index == 1 then
+                    self.index = #self.children;
+                else
+                    self.index = self.index - 1;
+                end
+                self.children[self.index]:onFocus();
+            elseif inputs[UI.KEY.DOWN] == true then
+                self.children[self.index]:onBlur();
+                if self.index == #self.children then
+                    self.index = 1;
+                else
+                    self.index = self.index + 1;
+                end
+                self.children[self.index]:onFocus();
+            elseif inputs[UI.KEY.MOUSE2] == true then
+                if self.father.type == "Plane" then
+                    self:setFocus(self.father);
+                end
+            elseif inputs[UI.KEY.MOUSE1] == true then
+                if self.children[self.index].type == "Plane" then
+                    self:setFocus(self.children[self.index]);
+                end
+            else
+                self.children[self.index]:onKeyDown(inputs);
+            end
+        end
+
+        function Plane:onKeyUp(inputs)
+            if #self.children == 0 then
+                return;
+            end
+            self.children[self.index]:onKeyUp(inputs);
         end
 
         function Plane:paint(graphics)
@@ -713,26 +812,51 @@ Clone,Create,New = (function()
         Create(Plane,"Plane","Component");
     end)();
 
+        (function()
+        local SelectBox = {};
+
+        function SelectBox:constructor(id)
+            self.super(id);
+            self.list = {};
+        end
+
+        function SelectBox:addItem()
+            
+        end
+
+        function SelectBox:paint(graphics)
+
+        end
+
+        Create(SelectBox,"SelectBox","Plane");
+    end)();
+
+
+
 
     Frame = New("Frame");
     Frame:add(
-        New("Edit",1),
-        New("Lable",2,"abc")
+        New("Plane",1):add(
+            New("Plane",2),
+            New("Plane",3)
+        )
     );
 
     Component1 = Frame:findById(1);
-    Component1.style.top = 40;
-    Component1.style.width = 30;
-    Component1.style.height = 20;
+    Component1.style.left = 20;
+    Component1.style.width = 60;
+    Component1.style.height = 30;
 
     Component2 = Frame:findById(2);
-    Component2.style.width = 30;
+    Component2.style.width = 50;
     Component2.style.height = 20;
-    Component2.style.newline = true;
 
-    print(Component1.type);
+    Component3 = Frame:findById(3);
+    Component3.style.width = 50;
+    Component3.style.height = 20;
+
+
 
     Frame:reset();
     Frame:paint();
-
-    Component1:setFocus(true);
+    Frame:setFocus(Component1);
