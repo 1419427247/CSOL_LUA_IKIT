@@ -544,7 +544,7 @@ Clone,Create,New = (function()
                     newline = false,
                     fontsize = 5,
                     letterspacing = 25,
-                    textalign = "left",
+                    textalign = "center",
                 };
                 self.father = 0;
                 self.children = {};
@@ -600,7 +600,7 @@ Clone,Create,New = (function()
             end
 
             function Component:setFocus(component)
-                self.super:setFocus(component);
+                self.father:setFocus(component);
             end
 
             function Component:repaint()
@@ -693,11 +693,9 @@ Clone,Create,New = (function()
                     end
                     if key == 42 then
                         if self.cursor < self.text.length + 1 then
-                            print(self.text.length)
                             self.cursor = self.cursor + 1;
                         end
                     end
-                    print(key)
                 end
             end
             self:repaint();
@@ -752,48 +750,64 @@ Clone,Create,New = (function()
         end
 
         function Plane:onFocus()
-            if #self.children == 0 then
-                return;
+            if #self.children > 0 then
+                self.children[self.index]:onFocus();
             end
-            self.children[self.index]:onFocus();
+            self.style.border.left = self.style.border.left + 5;
+            self.style.border.right = self.style.border.right + 5;
+            self.style.border.top = self.style.border.top + 5;
+            self.style.border.bottom = self.style.border.bottom + 5;
+            self:repaint();
         end
 
         function Plane:onBlur()
-            if #self.children == 0 then
-                return;
+            if #self.children > 0 then
+                self.children[self.index]:onBlur();
             end
-            self.children[self.index]:onBlur();
+            self.style.border.left = self.style.border.left - 5;
+            self.style.border.right = self.style.border.right - 5;
+            self.style.border.top = self.style.border.top - 5;
+            self.style.border.bottom = self.style.border.bottom - 5;
+            self:repaint();
         end
 
         function Plane:onKeyDown(inputs)
-            if #self.children == 0 then
-                return;
-            end
             if inputs[UI.KEY.UP] == true then
-                self.children[self.index]:onBlur();
-                if self.index == 1 then
-                    self.index = #self.children;
-                else
-                    self.index = self.index - 1;
+                if #self.children > 0 then
+                    self.children[self.index]:onBlur();
+                    if self.index == 1 then
+                        self.index = #self.children;
+                    else
+                        self.index = self.index - 1;
+                    end
+                    self.children[self.index]:onFocus();
                 end
-                self.children[self.index]:onFocus();
-            elseif inputs[UI.KEY.DOWN] == true then
-                self.children[self.index]:onBlur();
-                if self.index == #self.children then
-                    self.index = 1;
-                else
-                    self.index = self.index + 1;
+            end
+            if inputs[UI.KEY.DOWN] == true then
+                if #self.children > 0 then
+                    self.children[self.index]:onBlur();
+                    if self.index == #self.children then
+                        self.index = 1;
+                    else
+                        self.index = self.index + 1;
+                    end
+                    self.children[self.index]:onFocus();
                 end
-                self.children[self.index]:onFocus();
-            elseif inputs[UI.KEY.MOUSE2] == true then
+            end
+            if inputs[UI.KEY.MOUSE1] == true then
+                if #self.children > 0 then
+                    if self.children[self.index].type == "Plane" then
+                        self:setFocus(self.children[self.index]);
+                    end             
+                end
+            end
+            if inputs[UI.KEY.MOUSE2] == true then
                 if self.father.type == "Plane" then
                     self:setFocus(self.father);
+                    return;
                 end
-            elseif inputs[UI.KEY.MOUSE1] == true then
-                if self.children[self.index].type == "Plane" then
-                    self:setFocus(self.children[self.index]);
-                end
-            else
+            end
+            if #self.children > 0 then
                 self.children[self.index]:onKeyDown(inputs);
             end
         end
@@ -837,7 +851,9 @@ Clone,Create,New = (function()
     Frame = New("Frame");
     Frame:add(
         New("Plane",1):add(
-            New("Plane",2),
+            New("Plane",2):add(
+                New("Button",4,"click")
+            ),
             New("Plane",3)
         )
     );
@@ -855,8 +871,14 @@ Clone,Create,New = (function()
     Component3.style.width = 50;
     Component3.style.height = 20;
 
-
+    Component3 = Frame:findById(4);
+    Component3.style.left = 10; 
+    Component3.style.top =10;
+    Component3.style.width = 80;
+    Component3.style.height = 80;
+    Component3.style.backgroundcolor.blue = 0;
 
     Frame:reset();
     Frame:paint();
     Frame:setFocus(Component1);
+    UI.StopPlayerControl(true)
