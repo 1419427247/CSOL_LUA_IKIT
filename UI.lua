@@ -87,10 +87,10 @@ Clone,Create,New = (function()
             end
             local String = {};
 
-            function String:constructor(string)
+            function String:constructor(value)
                 self.array = {};
                 self.length = 0;
-                self:insert(string);
+                self:insert(value);
             end
 
             function String:charAt(index)
@@ -98,51 +98,55 @@ Clone,Create,New = (function()
             end
 
             function String:substring(beginIndex,endIndex)
-                local string = {};
+                local text = {};
                 for i = beginIndex, endIndex, 1 do
-                    table.insert(string,self.array[i]);
+                    table.insert(text,self.array[i]);
                 end
-                return table.concat(string);
+                return table.concat(text);
             end
 
             function String:isEmpty()
                 return self.length == 0;
             end
 
-            function String:insert(string,pos)
+            function String:insert(value,pos)
                 pos = pos or #self.array + 1;
-                if type(string) == "string" then
+                if type(value) == "string" then
                     local currentIndex = 1;
-                    while currentIndex <= #string do
-                        local cs = charSize(string.byte(string, currentIndex));
-                        table.insert(self.array,pos,string.sub(string,currentIndex,currentIndex+cs-1));
+                    while currentIndex <= #value do
+                        local cs = charSize(string.byte(value, currentIndex));
+                        table.insert(self.array,pos,string.sub(value,currentIndex,currentIndex+cs-1));
                         currentIndex = currentIndex + cs;
                         self.length = self.length + 1;
                     end
-                elseif type(string) == "table" then
-                    if string.type == "String" then 
-                        for i = 1, string.length, 1 do
-                            table.insert(self.array,pos,string.array[i]);
+                elseif type(value) == "table" then
+                    if value.type == "String" then 
+                        for i = 1, value.length, 1 do
+                            table.insert(self.array,pos,value.array[i]);
                         end
-                        self.length = self.length +  string.length;
+                        self.length = self.length +  value.length;
                     else
                         local currentIndex = 1;
-                        while currentIndex <= #bytes do
-                            local cs = string.byte(bytes[currentIndex])
+                        while currentIndex <= #value do
+                            local cs = charSize(value[currentIndex])
                             if cs == 1 then
-                                table.insert(self.array,string.char(bytes[currentIndex]));
+                                table.insert(self.array,pos,string.char(value[currentIndex]));
                             elseif cs == 2 then
-                                table.insert(self.array,string.char(bytes[currentIndex],bytes[currentIndex+1]));
+                                table.insert(self.array,pos,string.char(value[currentIndex],value[currentIndex+1]));
                             elseif cs == 3 then
-                                table.insert(self.array,string.char(bytes[currentIndex],bytes[currentIndex+1],bytes[currentIndex+2]));
+                                table.insert(self.array,pos,string.char(value[currentIndex],value[currentIndex+1],value[currentIndex+2]));
                             elseif cs == 4 then
-                                table.insert(self.array,string.char(bytes[currentIndex],bytes[currentIndex+1],bytes[currentIndex+2],bytes[currentIndex+3]));
+                                table.insert(self.array,pos,string.char(value[currentIndex],value[currentIndex+1],value[currentIndex+2],value[currentIndex+3]));
                             end
                             currentIndex = currentIndex+cs;
                             self.length = self.length + 1;
                         end
                     end
                 end
+            end
+            function String:clean()
+                self.array = {};
+                self.length = 0;
             end
 
             function String:toBytes()
@@ -163,10 +167,10 @@ Clone,Create,New = (function()
                 return self.length;
             end
 
-            function String:__eq(string)
-                return self.length == string.length and function()
+            function String:__eq(value)
+                return self.length == value.length and function()
                     for i = 1, self.length, 1 do
-                        if self.array[i] ~= string.array[i] then
+                        if self.array[i] ~= value.array[i] then
                             return false;
                         end
                     end
@@ -174,14 +178,14 @@ Clone,Create,New = (function()
                 end
             end
 
-            function String:__add(string)
-                self:insert(string);
+            function String:__add(value)
+                self:insert(value);
                 return self;
             end
 
-            function String:__concat(string)
+            function String:__concat(value)
                 local str1 = New("String",self);
-                str1:insert(string);
+                str1:insert(value);
                 return str1;
             end
 
@@ -245,7 +249,8 @@ Clone,Create,New = (function()
     Event = Event 
     + "OnKeyDown" 
     + "OnKeyUp"
-    + "OnSignal";
+    + "OnSignal"
+    + "OnUpdate";
 
     function UI.Event:OnKeyDown(inputs)
         Event:forEach("OnKeyDown",(inputs));
@@ -259,12 +264,16 @@ Clone,Create,New = (function()
         Event:forEach("OnSignal",signal);
     end
 
+    function UI.Event:OnUpdate(time)
+        Event:forEach("OnUpdate",time);
+    end
+
     (function()
         local Command = {};
         function Command:constructor()
             self.sendbuffer = {};
             self.receivbBuffer = {};
-            
+
             self.methods = {};
 
             local OnSignalId = 0;
@@ -276,11 +285,11 @@ Clone,Create,New = (function()
             function self:disconnect()
                 Event:detachEventListener("OnSignal",OnSignalId);
             end
-            self:disconnect();
+            self:connection();
         end
 
         function Command:OnSignal(signal)
-            if #self.receivbBuffer ~= 0 and signal == -1 then
+            if signal == -1 then
                 
             else
                 table.insert(self.receivbBuffer,signal);
@@ -295,8 +304,12 @@ Clone,Create,New = (function()
             self.methods[name](args);
         end
 
-        function Command:sendMessage()
-            
+        function Command:sendMessage(message)
+            local message = New("String",message):toBytes();
+            for i = 1, #message, 1 do
+                table.insert(self.sendbuffer,message[i]);
+            end
+            table.insert(self.sendbuffer,-1);
         end
 
         Create(Command,"Command");
