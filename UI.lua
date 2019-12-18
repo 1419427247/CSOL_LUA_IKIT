@@ -78,8 +78,7 @@ Clone,Create,New = (function()
     end)();
 
     (function()
-            local function charSize(str, index)
-                local curByte = string.byte(str, index)
+            local function charSize(curByte)
                 local seperate = {0, 0xc0, 0xe0, 0xf0}
                 for i = #seperate, 1, -1 do
                     if curByte >= seperate[i] then return i end
@@ -91,21 +90,7 @@ Clone,Create,New = (function()
             function String:constructor(string)
                 self.array = {};
                 self.length = 0;
-                if type(string) == "string" then
-                    local currentIndex = 1;
-                    while currentIndex <= #string do
-                        self.length = self.length +1;
-                        local cs = charSize(string, currentIndex);
-                        table.insert(self.array,string.sub(string,currentIndex,currentIndex+cs-1));
-                        currentIndex = currentIndex + cs;
-                    end
-                elseif type(string) == "table" then
-                    for i = 1, string.length, 1 do
-                        table.insert(self.array,string.array[i]);
-                    end
-                    self.length =  string.length;
-                end
-
+                self:insert(string);
             end
 
             function String:charAt(index)
@@ -129,17 +114,45 @@ Clone,Create,New = (function()
                 if type(string) == "string" then
                     local currentIndex = 1;
                     while currentIndex <= #string do
-                        local cs = charSize(string, currentIndex);
+                        local cs = charSize(string.byte(string, currentIndex));
                         table.insert(self.array,pos,string.sub(string,currentIndex,currentIndex+cs-1));
                         currentIndex = currentIndex + cs;
                         self.length = self.length + 1;
                     end
                 elseif type(string) == "table" then
-                    for i = 1, string.length, 1 do
-                        table.insert(self.array,pos,string.array[i]);
+                    if string.type == "String" then 
+                        for i = 1, string.length, 1 do
+                            table.insert(self.array,pos,string.array[i]);
+                        end
+                        self.length = self.length +  string.length;
+                    else
+                        local currentIndex = 1;
+                        while currentIndex <= #bytes do
+                            local cs = string.byte(bytes[currentIndex])
+                            if cs == 1 then
+                                table.insert(self.array,string.char(bytes[currentIndex]));
+                            elseif cs == 2 then
+                                table.insert(self.array,string.char(bytes[currentIndex],bytes[currentIndex+1]));
+                            elseif cs == 3 then
+                                table.insert(self.array,string.char(bytes[currentIndex],bytes[currentIndex+1],bytes[currentIndex+2]));
+                            elseif cs == 4 then
+                                table.insert(self.array,string.char(bytes[currentIndex],bytes[currentIndex+1],bytes[currentIndex+2],bytes[currentIndex+3]));
+                            end
+                            currentIndex = currentIndex+cs;
+                            self.length = self.length + 1;
+                        end
                     end
-                    self.length = self.length +  string.length;
                 end
+            end
+
+            function String:toBytes()
+                local bytes = {};
+                for i = 1, self.length, 1 do
+                    for j = 1, #self.array[i], 1 do
+                        table.insert(bytes,string.byte(self.array[i],j));
+                    end
+                end
+                return bytes;
             end
 
             function String:toString()
@@ -181,69 +194,46 @@ Clone,Create,New = (function()
 
 
     (function()
+
         local Event = {};
 
         function Event:constructor()
-
+            self.id = 1;
         end
 
-        function Event:__add(type)
-            if not self[type] then
-                rawset(self,type,setmetatable({},{
-                    __add = function(lis,handle)
-                        -- if type(handle) ~= "function" then
-                        -- 	error("It is not a function");
-                        -- end
-                        table.insert(lis,handle);
-                        return lis;
-                    end,
-                     __sub = function(lis,handle)
-                        for i = 1, #lis, 1 do
-                            if lis[i] == handle then
-                                table.remove(lis,i);
-                                break;
-                            end
-                        end
-                        return lis;
-                    end,
-                    __call = function(table,...)
-                        for __, value in pairs(table) do
-                            value(...);
-                        end
-                    end
-                }));
+        function Event:__add(name)
+            if not self[name] then
+                self[name] = {};
                 return self;
             end
             error("Event: '" ..type.."' already exists");
         end
 
-        function Event:__sub(event)
-            if self[event] then
-                rawset(self,event,nil);
+        function Event:__sub(name)
+            if self[name] then
+                self[name] = nil;
                 return self;
             end
-            error("Event: '" ..event.."' does not exist");
+            error("Event: '" ..name.."' does not exist");
         end
 
-        function Event:addEventListener(type,event)
-            if type(event) ~= "function" then
+        function Event:addEventListener (name,event)
+            if type(event) == "function" then
+                self[name][self.id] = event;
+                self.id = self.id + 1;
+                return self.id - 1;
+            else
                 error("It is not a function");
-                    return;
             end
-            table.insert(self[type],event);
-        end
+        end;
 
-        function Event:detachEventListener(type,event)
-            for i = 1, #self[type], 1 do
-                if self[type][i] == event then
-                    table.remove(self[type],i);
-                end
-            end
-        end
+        function Event:detachEventListener(name,id)
+            self[name][id] = nil;
+        end;
 
-        function Event:forEach(type,...)
-            for i = 1, #self[type], 1 do
-                self[type][i](...);
+        function Event:forEach(name,...)
+            for key, value in pairs(self[name]) do
+                value(...)
             end
         end
 
@@ -252,19 +242,67 @@ Clone,Create,New = (function()
 
     Event = New("Event");
 
-
-    Event = Event + "OnKeyDown";
-    Event = Event + "OnKeyUp";
-
+    Event = Event 
+    + "OnKeyDown" 
+    + "OnKeyUp"
+    + "OnSignal";
 
     function UI.Event:OnKeyDown(inputs)
-        Event["OnKeyDown"](inputs);
+        Event:forEach("OnKeyDown",(inputs));
     end
 
     function UI.Event:OnKeyUp (inputs)
-        Event["OnKeyUp"](inputs);
+        Event:forEach("OnKeyUp",inputs);
     end
 
+    function UI.Event:OnSignal(signal)
+        Event:forEach("OnSignal",signal);
+    end
+
+    (function()
+        local Command = {};
+        function Command:constructor()
+            self.sendbuffer = {};
+            self.receivbBuffer = {};
+            
+            self.methods = {};
+
+            local OnSignalId = 0;
+            function self:connection()
+                OnSignalId = Event:addEventListener("OnSignal",function(signal)
+                    self:OnSignal(signal);
+                end);
+            end
+            function self:disconnect()
+                Event:detachEventListener("OnSignal",OnSignalId);
+            end
+            self:disconnect();
+        end
+
+        function Command:OnSignal(signal)
+            if #self.receivbBuffer ~= 0 and signal == -1 then
+                
+            else
+                table.insert(self.receivbBuffer,signal);
+            end
+        end
+
+        function Command:register(name,fun)
+            self.methods[name] = fun;
+        end
+
+        function Command:execute(name,args)
+            self.methods[name](args);
+        end
+
+        function Command:sendMessage()
+            
+        end
+
+        Create(Command,"Command");
+    end)();
+
+    
 
     (function ()
         local Font = {};
@@ -383,13 +421,29 @@ Clone,Create,New = (function()
             self.graphics = New("Graphics");
             self.children = {};
             self.focused = 0;
-            Event["OnKeyDown"] = Event["OnKeyDown"] + function (inputs)
-                self:onKeyDown(inputs);
-            end;
-            Event["OnKeyUp"] = Event["OnKeyUp"] + function (inputs)
-                self:onKeyUp(inputs);
-            end;
+
+            local OnKeyDownEventId = 0;
+            local OnKeyUpEventId = 0;
+            
+            function self:show()
+                OnKeyDownEventId = Event:addEventListener("OnKeyDown",function(inputs)
+                    self:onKeyDown(inputs);
+                end);
+                OnKeyUpEventId = Event:addEventListener("OnKeyUp",function(inputs)
+                    self:onKeyUp(inputs);
+                end);
+                self:repaint();
+            end
+
+            function self:hide()
+                Event:detachEventListener("OnKeyDown",OnKeyDownEventId);
+                Event:detachEventListener("OnKeyUp",OnKeyUpEventId);
+                self:repaint();
+            end
+
+            self:show();
         end
+
 
         function Frame:add(...)
             local components = {...};
@@ -408,11 +462,6 @@ Clone,Create,New = (function()
             self.focused:onFocus();
         end
 
-        function Frame:close()
-            self.focused = 0;
-            self.graphics:clean();
-        end
-        
         function Frame:forEach(fun)
             local function forEach(component)
                 if fun(component) == false then
@@ -521,7 +570,6 @@ Clone,Create,New = (function()
         Create(Frame,"Frame");
     end)();
 
-
     (function()
             local Component = {};
             function Component:constructor(id)
@@ -586,7 +634,7 @@ Clone,Create,New = (function()
 
             function Component:onFocus()
                 self.style.backgroundcolor.red = self.style.backgroundcolor.red + 128;
-                self.style.backgroundcolor.green = self.style.backgroundcolor.green + 128;
+                    self.style.backgroundcolor.green = self.style.backgroundcolor.green + 128;
                 self.style.backgroundcolor.blue = self.style.backgroundcolor.blue + 128;
                 self:repaint();
             end
@@ -726,7 +774,7 @@ Clone,Create,New = (function()
         end
 
         function Button:onMouseClick()
-            
+
         end
 
         Create(Button,"Button","Lable");
@@ -798,7 +846,7 @@ Clone,Create,New = (function()
                 if #self.children > 0 then
                     if self.children[self.index].type == "Plane" then
                         self:setFocus(self.children[self.index]);
-                    end             
+                    end
                 end
             end
             if inputs[UI.KEY.MOUSE2] == true then
@@ -835,7 +883,7 @@ Clone,Create,New = (function()
         end
 
         function SelectBox:addItem()
-            
+
         end
 
         function SelectBox:paint(graphics)
@@ -872,7 +920,7 @@ Clone,Create,New = (function()
     Component3.style.height = 20;
 
     Component3 = Frame:findById(4);
-    Component3.style.left = 10; 
+    Component3.style.left = 10;
     Component3.style.top =10;
     Component3.style.width = 80;
     Component3.style.height = 80;
@@ -881,4 +929,6 @@ Clone,Create,New = (function()
     Frame:reset();
     Frame:paint();
     Frame:setFocus(Component1);
-    UI.StopPlayerControl(true)
+
+    Frame:hide();
+    Frame:show();
