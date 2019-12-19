@@ -19,11 +19,11 @@
     end
 
     function String:substring(beginIndex,endIndex)
-        local text = {};
+        local text = IKit.New("String");
         for i = beginIndex, endIndex, 1 do
-            table.insert(text,self.array[i]);
+            text:insert(self.array[i]);
         end
-        return table.concat(text);
+        return text;
     end
 
     function String:isEmpty()
@@ -31,7 +31,7 @@
     end
 
     function String:insert(value,pos)
-        pos = pos or #self.array + 1;
+        pos = pos or self.length + 1;
         if type(value) == "string" then
             local currentIndex = 1;
             while currentIndex <= #value do
@@ -39,11 +39,13 @@
                 table.insert(self.array,pos,string.sub(value,currentIndex,currentIndex+cs-1));
                 currentIndex = currentIndex + cs;
                 self.length = self.length + 1;
+                pos = pos + 1;
             end
         elseif type(value) == "table" then
             if value.type == "String" then 
                 for i = 1, value.length, 1 do
                     table.insert(self.array,pos,value.array[i]);
+                    pos = pos + 1;
                 end
                 self.length = self.length +  value.length;
             else
@@ -61,6 +63,7 @@
                     end
                     currentIndex = currentIndex+cs;
                     self.length = self.length + 1;
+                    pos = pos + 1;
                 end
             end
         end
@@ -78,6 +81,21 @@
             end
         end
         return bytes;
+    end
+
+    function String:toNumber()
+        local sum = 0;
+        if self.array[1] == '-' then
+            for i = 2, #self.array, 1 do
+                sum = sum * 10 + string.byte(self.array[i]) - 48;
+            end
+            sum = sum * -1;
+        else
+            for i = 1, #self.array, 1 do
+                sum = sum * 10 + string.byte(self.array[i]) - 48;
+            end
+        end
+        return sum;
     end
 
     function String:toString()

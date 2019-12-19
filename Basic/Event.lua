@@ -103,7 +103,7 @@ if Game~=nil then
         Event:forEach("OnKilled",victim,killer);
     end
     
-    function Game.Rule:OnPlayerSignal (player, signal)
+    function Game.Rule:OnPlayerSignal (player,signal)
         Event:forEach("OnPlayerSignal",player,signal);
     end
     
@@ -159,9 +159,6 @@ if Game~=nil then
         Event:forEach("OnPlayerConnect",player);
     end
 end
-
-print(Game);
-print(UI);
 
 if UI~=nil then
     Event = Event
