@@ -1,5 +1,9 @@
 {
     "game": ["GAME.lua"], 
-    "ui": ["UI.lua"],
-    "common":["COMMON.lua"]
+    "ui": ["Object/Object.lua",
+        "Object/String.lua",
+        "Object/Font.lua",
+        "Object/Event.lua",
+        "Object/Frame.lua",
+        "UI.lua"]
 }
