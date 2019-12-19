@@ -105,7 +105,7 @@
     end
 
     function String:__concat(value)
-        local str1 = New("String",self);
+        local str1 = IKit.New("String",self);
         str1:insert(value);
         return str1;
     end
@@ -114,5 +114,5 @@
         return self.array[index];
     end
 
-    Create(String,"String");
+    IKit.Create(String,"String");
 end)();

@@ -1,7 +1,5 @@
-Clone,Create,New = (function()
-
+IKit = (function()
     local class = {};
-
     class["Object"] = {
         type = "Object",
         __newindex = function (table,key,value)
@@ -73,6 +71,9 @@ Clone,Create,New = (function()
         return object;
     end
 
-    return clone,create,new;
-
-    end)();
+    return {
+        Clone = clone,
+        Create = create,
+        New = new,
+    }
+end)();

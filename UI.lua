@@ -1,30 +1,12 @@
-    function UI.Event:OnKeyDown(inputs)
-        Event:forEach("OnKeyDown",(inputs));
-    end
 
-    function UI.Event:OnKeyUp (inputs)
-        Event:forEach("OnKeyUp",inputs);
-    end
-
-    function UI.Event:OnSignal(signal)
-        Event:forEach("OnSignal",signal);
-    end
-
-    function UI.Event:OnUpdate(time)
-        Event:forEach("OnUpdate",time);
-    end
-
-
-
-
-    Frame = New("Frame");
+    Frame = IKit.New("Frame");
     Frame:show(Event);
     Frame:add(
-        New("Plane",1):add(
-            New("Plane",2):add(
-                New("Button",4,"123")
+        IKit.New("Plane",1):add(
+            IKit.New("Plane",2):add(
+                IKit.New("Button",4,"123")
             ),
-            New("Plane",3)
+            IKit.New("Plane",3)
         )
     );
 
@@ -55,6 +37,3 @@
 
     Frame:hide();
     Frame:show();
-
-
-    print("KKK");

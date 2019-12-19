@@ -1,3 +1,55 @@
+Font = {};
+Font["a"]={0,0,1,4,2,0,3,4,1,1,2,2,1,4,2,5};
+Font["b"]={0,0,1,5,1,0,2,1,1,2,2,3,1,4,2,5,2,1,3,2,2,3,3,4};
+Font["c"]={0,1,1,4,1,0,3,1,1,4,3,5};
+Font["d"]={0,0,1,5,1,0,2,1,1,4,2,5,2,1,3,4};
+Font["e"]={0,1,1,4,1,0,3,1,1,2,3,3,1,4,3,5};
+Font["f"]={0,0,1,4,1,2,3,3,1,4,3,5};
+Font["g"]={0,1,1,4,1,0,2,1,2,0,3,3,1,4,3,5};
+Font["h"]={0,0,1,5,2,0,3,5,1,2,2,3};
+Font["i"]={1,0,2,5};
+Font["j"]={0,1,1,3,1,0,2,1,2,1,3,5};
+Font["k"]={0,0,1,5,2,0,3,2,2,3,3,5,1,2,2,3};
+Font["l"]={0,1,1,5,1,0,3,1};
+Font["m"]={0,0,1,5,2,0,3,5,1,3,2,4};
+Font["n"]={0,0,1,5,1,4,2,5,2,0,3,4};
+Font["o"]={0,1,1,4,2,1,3,4,1,0,2,1,1,4,2,5};
+Font["p"]={0,0,1,4,1,1,2,2,1,4,2,5,2,2,3,4};
+Font["q"]={0,2,1,4,2,2,3,4,1,0,2,2,1,4,2,5};
+Font["r"]={0,0,1,4,1,1,2,2,1,4,2,5,2,2,3,4,2,0,3,1};
+Font["s"]={0,0,2,1,2,1,3,2,1,2,2,3,0,3,1,4,1,4,3,5};
+Font["t"]={0,4,3,5,1,0,2,4};
+Font["u"]={0,0,1,5,1,0,2,1,2,1,3,5};
+Font["v"]={0,1,1,5,1,0,2,1,2,1,3,5};
+Font["w"]={0,0,1,5,2,0,3,5,1,1,2,2};
+Font["x"]={0,0,1,2,0,3,1,5,2,0,3,2,2,3,3,5,1,2,2,3};
+Font["y"]={0,3,1,5,2,3,3,5,1,0,2,3};
+Font["z"]={0,0,3,1,0,4,3,5,0,1,1,2,1,2,2,3,2,3,3,4};
+Font["0"]={0,0,1,5,2,0,3,5,1,0,2,1,1,4,2,5};
+Font["1"]={1,0,2,5,0,3,1,4};
+Font["2"]={0,0,1,3,2,2,3,5,1,0,3,1,1,2,2,3,0,4,2,5};
+Font["3"]={2,0,3,5,0,0,2,1,0,2,2,3,0,4,2,5};
+Font["4"]={0,2,1,5,2,0,3,5,1,2,2,3};
+Font["5"]={0,2,1,5,0,0,3,1,1,2,3,3,1,4,3,5,2,1,3,2};
+Font["6"]={0,0,1,5,1,0,3,1,1,2,3,3,1,4,3,5,2,1,3,2};
+Font["7"]={0,4,3,5,2,0,3,4};
+Font["8"]={0,0,1,5,2,0,3,5,1,0,2,1,1,2,2,3,1,4,2,5};
+Font["9"]={0,0,3,1,2,1,3,5,0,2,1,5,1,2,2,3,1,4,2,5};
+Font["."]={1,0,2,1};
+Font[":"]={1,1,2,2,1,3,2,4};
+Font["?"]={1,0,2,1,1,2,2,3,2,2,3,5,0,4,2,5};
+Font["!"]={1,0,2,1,1,2,2,5};
+Font["+"]={1,1,2,4,0,2,3,3};
+Font["-"]={0,2,3,3};
+Font["("]={0,1,1,4,1,0,2,1,1,4,2,5};
+Font["("]={2,1,3,4,1,0,2,1,1,4,2,5};
+Font[">"]={0,0,1,1,1,1,2,2,2,2,3,3,0,4,1,5,1,3,2,4};
+Font["<"]={0,2,1,3,1,1,2,2,0,2,1,3,1,3,2,4,2,4,3,5};
+Font["="]={0,1,3,2,0,3,3,4};
+Font["\'"]={1,3,2,5};
+Font["\\"]={0,3,1,5,1,2,2,3,2,0,3,2};
+Font["/"]={0,0,1,2,1,2,2,3,2,3,3,5};
+
 (function ()
     local Graphics = {};
     function Graphics:constructor()
@@ -50,8 +102,9 @@
         collectgarbage("collect");
     end
 
-    Create(Graphics,"Graphics");
+    IKit.Create(Graphics,"Graphics");
 end)();
+
 
 (function()
     local Frame = {};
@@ -60,7 +113,7 @@ end)();
         self.y=0;
         self.width = width or UI.ScreenSize().width;
         self.height = height or UI.ScreenSize().height;
-        self.graphics = New("Graphics");
+        self.graphics = IKit.New("Graphics");
         self.children = {};
         self.focused = 0;
 
@@ -208,217 +261,92 @@ end)();
         end
     end
 
-    Create(Frame,"Frame");
+    IKit.Create(Frame,"Frame");
 end)();
 
 (function()
-        local Component = {};
-        function Component:constructor(id)
-            self.id = id;
-            self.tag = self.type;
-            self.visible = true;
-            self.x = 0;
-            self.y = 0;
-            self.width = 0;
-            self.height = 0;
-            self.style = {
-                left = 0,
-                top = 0,
-                width = 0,
-                height = 0,
-                position = "relative",
-                backgroundcolor = {red = 255,green = 255,blue=255,alpha=255},
-                border = {top = 1,left = 1,right = 1,bottom = 1},
-                bordercolor = {red = 0,green = 0,blue=0,alpha=255},
-                newline = false,
-                fontsize = 5,
-                letterspacing = 25,
-                textalign = "center",
-            };
-            self.father = 0;
-            self.children = {};
-        end
-
-        function Component:getIndex()
-            for i = 1, #self.father.children, 1 do
-                if self.father.children[i] == self then
-                    return i;
-                end
-            end
-        end
-
-        function Component:paint(graphics)
-            graphics.color = self.style.backgroundcolor;
-            graphics:drawRect(self.x,self.y,self.width,self.height);
-
-            graphics.color = self.style.bordercolor;
-            if self.style.border.top > 0 then
-                graphics:drawRect(self.x,self.y,self.width,self.style.border.top);
-            end
-            if self.style.border.right > 0 then
-                graphics:drawRect(self.x + self.width - self.style.border.right,self.y,self.style.border.right,self.height);
-            end
-            if self.style.border.bottom > 0 then
-                graphics:drawRect(self.x,self.y + self.height - self.style.border.bottom,self.width,self.style.border.bottom);
-            end
-            if self.style.border.left > 0 then
-                graphics:drawRect(self.x,self.y,self.style.border.left,self.height);
-            end
-        end
-
-        function Component:onBlur()
-            self.style.backgroundcolor.red = self.style.backgroundcolor.red - 128;
-            self.style.backgroundcolor.green = self.style.backgroundcolor.green - 128;
-            self.style.backgroundcolor.blue = self.style.backgroundcolor.blue - 128;
-            self:repaint();
-        end
-
-        function Component:onFocus()
-            self.style.backgroundcolor.red = self.style.backgroundcolor.red + 128;
-                self.style.backgroundcolor.green = self.style.backgroundcolor.green + 128;
-            self.style.backgroundcolor.blue = self.style.backgroundcolor.blue + 128;
-            self:repaint();
-        end
-
-        function Component:onKeyDown(inputs)
-
-        end
-
-        function Component:onKeyUp(inputs)
-
-        end
-
-        function Component:setFocus(component)
-            self.father:setFocus(component);
-        end
-
-        function Component:repaint()
-            self.father:repaint();
-        end
-
-        Create(Component,"Component");
-end)();
-
-(function()
-    local Lable = {};
-
-    function Lable:constructor(id,text)
-        self.super(id);
-        self.text = New("String",text);
-        self.color = {red = 0,green = 0,blue=0,alpha=255};
-
+    local Component = {};
+    function Component:constructor(id)
+        self.id = id;
+        self.tag = self.type;
+        self.visible = true;
+        self.x = 0;
+        self.y = 0;
+        self.width = 0;
+        self.height = 0;
+        self.style = {
+            left = 0,
+            top = 0,
+            width = 0,
+            height = 0,
+            position = "relative",
+            backgroundcolor = {red = 255,green = 255,blue=255,alpha=255},
+            border = {top = 1,left = 1,right = 1,bottom = 1},
+            bordercolor = {red = 0,green = 0,blue=0,alpha=255},
+            newline = false,
+        };
+        self.father = 0;
+        self.children = {};
     end
 
-    function Lable:paint(graphics)
-        self.super:paint(graphics);
-        graphics.color = self.color;
-        local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
-        if self.style.textalign == "center" then
-            graphics:drawText(self.x + (self.width - w)/2,self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
-        elseif self.style.textalign == "left" then
-            graphics:drawText(self.x,self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
-        elseif self.style.textalign == "rigth" then
-            graphics:drawText(self.x + (self.width - w),self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
+    function Component:getIndex()
+        for i = 1, #self.father.children, 1 do
+            if self.father.children[i] == self then
+                return i;
+            end
         end
     end
 
-    Create(Lable,"Lable","Component");
-end)();
+    function Component:paint(graphics)
+        graphics.color = self.style.backgroundcolor;
+        graphics:drawRect(self.x,self.y,self.width,self.height);
 
-(function()
-    local Edit = {};
-
-    function Edit:constructor(id)
-        self.super(id);
-        self.cursor = 1;
-    end
-
-    function Edit:paint(graphics)
-        self.super:paint(graphics);
-        local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
-
-        if self.style.textalign == "center" then
-            graphics:drawRect(self.x + (self.width - w)/2 + (self.cursor - 1) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
-            self.y + (self.height - h) / 2,
-            self.style.fontsize / 2,
-            self.style.fontsize * 5);
-        elseif self.style.textalign == "left" then
-            graphics:drawRect(self.x + (self.cursor - 1) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
-            self.y + (self.height - h) / 2,
-            self.style.fontsize / 2,
-            self.style.fontsize * 5);
-        elseif self.style.textalign == "rigth" then
-            graphics:drawRect(self.x + (self.cursor - 1) * self.style.letterspacing + (self.width - w) - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
-            self.y + (self.height - h) / 2,
-            self.style.fontsize / 2,
-            self.style.fontsize * 5);
+        graphics.color = self.style.bordercolor;
+        if self.style.border.top > 0 then
+            graphics:drawRect(self.x,self.y,self.width,self.style.border.top);
+        end
+        if self.style.border.right > 0 then
+            graphics:drawRect(self.x + self.width - self.style.border.right,self.y,self.style.border.right,self.height);
+        end
+        if self.style.border.bottom > 0 then
+            graphics:drawRect(self.x,self.y + self.height - self.style.border.bottom,self.width,self.style.border.bottom);
+        end
+        if self.style.border.left > 0 then
+            graphics:drawRect(self.x,self.y,self.style.border.left,self.height);
         end
     end
 
-    function Edit:onKeyDown(inputs)
-        self.super:onKeyDown(inputs);
-        for key, value in pairs(inputs) do
-            if value == true then
-                if key >=0 and key <= 8 then
-                    self.text:insert(string.char(key+49),self.cursor);
-                    self.cursor = self.cursor + 1;
-                end
-                if key == 9 then
-                    self.text:insert('0',self.cursor);
-                    self.cursor = self.cursor + 1;
-                end
-                if key >= 10 and key <= 35 then
-                    self.text:insert(string.char(key+87),self.cursor);
-                    self.cursor = self.cursor + 1;
-                end
-                if key == 37 then
-                    self.text:insert(' ',self.cursor);
-                    self.cursor = self.cursor + 1;
-                end
-                if key == 41 then
-                    if self.cursor > 1 then
-                        self.cursor = self.cursor - 1;
-                    end
-                end
-                if key == 42 then
-                    if self.cursor < self.text.length + 1 then
-                        self.cursor = self.cursor + 1;
-                    end
-                end
-            end
-        end
+    function Component:onBlur()
+        self.style.backgroundcolor.red = self.style.backgroundcolor.red - 128;
+        self.style.backgroundcolor.green = self.style.backgroundcolor.green - 128;
+        self.style.backgroundcolor.blue = self.style.backgroundcolor.blue - 128;
         self:repaint();
     end
 
-    function Edit:getText()
-        return self.text;
+    function Component:onFocus()
+        self.style.backgroundcolor.red = self.style.backgroundcolor.red + 128;
+        self.style.backgroundcolor.green = self.style.backgroundcolor.green + 128;
+        self.style.backgroundcolor.blue = self.style.backgroundcolor.blue + 128;
+        self:repaint();
     end
 
-    Create(Edit,"Edit","Lable");
-end)();
-
-(function()
-    local Button = {};
-
-    function Button:constructor(id,text)
-        self.super(id,text);
-    end
-
-    function Button:paint(graphics)
-        self.super:paint(graphics);
-    end
-
-    function Button:onKeyDown(inputs)
-        if inputs[UI.KEY.MOUSE1] == true then
-            self:onMouseClick();
-        end
-    end
-
-    function Button:onMouseClick()
+    function Component:onKeyDown(inputs)
 
     end
 
-    Create(Button,"Button","Lable");
+    function Component:onKeyUp(inputs)
+
+    end
+
+    function Component:setFocus(component)
+        self.father:setFocus(component);
+    end
+
+    function Component:repaint()
+        self.father:repaint();
+    end
+
+    IKit.Create(Component,"Component");
 end)();
 
 (function()
@@ -512,24 +440,151 @@ end)();
         self.super:paint(graphics);
     end
 
-    Create(Plane,"Plane","Component");
+    IKit.Create(Plane,"Plane","Component");
+end)();
+
+
+(function()
+    local Lable = {};
+
+    function Lable:constructor(id,text)
+        self.super(id);
+        self.text = IKit.New("String",text);
+        self.style.fontsize = 5;
+        self.style.letterspacing = 25;
+        self.style.textalign = "center";
+        self.style.color = {red = 0,green = 0,blue=0,alpha=255};
+    end
+
+    function Lable:paint(graphics)
+        self.super:paint(graphics);
+        graphics.color = self.style.color;
+        local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
+        if self.style.textalign == "center" then
+            graphics:drawText(self.x + (self.width - w)/2,self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
+        elseif self.style.textalign == "left" then
+            graphics:drawText(self.x,self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
+        elseif self.style.textalign == "rigth" then
+            graphics:drawText(self.x + (self.width - w),self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
+        end
+    end
+
+    IKit.Create(Lable,"Lable","Component");
 end)();
 
 (function()
-local SelectBox = {};
+    local Edit = {};
 
-function SelectBox:constructor(id)
-    self.super(id);
-    self.list = {};
-end
+    function Edit:constructor(id)
+        self.super(id);
+        self.cursor = 1;
+    end
 
-function SelectBox:addItem()
+    function Edit:paint(graphics)
+        self.super:paint(graphics);
+        local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
 
-end
+        if self.style.textalign == "center" then
+            graphics:drawRect(self.x + (self.width - w)/2 + (self.cursor - 1) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+            self.y + (self.height - h) / 2,
+            self.style.fontsize / 2,
+            self.style.fontsize * 5);
+        elseif self.style.textalign == "left" then
+            graphics:drawRect(self.x + (self.cursor - 1) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+            self.y + (self.height - h) / 2,
+            self.style.fontsize / 2,
+            self.style.fontsize * 5);
+        elseif self.style.textalign == "rigth" then
+            graphics:drawRect(self.x + (self.cursor - 1) * self.style.letterspacing + (self.width - w) - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+            self.y + (self.height - h) / 2,
+            self.style.fontsize / 2,
+            self.style.fontsize * 5);
+        end
+    end
 
-function SelectBox:paint(graphics)
+    function Edit:onKeyDown(inputs)
+        self.super:onKeyDown(inputs);
+        for key, value in pairs(inputs) do
+            if value == true then
+                if key >=0 and key <= 8 then
+                    self.text:insert(string.char(key+49),self.cursor);
+                    self.cursor = self.cursor + 1;
+                end
+                if key == 9 then
+                    self.text:insert('0',self.cursor);
+                    self.cursor = self.cursor + 1;
+                end
+                if key >= 10 and key <= 35 then
+                    self.text:insert(string.char(key+87),self.cursor);
+                    self.cursor = self.cursor + 1;
+                end
+                if key == 37 then
+                    self.text:insert(' ',self.cursor);
+                    self.cursor = self.cursor + 1;
+                end
+                if key == 41 then
+                    if self.cursor > 1 then
+                        self.cursor = self.cursor - 1;
+                    end
+                end
+                if key == 42 then
+                    if self.cursor < self.text.length + 1 then
+                        self.cursor = self.cursor + 1;
+                    end
+                end
+            end
+        end
+        self:repaint();
+    end
 
-end
+    function Edit:getText()
+        return self.text;
+    end
 
-Create(SelectBox,"SelectBox","Plane");
+    IKit.Create(Edit,"Edit","Lable");
 end)();
+
+(function()
+    local Button = {};
+
+    function Button:constructor(id,text)
+        self.super(id,text);
+    end
+
+    function Button:paint(graphics)
+        self.super:paint(graphics);
+    end
+
+    function Button:onKeyDown(inputs)
+        if inputs[UI.KEY.MOUSE1] == true then
+            self:onMouseClick();
+        end
+    end
+
+    function Button:onMouseClick()
+
+    end
+
+    IKit.Create(Button,"Button","Lable");
+end)();
+
+(function()
+    local SelectBox = {};
+    
+    function SelectBox:constructor(id)
+        self.super(id);
+        self.list = {};
+    end
+    
+    function SelectBox:addItem()
+        
+    end
+    
+    function SelectBox:paint(graphics)
+    
+    end
+    
+    IKit.Create(SelectBox,"SelectBox","Plane");
+end)();
+
+

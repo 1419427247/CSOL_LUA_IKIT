@@ -1,5 +1,7 @@
 {
     "Lua.diagnostics.globals": [
-        "UI"
+        "UI",
+        "Game",
+        "IKit"
     ]
 }
