@@ -2,41 +2,42 @@
     local Event = {};
 
     function Event:constructor()
+        self.array = {};
         self.id = 1;
     end
 
     function Event:__add(name)
-        if not self[name] then
-            self[name] = {};
+        if not self.array[name] then
+            self.array[name] = {};
             return self;
         end
-        error("Event: '" ..type.."' already exists");
+        error("事件:''" ..name.. "'已经存在,请勿重复添加");
     end
 
     function Event:__sub(name)
-        if self[name] then
-            self[name] = nil;
+        if self.array[name] then
+            self.array[name] = nil;
             return self;
         end
-        error("Event: '" ..name.."' does not exist");
+        error("事件:'" ..name.."'不存在");
     end
 
     function Event:addEventListener (name,event)
         if type(event) == "function" then
-            self[name][self.id] = event;
+            self.array[name][self.id] = event;
             self.id = self.id + 1;
             return self.id - 1;
         else
-            error("It is not a function");
+            error("它应该是一个函数");
         end
     end;
 
     function Event:detachEventListener(name,id)
-        self[name][id] = nil;
+        self.array[name][id] = nil;
     end;
 
     function Event:forEach(name,...)
-        for key, value in pairs(self[name]) do
+        for key, value in pairs(self.array[name]) do
             value(...)
         end
     end

@@ -34,8 +34,22 @@ end)();
     end
 
     function ServerCommand:OnPlayerSignal(player,signal)
-        if signal == -1 then
-            
+        if signal == 4 then
+            local command = IKit.New("String",self.receivbBuffer[player.name]);
+
+            local args = {IKit.New("String")};
+            for i = 1, command.length, 1 do
+                if command:charAt(i) == ' ' then
+                    if args[#args].length > 0 then
+                        table.insert(args,IKit.New("String"));
+                    end
+                else
+                    args[#args]:insert(command:charAt(i));
+                end
+            end
+
+            self:execute(player,args);
+            self.receivbBuffer[player.name] = {};
         else
             if self.receivbBuffer[player.name] == nil then
                 self.receivbBuffer[player.name] = {};
@@ -54,8 +68,10 @@ end)();
         -- table.insert(self.sendbuffer,-1);
     end
 
-    function ServerCommand:execute(player,name,args)
-        self.methods[name](player,args);
+    function ServerCommand:execute(player,args)
+        local name = args[1];
+        table.remove(args,1);
+        self.methods[name:toString()](player,args);
     end
 
     IKit.Create(ServerCommand,"ServerCommand","Command");

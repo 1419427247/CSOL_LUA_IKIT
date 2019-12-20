@@ -36,15 +36,23 @@
             local currentIndex = 1;
             while currentIndex <= #value do
                 local cs = charSize(string.byte(value, currentIndex));
-                table.insert(self.array,pos,string.sub(value,currentIndex,currentIndex+cs-1));
+                if pos > self.length then
+                    self.array[#self.array+1] = string.sub(value,currentIndex,currentIndex+cs-1);
+                else
+                    table.insert(self.array,pos,string.sub(value,currentIndex,currentIndex+cs-1));
+                end
                 currentIndex = currentIndex + cs;
                 self.length = self.length + 1;
                 pos = pos + 1;
             end
         elseif type(value) == "table" then
-            if value.type == "String" then 
+            if value.type == "String" then
                 for i = 1, value.length, 1 do
-                    table.insert(self.array,pos,value.array[i]);
+                    if pos > self.length then
+                        self.array[#self.array+1] = value.array[i];
+                    else
+                        table.insert(self.array,pos,value.array[i]);
+                    end
                     pos = pos + 1;
                 end
                 self.length = self.length +  value.length;
@@ -52,14 +60,26 @@
                 local currentIndex = 1;
                 while currentIndex <= #value do
                     local cs = charSize(value[currentIndex])
-                    if cs == 1 then
-                        table.insert(self.array,pos,string.char(value[currentIndex]));
-                    elseif cs == 2 then
-                        table.insert(self.array,pos,string.char(value[currentIndex],value[currentIndex+1]));
-                    elseif cs == 3 then
-                        table.insert(self.array,pos,string.char(value[currentIndex],value[currentIndex+1],value[currentIndex+2]));
-                    elseif cs == 4 then
-                        table.insert(self.array,pos,string.char(value[currentIndex],value[currentIndex+1],value[currentIndex+2],value[currentIndex+3]));
+                    if pos > self.length then
+                        if cs == 1 then
+                            self.array[#self.array+1] = string.char(value[currentIndex]);
+                        elseif cs == 2 then
+                            self.array[#self.array+1] = string.char(value[currentIndex],value[currentIndex+1]);
+                        elseif cs == 3 then
+                            self.array[#self.array+1] = string.char(value[currentIndex],value[currentIndex+1],value[currentIndex+2]);
+                        elseif cs == 4 then
+                            self.array[#self.array+1] = string.char(value[currentIndex],value[currentIndex+1],value[currentIndex+2],value[currentIndex+3]);
+                        end
+                    else
+                        if cs == 1 then
+                            table.insert(self.array,pos,string.char(value[currentIndex]));
+                        elseif cs == 2 then
+                            table.insert(self.array,pos,string.char(value[currentIndex],value[currentIndex+1]));
+                        elseif cs == 3 then
+                            table.insert(self.array,pos,string.char(value[currentIndex],value[currentIndex+1],value[currentIndex+2]));
+                        elseif cs == 4 then
+                            table.insert(self.array,pos,string.char(value[currentIndex],value[currentIndex+1],value[currentIndex+2],value[currentIndex+3]));
+                        end
                     end
                     currentIndex = currentIndex+cs;
                     self.length = self.length + 1;
@@ -68,6 +88,7 @@
             end
         end
     end
+
     function String:clean()
         self.array = {};
         self.length = 0;

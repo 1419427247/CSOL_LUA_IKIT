@@ -215,17 +215,17 @@ end)();
             end
     end
 
-    function Frame:paint()
+    function Frame:freeze(component)
+    
+    end
+
+    function Frame:repaint()
+        self.graphics:clean();
         self:forEach(function(component)
             if component.visible == true then
                 component:paint(self.graphics);
             end
         end);
-    end
-
-    function Frame:repaint()
-        self.graphics:clean();
-        self:paint();
     end
 
     function Frame:findById(id)
@@ -586,5 +586,3 @@ end)();
     
     IKit.Create(SelectBox,"SelectBox","Plane");
 end)();
-
-
