@@ -4,7 +4,7 @@ Frame:show(Event);
 Frame:add(
     IKit.New("Plane",1):add(
         IKit.New("Plane",2):add(
-            IKit.New("Button",4,"qwq")
+            IKit.New("Edit",4,"qwq")
         ),
         IKit.New("Plane",3)
     )
@@ -37,10 +37,8 @@ Frame:setFocus(Component1);
 
 Frame:repaint();
 
-
-Event:addEventListener("OnUpdate",function()
+Timer:schedule(function()
     Component4.x = Component4.x + 0.5;
+    Component3.height = Component3.height + 0.5;
     Frame:repaint();
-end)
-
-print(IKit.Instanceof(Frame,"Compo1nent"));
+end,1,0.03);

@@ -105,6 +105,70 @@ Font["/"]={0,0,1,2,1,2,2,3,2,3,3,5};
     IKit.Create(Graphics,"Graphics");
 end)();
 
+(function()
+    local ComponentBox = {};
+
+    function ComponentBox:constructor()
+        self.components = {};
+    end
+
+    function ComponentBox:set(key,value)
+        for i = 1, #self.components, 1 do
+            self.components[i][key] = value;
+        end
+    end
+    
+    function ComponentBox:get(tag)
+        local array = {};
+        for i = 1, #self.components, 1 do
+            if self.components[i] == tag then
+                array[#array+1] = self.components[i];
+            end
+        end
+        return array;
+    end
+
+    function ComponentBox:call(key,...)
+        for i = 1, #self.components, 1 do
+            self.components[i][key](self.components[i],...);
+        end
+    end
+
+    function ComponentBox:forEach(func)
+        for i = 1, #self.components, 1 do
+            func(self.components[i]);
+        end
+    end
+
+    IKit.Create(ComponentBox,"ComponentBox");
+end)();
+
+(function()
+    local Animation = {};
+    function Animation:constructor()
+        self.task = {};
+
+        local OnUpdateId = 0;
+
+        function self:start()
+            OnUpdateId = Event:addEventListener("OnUpdate",function(time)
+                self:OnUpdate(time);
+            end);
+        end
+
+        function self:finish()
+            Event:detachEventListener("OnPlayerSignal",OnUpdateId);
+        end
+
+        self:start();
+    end
+
+    function Animation:OnUpdate(time)
+        
+    end
+
+    IKit.Create(Animation,"Animation");
+end)();
 
 (function()
     local Frame = {};
@@ -135,7 +199,6 @@ end)();
             Event:detachEventListener("OnKeyUp",OnKeyUpEventId);
             self:repaint();
         end
-
     end
 
 
@@ -215,38 +278,31 @@ end)();
             end
     end
 
-    function Frame:freeze(component)
-    
-    end
+    -- function Frame:freeze(component)
+        
+    -- end
 
     function Frame:repaint()
         self.graphics:clean();
         self:forEach(function(component)
-            if component.visible == true then
+            if component.isvisible == true then
                 component:paint(self.graphics);
             end
         end);
-    end
-
-    function Frame:findById(id)
-        local recomponent = nil;
-        self:forEach(function(component)
-            if id == component.id then
-                recomponent = component;
-                return false;
-            end
-        end);
-        return recomponent;
     end
 
     function Frame:findByTag(tag)
         local components = {};
         self:forEach(function(component)
             if tag == component.tag then
-                table.insert(components,component);
+                components[#components+1] = component;
             end
         end);
-        return components;
+        return IKit.New("ComponentBox",components);
+    end
+
+    function Frame:animate(component,params,speed)
+
     end
 
     function Frame:onKeyDown(inputs)
@@ -268,8 +324,8 @@ end)();
     local Component = {};
     function Component:constructor(id)
         self.id = id;
-        self.tag = self.type;
-        self.visible = true;
+        self.isvisible = true;
+        --self.isfreeze = false;
         self.x = 0;
         self.y = 0;
         self.width = 0;
@@ -336,6 +392,10 @@ end)();
 
     function Component:onKeyUp(inputs)
 
+    end
+
+    function Component:animate(params,speed)
+        self.super:animate(self,params,speed);
     end
 
     function Component:setFocus(component)
@@ -425,15 +485,18 @@ end)();
             end
         end
         if #self.children > 0 then
-            self.children[self.index]:onKeyDown(inputs);
+            if self.children[self.index].type~="Plane" then
+                self.children[self.index]:onKeyDown(inputs);
+            end
         end
     end
 
     function Plane:onKeyUp(inputs)
-        if #self.children == 0 then
-            return;
+        if #self.children > 0 then
+            if self.children[self.index].type~="Plane" then
+                self.children[self.index]:onKeyUp(inputs);
+            end
         end
-        self.children[self.index]:onKeyUp(inputs);
     end
 
     function Plane:paint(graphics)
@@ -477,7 +540,9 @@ end)();
 
     function Edit:constructor(id)
         self.super(id);
-        self.cursor = 1;
+        self.cursor = 0;
+        self.intype="all";
+        self.maxlength = 10;
     end
 
     function Edit:paint(graphics)
@@ -485,17 +550,17 @@ end)();
         local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
 
         if self.style.textalign == "center" then
-            graphics:drawRect(self.x + (self.width - w)/2 + (self.cursor - 1) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+            graphics:drawRect(self.x + (self.width - w)/2 + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
             self.y + (self.height - h) / 2,
             self.style.fontsize / 2,
             self.style.fontsize * 5);
         elseif self.style.textalign == "left" then
-            graphics:drawRect(self.x + (self.cursor - 1) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+            graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
             self.y + (self.height - h) / 2,
             self.style.fontsize / 2,
             self.style.fontsize * 5);
         elseif self.style.textalign == "rigth" then
-            graphics:drawRect(self.x + (self.cursor - 1) * self.style.letterspacing + (self.width - w) - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+            graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing + (self.width - w) - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
             self.y + (self.height - h) / 2,
             self.style.fontsize / 2,
             self.style.fontsize * 5);
@@ -504,36 +569,53 @@ end)();
 
     function Edit:onKeyDown(inputs)
         self.super:onKeyDown(inputs);
+
         for key, value in pairs(inputs) do
             if value == true then
-                if key >=0 and key <= 8 then
-                    self.text:insert(string.char(key+49),self.cursor);
-                    self.cursor = self.cursor + 1;
-                end
-                if key == 9 then
-                    self.text:insert('0',self.cursor);
-                    self.cursor = self.cursor + 1;
-                end
-                if key >= 10 and key <= 35 then
-                    self.text:insert(string.char(key+87),self.cursor);
-                    self.cursor = self.cursor + 1;
-                end
-                if key == 37 then
-                    self.text:insert(' ',self.cursor);
-                    self.cursor = self.cursor + 1;
+                if self.text.length < self.maxlength then
+                    if self.intype == "all" or self.intype == "number" then
+                        if key >=0 and key <= 8 then
+                            self.text:insert(string.char(key+49),self.cursor+1);
+                            self.cursor = self.cursor + 1;
+                        end
+                        if key == 9 then
+                            self.text:insert('0',self.cursor);
+                            self.cursor = self.cursor + 1;
+                        end
+                    end
+
+                    if self.intype == "all" or self.intype == "english" then
+                        if key >= 10 and key <= 35 then
+                            self.text:insert(string.char(key+87),self.cursor+1);
+                            self.cursor = self.cursor + 1;
+                        end
+
+                        if key == 37 then
+                            self.text:insert(' ',self.cursor+1);
+                            self.cursor = self.cursor + 1;
+                        end
+                    end
                 end
                 if key == 41 then
-                    if self.cursor > 1 then
+                    if self.cursor > 0 then
                         self.cursor = self.cursor - 1;
                     end
                 end
                 if key == 42 then
-                    if self.cursor < self.text.length + 1 then
+                    if self.cursor < self.text.length then
                         self.cursor = self.cursor + 1;
+                    end
+                end
+                if key == 36 then
+                    if self.cursor > 0 then
+                        self.text:remove(self.cursor);
+                        self.cursor = self.cursor - 1;
                     end
                 end
             end
         end
+        
+        print(self.text:toString())
         self:repaint();
     end
 

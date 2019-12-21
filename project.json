@@ -1,20 +1,12 @@
 {
     "game": [
-        "Basic/Object.lua",
-        "Basic/String.lua",
-        "Basic/Event.lua",
-        "Basic/Command.lua",
-
+        "Basic/Basic.lua",
+        
         "GAME.lua"
     ],
     "ui": [
-        "Basic/Object.lua",
-        "Basic/String.lua",
-        "Basic/Event.lua",
-        "Basic/Command.lua",
-
-
-        "Puzzle/Frame.lua",
+        "Basic/Basic.lua",
+        "Basic/Frame.lua",
 
         "UI.lua"
     ]
