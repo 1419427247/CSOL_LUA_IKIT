@@ -225,15 +225,30 @@ end)();
 
     function String:toNumber()
         local sum = 0;
+        local neg = false;
+        local float = false;
+        local s = 10;
+
+        local i = 1;
         if self.array[1] == '-' then
-            for i = 2, #self.array, 1 do
-                sum = sum * 10 + string.byte(self.array[i]) - 48;
+            neg = true;
+            i = 2;
+        end
+        while i <= #self.array do
+            if self.array[i] == '.' then
+                float = true;
+            else
+                if float == false then
+                    sum = sum * 10 + string.byte(self.array[i]) - 48;
+                else
+                    sum = sum + (string.byte(self.array[i]) - 48) / s;
+                    s = s * 10;
+                end
             end
+            i = i + 1;
+        end
+        if neg == true then
             sum = sum * -1;
-        else
-            for i = 1, #self.array, 1 do
-                sum = sum * 10 + string.byte(self.array[i]) - 48;
-            end
         end
         return sum;
     end
@@ -274,7 +289,6 @@ end)();
 
     IKit.Create(String,"String");
 end)();
-
 
 (function()
     local Event = {};
@@ -321,6 +335,209 @@ end)();
     end
 
     IKit.Create(Event,"Event");
+end)();
+
+(function()
+    local Timer = {};
+
+    function Timer:constructor()
+        self.id = 1;
+        self.task = {};
+        Event:addEventListener("OnUpdate",function(time)
+            self:OnUpdate(time);
+        end);
+    end
+
+    function Timer:OnUpdate(time)
+        local i = 1;
+        while i <= #self.task do
+            if self.task[i].time < time then
+                if not pcall(self.task[i].func) then
+                    table.remove(self.task,i);
+                    print("Timer:ID为:[" .. self.task[i].id .. "]的函数发生了异常");
+                elseif self.task[i].period == nil then
+                    table.remove(self.task,i);
+                else
+                    self.task[i].time = time + self.task[i].period;
+                end
+            end
+            i = i + 1;
+        end
+    end
+
+    function Timer:schedule(fun,delay,period)
+        if Game ~= nil then
+            self.task[#self.task+1] = {id = self.id,func = fun,time = Game.GetTime() + delay,period = period};
+        end
+        if UI ~= nil then
+            self.task[#self.task+1] = {id = self.id,func = fun,time = UI.GetTime() + delay,period = period};
+        end
+        self.id = self.id + 1;
+        return self.id - 1;
+    end
+
+    function Timer:find(id)
+        for i = 1, #self.task, 1 do
+            if self.task[i].id == id then
+                return self.task[i];
+            end
+        end
+        return nil;
+    end
+
+    function Timer:cancel(id)
+        for i = 1, #self.task, 1 do
+            if self.task[i].id == id then
+                table.remove(self.task,i);
+                return;
+            end
+        end
+    end
+    function Timer:purge()
+        self.task = {}
+    end
+
+    IKit.Create(Timer,"Timer");
+end)();
+
+(function()
+    local Command = {};
+    function Command:constructor()
+        self.sendbuffer = {};
+        self.receivbBuffer = {};
+
+        self.methods = {};
+    end
+
+    function Command:register(name,fun)
+        self.methods[name] = fun;
+    end
+
+    IKit.Create(Command,"Command");
+end)();
+
+(function()
+    local  ServerCommand = {};
+    
+    function ServerCommand:constructor()
+        self.super();
+
+        local OnPlayerSignalId = 0;
+        function self:connection()
+            OnPlayerSignalId = Event:addEventListener("OnPlayerSignal",function(player,signal)
+                self:OnPlayerSignal(player,signal);
+            end);
+        end
+
+        function self:disconnect()
+            Event:detachEventListener("OnPlayerSignal",OnPlayerSignalId);
+        end
+        self:connection();
+    end
+
+    function ServerCommand:OnPlayerSignal(player,signal)
+        if signal == 4 then
+            local command = IKit.New("String",self.receivbBuffer[player.name]);
+
+            local args = {IKit.New("String")};
+            for i = 1, command.length, 1 do
+                if command:charAt(i) == ' ' then
+                    if args[#args].length > 0 then
+                        table.insert(args,IKit.New("String"));
+                    end
+                else
+                    args[#args]:insert(command:charAt(i));
+                end
+            end
+
+            self:execute(player,args);
+            self.receivbBuffer[player.name] = {};
+        else
+            if self.receivbBuffer[player.name] == nil then
+                self.receivbBuffer[player.name] = {};
+            end
+            table.insert(self.receivbBuffer[player.name],signal);
+        end
+    end
+
+    function ServerCommand:sendMessage(player,message)
+        local message = IKit.New("String",message):toBytes();
+        for i = 1, #message, 1 do
+            player:Signal(message[i]);
+            -- table.insert(self.sendbuffer,message[i]);
+        end
+        player:Signal(4);
+        -- table.insert(self.sendbuffer,-1);
+    end
+
+    function ServerCommand:execute(player,args)
+        local name = args[1];
+        table.remove(args,1);
+        self.methods[name:toString()](player,args);
+    end
+
+    IKit.Create(ServerCommand,"ServerCommand","Command");
+end)();
+
+(function()
+    local  ClientCommand = {};
+    
+    function ClientCommand:constructor()
+        self.super();
+
+        local OnSignalId = 0;
+        function self:connection()
+            OnSignalId = Event:addEventListener("OnSignal",function(signal)
+                self:OnSignal(signal);
+            end);
+        end
+
+        function self:disconnect()
+            Event:detachEventListener("OnSignal",OnSignalId);
+        end
+        self:connection();
+    end
+
+    function ClientCommand:OnSignal(signal)
+        if signal == 4 then
+            local command = IKit.New("String",self.receivbBuffer);
+
+            local args = {IKit.New("String")};
+            for i = 1, command.length, 1 do
+                if command:charAt(i) == ' ' then
+                    if args[#args].length > 0 then
+                        table.insert(args,IKit.New("String"));
+                    end
+                else
+                    args[#args]:insert(command:charAt(i));
+                end
+            end
+
+            self:execute(args);
+            self.receivbBuffer = {};
+        else
+            table.insert(self.receivbBuffer,signal);
+        end
+    end
+
+    --当传出信号值为4时表示传输结束
+    function ClientCommand:sendMessage(message)
+        local message = IKit.New("String",message):toBytes();
+            for i = 1, #message, 1 do
+                UI.Signal(message[i]);
+                -- table.insert(self.sendbuffer,message[i]);
+            end
+            UI.Signal(4);
+            -- table.insert(self.sendbuffer,-1);
+    end
+
+    function ClientCommand:execute(args)
+        local name = args[1];
+        table.remove(args,1);
+        self.methods[name:toString()](args);
+    end
+
+    IKit.Create(ClientCommand,"ClientCommand","Command");
 end)();
 
 Event = IKit.New("Event");
@@ -488,211 +705,7 @@ if UI~=nil then
     end
 end
 
-
-(function()
-    local Timer = {};
-
-    function Timer:constructor()
-        self.id = 1;
-        self.task = {};
-        Event:addEventListener("OnUpdate",function(time)
-            self:OnUpdate(time);
-        end);
-    end
-
-    function Timer:OnUpdate(time)
-        local i = 1;
-        while i <= #self.task do
-            if self.task[i].time < time then
-                if not pcall(self.task[i].func) then
-                    table.remove(self.task,i);
-                    print("Timer:ID为:[" .. self.task[i].id .. "]的函数发生了异常");
-                elseif self.task[i].period == nil then
-                    table.remove(self.task,i);
-                else
-                    self.task[i].time = time + self.task[i].period;
-                end
-            end
-            i = i + 1;
-        end
-    end
-
-    function Timer:schedule(fun,delay,period)
-        if Game ~= nil then
-            self.task[#self.task+1] = {id = self.id,func = fun,time = Game.GetTime() + delay,period = period};
-        end
-        if UI ~= nil then
-            self.task[#self.task+1] = {id = self.id,func = fun,time = UI.GetTime() + delay,period = period};
-        end
-        self.id = self.id + 1;
-        return self.id - 1;
-    end
-
-    function Timer:find(id)
-        for i = 1, #self.task, 1 do
-            if self.task[i].id == id then
-                return self.task[i];
-            end
-        end
-        return nil;
-    end
-
-    function Timer:cancel(id)
-        for i = 1, #self.task, 1 do
-            if self.task[i].id == id then
-                table.remove(self.task,i);
-                return;
-            end
-        end
-    end
-    function Timer:purge()
-        self.task = {}
-    end
-
-    IKit.Create(Timer,"Timer");
-end)();
-
 Timer = IKit.New("Timer");
-
-(function()
-    local Command = {};
-    function Command:constructor()
-        self.sendbuffer = {};
-        self.receivbBuffer = {};
-
-        self.methods = {};
-    end
-
-    function Command:register(name,fun)
-        self.methods[name] = fun;
-    end
-
-    IKit.Create(Command,"Command");
-end)();
-
-(function()
-    local  ServerCommand = {};
-    
-    function ServerCommand:constructor()
-        self.super();
-
-        local OnPlayerSignalId = 0;
-        function self:connection()
-            OnPlayerSignalId = Event:addEventListener("OnPlayerSignal",function(player,signal)
-                self:OnPlayerSignal(player,signal);
-            end);
-        end
-
-        function self:disconnect()
-            Event:detachEventListener("OnPlayerSignal",OnPlayerSignalId);
-        end
-        self:connection();
-    end
-
-    function ServerCommand:OnPlayerSignal(player,signal)
-        if signal == 4 then
-            local command = IKit.New("String",self.receivbBuffer[player.name]);
-
-            local args = {IKit.New("String")};
-            for i = 1, command.length, 1 do
-                if command:charAt(i) == ' ' then
-                    if args[#args].length > 0 then
-                        table.insert(args,IKit.New("String"));
-                    end
-                else
-                    args[#args]:insert(command:charAt(i));
-                end
-            end
-
-            self:execute(player,args);
-            self.receivbBuffer[player.name] = {};
-        else
-            if self.receivbBuffer[player.name] == nil then
-                self.receivbBuffer[player.name] = {};
-            end
-            table.insert(self.receivbBuffer[player.name],signal);
-        end
-    end
-
-    function ServerCommand:sendMessage(player,message)
-        local message = IKit.New("String",message):toBytes();
-        for i = 1, #message, 1 do
-            player:Signal(message[i]);
-            -- table.insert(self.sendbuffer,message[i]);
-        end
-        player:Signal(4);
-        -- table.insert(self.sendbuffer,-1);
-    end
-
-    function ServerCommand:execute(player,args)
-        local name = args[1];
-        table.remove(args,1);
-        self.methods[name:toString()](player,args);
-    end
-
-    IKit.Create(ServerCommand,"ServerCommand","Command");
-end)();
-
-(function()
-    local  ClientCommand = {};
-    
-    function ClientCommand:constructor()
-        self.super();
-
-        local OnSignalId = 0;
-        function self:connection()
-            OnSignalId = Event:addEventListener("OnSignal",function(signal)
-                self:OnSignal(signal);
-            end);
-        end
-
-        function self:disconnect()
-            Event:detachEventListener("OnSignal",OnSignalId);
-        end
-        self:connection();
-    end
-
-    function ClientCommand:OnSignal(signal)
-        if signal == 4 then
-            local command = IKit.New("String",self.receivbBuffer);
-
-            local args = {IKit.New("String")};
-            for i = 1, command.length, 1 do
-                if command:charAt(i) == ' ' then
-                    if args[#args].length > 0 then
-                        table.insert(args,IKit.New("String"));
-                    end
-                else
-                    args[#args]:insert(command:charAt(i));
-                end
-            end
-
-            self:execute(args);
-            self.receivbBuffer = {};
-        else
-            table.insert(self.receivbBuffer,signal);
-        end
-    end
-
-    --当传出信号值为4时表示传输结束
-    function ClientCommand:sendMessage(message)
-        local message = IKit.New("String",message):toBytes();
-            for i = 1, #message, 1 do
-                UI.Signal(message[i]);
-                -- table.insert(self.sendbuffer,message[i]);
-            end
-            UI.Signal(4);
-            -- table.insert(self.sendbuffer,-1);
-    end
-
-    function ClientCommand:execute(args)
-        local name = args[1];
-        table.remove(args,1);
-        self.methods[name:toString()](args);
-    end
-
-    IKit.Create(ClientCommand,"ClientCommand","Command");
-end)();
 
 if Game ~= nil then
     Command = IKit.New("ServerCommand");

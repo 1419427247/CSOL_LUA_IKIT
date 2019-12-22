@@ -1,54 +1,4 @@
 Font = {};
-Font["a"]={0,0,1,4,2,0,3,4,1,1,2,2,1,4,2,5};
-Font["b"]={0,0,1,5,1,0,2,1,1,2,2,3,1,4,2,5,2,1,3,2,2,3,3,4};
-Font["c"]={0,1,1,4,1,0,3,1,1,4,3,5};
-Font["d"]={0,0,1,5,1,0,2,1,1,4,2,5,2,1,3,4};
-Font["e"]={0,1,1,4,1,0,3,1,1,2,3,3,1,4,3,5};
-Font["f"]={0,0,1,4,1,2,3,3,1,4,3,5};
-Font["g"]={0,1,1,4,1,0,2,1,2,0,3,3,1,4,3,5};
-Font["h"]={0,0,1,5,2,0,3,5,1,2,2,3};
-Font["i"]={1,0,2,5};
-Font["j"]={0,1,1,3,1,0,2,1,2,1,3,5};
-Font["k"]={0,0,1,5,2,0,3,2,2,3,3,5,1,2,2,3};
-Font["l"]={0,1,1,5,1,0,3,1};
-Font["m"]={0,0,1,5,2,0,3,5,1,3,2,4};
-Font["n"]={0,0,1,5,1,4,2,5,2,0,3,4};
-Font["o"]={0,1,1,4,2,1,3,4,1,0,2,1,1,4,2,5};
-Font["p"]={0,0,1,4,1,1,2,2,1,4,2,5,2,2,3,4};
-Font["q"]={0,2,1,4,2,2,3,4,1,0,2,2,1,4,2,5};
-Font["r"]={0,0,1,4,1,1,2,2,1,4,2,5,2,2,3,4,2,0,3,1};
-Font["s"]={0,0,2,1,2,1,3,2,1,2,2,3,0,3,1,4,1,4,3,5};
-Font["t"]={0,4,3,5,1,0,2,4};
-Font["u"]={0,0,1,5,1,0,2,1,2,1,3,5};
-Font["v"]={0,1,1,5,1,0,2,1,2,1,3,5};
-Font["w"]={0,0,1,5,2,0,3,5,1,1,2,2};
-Font["x"]={0,0,1,2,0,3,1,5,2,0,3,2,2,3,3,5,1,2,2,3};
-Font["y"]={0,3,1,5,2,3,3,5,1,0,2,3};
-Font["z"]={0,0,3,1,0,4,3,5,0,1,1,2,1,2,2,3,2,3,3,4};
-Font["0"]={0,0,1,5,2,0,3,5,1,0,2,1,1,4,2,5};
-Font["1"]={1,0,2,5,0,3,1,4};
-Font["2"]={0,0,1,3,2,2,3,5,1,0,3,1,1,2,2,3,0,4,2,5};
-Font["3"]={2,0,3,5,0,0,2,1,0,2,2,3,0,4,2,5};
-Font["4"]={0,2,1,5,2,0,3,5,1,2,2,3};
-Font["5"]={0,2,1,5,0,0,3,1,1,2,3,3,1,4,3,5,2,1,3,2};
-Font["6"]={0,0,1,5,1,0,3,1,1,2,3,3,1,4,3,5,2,1,3,2};
-Font["7"]={0,4,3,5,2,0,3,4};
-Font["8"]={0,0,1,5,2,0,3,5,1,0,2,1,1,2,2,3,1,4,2,5};
-Font["9"]={0,0,3,1,2,1,3,5,0,2,1,5,1,2,2,3,1,4,2,5};
-Font["."]={1,0,2,1};
-Font[":"]={1,1,2,2,1,3,2,4};
-Font["?"]={1,0,2,1,1,2,2,3,2,2,3,5,0,4,2,5};
-Font["!"]={1,0,2,1,1,2,2,5};
-Font["+"]={1,1,2,4,0,2,3,3};
-Font["-"]={0,2,3,3};
-Font["("]={0,1,1,4,1,0,2,1,1,4,2,5};
-Font["("]={2,1,3,4,1,0,2,1,1,4,2,5};
-Font[">"]={0,0,1,1,1,1,2,2,2,2,3,3,0,4,1,5,1,3,2,4};
-Font["<"]={0,2,1,3,1,1,2,2,0,2,1,3,1,3,2,4,2,4,3,5};
-Font["="]={0,1,3,2,0,3,3,4};
-Font["\'"]={1,3,2,5};
-Font["\\"]={0,3,1,5,1,2,2,3,2,0,3,2};
-Font["/"]={0,0,1,2,1,2,2,3,2,3,3,5};
 
 (function ()
     local Graphics = {};
@@ -59,6 +9,9 @@ Font["/"]={0,0,1,2,1,2,2,3,2,3,3,5};
 
     function Graphics:drawRect(x,y,width,height)
         local box = UI.Box.Create();
+        if box == nil then
+            error("无法绘制矩形:已超过最大限制");
+        end
         box:Set({x=x,y=y,width=width,height=height,r=self.color.red,g=self.color.green,b=self.color.blue,a=self.color.alpha});
         box:Show();
         table.insert(self.root,box);
@@ -75,6 +28,9 @@ Font["/"]={0,0,1,2,1,2,2,3,2,3,3,5};
                     local x2 = Font[char][j+2];
                     local y2 = Font[char][j+3];
                     local box = UI.Box.Create();
+                    if box == nil then
+                        error("无法绘制文字:已超过最大限制");
+                    end
                     if i == 1 then
                         box:Set({x =x + x1*size, y = y - y1*size , width = (x2 -x1)*size, height = (y2-y1)*-size, r = self.color.red, g = self.color.green, b = self.color.blue, a = self.color.alpha})
                     else
@@ -89,8 +45,8 @@ Font["/"]={0,0,1,2,1,2,2,3,2,3,3,5};
     end
 
     function Graphics:getTextSize(text,fontsize,letterspacing)
-        local width = (text.length - 1) * letterspacing + 3 * fontsize;
-        local height = 5 * fontsize;
+        local width = (text.length - 1) * letterspacing + 11 * fontsize;
+        local height = 12 * fontsize;
         return width,height;
     end
 
@@ -298,7 +254,13 @@ end)();
                 components[#components+1] = component;
             end
         end);
-        return IKit.New("ComponentBox",components);
+        if #components == 0 then
+            return nil;
+        elseif #components == 1 then
+            return components[1];
+        else
+            return IKit.New("ComponentBox",components);
+        end
     end
 
     function Frame:animate(component,params,speed)
@@ -322,8 +284,8 @@ end)();
 
 (function()
     local Component = {};
-    function Component:constructor(id)
-        self.id = id;
+    function Component:constructor(tag)
+        self.tag = tag;
         self.isvisible = true;
         --self.isfreeze = false;
         self.x = 0;
@@ -412,8 +374,8 @@ end)();
 (function()
     local Plane = {};
 
-    function Plane:constructor(id)
-        self.super(id);
+    function Plane:constructor(tag)
+        self.super(tag);
         self.index = 1;
     end
 
@@ -510,11 +472,11 @@ end)();
 (function()
     local Lable = {};
 
-    function Lable:constructor(id,text)
-        self.super(id);
+    function Lable:constructor(tag,text)
+        self.super(tag);
         self.text = IKit.New("String",text);
-        self.style.fontsize = 5;
-        self.style.letterspacing = 25;
+        self.style.fontsize = 2;
+        self.style.letterspacing = 22;
         self.style.textalign = "center";
         self.style.color = {red = 0,green = 0,blue=0,alpha=255};
     end
@@ -538,8 +500,8 @@ end)();
 (function()
     local Edit = {};
 
-    function Edit:constructor(id)
-        self.super(id);
+    function Edit:constructor(tag)
+        self.super(tag);
         self.cursor = 0;
         self.intype="all";
         self.maxlength = 10;
@@ -629,8 +591,8 @@ end)();
 (function()
     local Button = {};
 
-    function Button:constructor(id,text)
-        self.super(id,text);
+    function Button:constructor(tag,text)
+        self.super(tag,text);
     end
 
     function Button:paint(graphics)
@@ -653,8 +615,8 @@ end)();
 (function()
     local SelectBox = {};
     
-    function SelectBox:constructor(id)
-        self.super(id);
+    function SelectBox:constructor(tag)
+        self.super(tag);
         self.list = {};
     end
     
