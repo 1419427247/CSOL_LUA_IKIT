@@ -553,9 +553,9 @@ end)();
         --要显示的文本
         self.text = IKit.New("String",text);
         --文字大小
-        self.style.fontsize = 3;
+        self.style.fontsize = 2;
         --文字间距
-        self.style.letterspacing = 50;
+        self.style.letterspacing = 25;
         --文本对齐方式,可为 "center","left","rigth"
         self.style.textalign = "center";
         --文本x轴偏移量

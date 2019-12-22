@@ -38,4 +38,4 @@ Frame:setFocus(Component1);
 
 Frame:repaint();
 
--- Component1:animate({"style.left",0,"style.top",0,"style.width",0,"style.height",0},100);
+Component1:animate({"style.left",0,"style.top",0,"style.width",0,"style.height",0},3500);
