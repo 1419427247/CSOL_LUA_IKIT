@@ -17,6 +17,7 @@ Font = {};
         table.insert(self.root,box);
     end;
 
+    --在屏幕上绘制文字
     function Graphics:drawText(x,y,size,letterSpacing,string)
         for i=1,string.length do
             local char = string:charAt(i)
@@ -32,9 +33,9 @@ Font = {};
                         error("无法绘制文字:已超过最大限制");
                     end
                     if i == 1 then
-                        box:Set({x =x + x1*size, y = y - y1*size , width = (x2 -x1)*size, height = (y2-y1)*-size, r = self.color.red, g = self.color.green, b = self.color.blue, a = self.color.alpha})
+                        box:Set({x =x + x1*size, y = y + (12 - y2)*size, width = (x2 - x1)*size, height = (y2 - y1)*size, r = self.color.red, g = self.color.green, b = self.color.blue, a = self.color.alpha})
                     else
-                        box:Set({x =(i-1) * letterSpacing + x + x1*size, y = y - y1*size , width = (x2 -x1)*size, height = (y2-y1)*-size, r = self.color.red, g = self.color.green, b = self.color.blue, a = self.color.alpha})
+                        box:Set({x =x + (i-1) * letterSpacing + x1*size, y = y + (12 - y2)*size, width = (x2 - x1)*size, height = (y2 - y1)*size, r = self.color.red, g = self.color.green, b = self.color.blue, a = self.color.alpha})
                     end
                     box:Show();
                     table.insert(self.root,box);
@@ -44,12 +45,14 @@ Font = {};
         end
     end
 
+    --获取文字的宽高
     function Graphics:getTextSize(text,fontsize,letterspacing)
         local width = (text.length - 1) * letterspacing + 11 * fontsize;
         local height = 12 * fontsize;
         return width,height;
     end
 
+    --清楚屏幕上绘制的一切
     function Graphics:clean()
         for i = 1, #self.root, 1 do
             self.root[i] = nil;
@@ -61,103 +64,97 @@ Font = {};
     IKit.Create(Graphics,"Graphics");
 end)();
 
-(function()
-    local ComponentBox = {};
+-- (function()
+--     local ComponentBox = {};
 
-    function ComponentBox:constructor()
-        self.components = {};
-    end
+--     function ComponentBox:constructor()
+--         self.components = {};
+--     end
 
-    function ComponentBox:set(key,value)
-        for i = 1, #self.components, 1 do
-            self.components[i][key] = value;
-        end
-    end
+--     function ComponentBox:set(key,value)
+--         for i = 1, #self.components, 1 do
+--             self.components[i][key] = value;
+--         end
+--     end
     
-    function ComponentBox:get(tag)
-        local array = {};
-        for i = 1, #self.components, 1 do
-            if self.components[i] == tag then
-                array[#array+1] = self.components[i];
-            end
-        end
-        return array;
-    end
+--     function ComponentBox:get(tag)
+--         local array = {};
+--         for i = 1, #self.components, 1 do
+--             if self.components[i] == tag then
+--                 array[#array+1] = self.components[i];
+--             end
+--         end
+--         return array;
+--     end
 
-    function ComponentBox:call(key,...)
-        for i = 1, #self.components, 1 do
-            self.components[i][key](self.components[i],...);
-        end
-    end
+--     function ComponentBox:call(key,...)
+--         for i = 1, #self.components, 1 do
+--             self.components[i][key](self.components[i],...);
+--         end
+--     end
 
-    function ComponentBox:forEach(func)
-        for i = 1, #self.components, 1 do
-            func(self.components[i]);
-        end
-    end
+--     function ComponentBox:forEach(func)
+--         for i = 1, #self.components, 1 do
+--             func(self.components[i]);
+--         end
+--     end
 
-    IKit.Create(ComponentBox,"ComponentBox");
-end)();
-
-(function()
-    local Animation = {};
-    function Animation:constructor()
-        self.task = {};
-
-        local OnUpdateId = 0;
-
-        function self:start()
-            OnUpdateId = Event:addEventListener("OnUpdate",function(time)
-                self:OnUpdate(time);
-            end);
-        end
-
-        function self:finish()
-            Event:detachEventListener("OnPlayerSignal",OnUpdateId);
-        end
-
-        self:start();
-    end
-
-    function Animation:OnUpdate(time)
-        
-    end
-
-    IKit.Create(Animation,"Animation");
-end)();
+--     IKit.Create(ComponentBox,"ComponentBox");
+-- end)();
 
 (function()
     local Frame = {};
     function Frame:constructor(width,height)
+        --设置当前窗口的x轴位置
         self.x=0;
+        --设置当前窗口的y轴位置
         self.y=0;
+        --设置当前窗口的宽度,默认为屏幕的宽度
         self.width = width or UI.ScreenSize().width;
+        --设置当前窗口的宽度,默认为屏幕的高度
         self.height = height or UI.ScreenSize().height;
         self.graphics = IKit.New("Graphics");
+        self.animation = {};
         self.children = {};
+        --当前得到焦点的物体，默认为空
         self.focused = 0;
 
         local OnKeyDownEventId = 0;
         local OnKeyUpEventId = 0;
-        
-        function self:show()
+        local OnUpdateId = 0;
+
+        --为当前Frame注册鼠标键盘监听事件
+        function self:enable()
+            if OnKeyUpEventId ~= 0 or OnKeyDownEventId ~= 0 then
+                error("当前窗口以存在监听事件不可重复添加");
+            end
             OnKeyDownEventId = Event:addEventListener("OnKeyDown",function(inputs)
                 self:onKeyDown(inputs);
             end);
             OnKeyUpEventId = Event:addEventListener("OnKeyUp",function(inputs)
                 self:onKeyUp(inputs);
             end);
-            self:repaint();
+            OnUpdateId = Event:addEventListener("OnUpdate",function(time)
+                self:OnUpdate(time);
+            end);
         end
 
-        function self:hide()
+        --移除当前Frame注册的鼠标键盘监听事件
+        function self:disable()
+            if OnKeyUpEventId == 0 or OnKeyDownEventId == 0 or OnUpdateId == 0 then
+                error("当前窗口以存在监听事件");
+            end
             Event:detachEventListener("OnKeyDown",OnKeyDownEventId);
             Event:detachEventListener("OnKeyUp",OnKeyUpEventId);
-            self:repaint();
+            Event:detachEventListener("OnUpdate",OnUpdateId);
+            OnKeyUpEventId = 0;
+            OnKeyDownEventId = 0;
+            OnUpdateId = 0;
         end
+        self:enable();
     end
 
-
+    --添加一个或多个组件
     function Frame:add(...)
         local components = {...};
         for i = 1, #components, 1 do
@@ -167,6 +164,7 @@ end)();
         return self;
     end
 
+    --将焦点指向component并触发相应事件
     function Frame:setFocus(component)
         if self.focused ~= 0 then
             self.focused:onBlur();
@@ -175,9 +173,10 @@ end)();
         self.focused:onFocus();
     end
 
-    function Frame:forEach(fun)
+    --前序遍历所有子组件
+    function Frame:forEach(func)
         local function forEach(component)
-            if fun(component) == false then
+            if func(component) == false then
                 return;
             end
             for i = 1, #component.children, 1 do
@@ -189,6 +188,7 @@ end)();
         end
     end
 
+    --计算子组件的位置,若components为nil则重新计算所有组建的位置
     function Frame:reset(components)
         local components = components or self.children;
             for i = 1, #components, 1 do
@@ -220,7 +220,7 @@ end)();
                             end
                         else
                             components[i].x = components[i - 1].x + components[i - 1].width + components[i].father.width * (components[i].style.left /100);
-                            components[i].y = components[i - 1].y + components[i].father.height * (components[i].style.top /100);
+                            components[i].y = components[i].father.y + components[i].father.height * (components[i].style.top /100);
                         end
                     end
                 elseif components[i].style.position == "absolute" then
@@ -238,6 +238,7 @@ end)();
         
     -- end
 
+    --重绘当前frame
     function Frame:repaint()
         self.graphics:clean();
         self:forEach(function(component)
@@ -247,6 +248,7 @@ end)();
         end);
     end
 
+    --通过标签查找子组件,若未查到相同tag的组件返回nil,查询到一个返回该组件，若查询到多个组件则返回包含多个组件的数组
     function Frame:findByTag(tag)
         local components = {};
         self:forEach(function(component)
@@ -259,12 +261,65 @@ end)();
         elseif #components == 1 then
             return components[1];
         else
-            return IKit.New("ComponentBox",components);
+            return components;
         end
     end
 
-    function Frame:animate(component,params,speed)
+    --设置动画{"x",5,"style.backgroundcolor.r",125}
+    function Frame:animate(params,timeslice,callback,component)
+        local style = {};
+        local object;
+        local key = IKit.New("String");
+        for i = 1, #params, 2 do
+            object = component;
+            key:clean();
 
+            for j = 1, #params[i], 1 do
+                if string.sub(params[i],j,j) == '.' then
+                    object = object[key:toString()];
+                    key:clean();
+                else
+                    key:insert(string.sub(params[i],j,j));
+                end
+            end
+            table.insert(style,{
+                object,
+                key:toString(),
+                params[i+1],
+                (params[i+1] - object[key:toString()])/ timeslice
+            });
+            print(params[i+1])
+            print(object[key:toString()])
+            print(timeslice)
+        end
+        self.animation[#self.animation+1] = function()
+            if timeslice == 0 then
+                for i = 1, #style, 1 do
+                    style[i][1][style[i][2]] = style[i][3];
+                end
+                if callback ~= nil then
+                    callback();
+                end
+                return false;
+            end
+            for i = 1, #style, 1 do
+                style[i][1][style[i][2]] = style[i][1][style[i][2]] + style[i][4];
+            end
+            timeslice = timeslice - 1;
+            return true;
+        end
+    end
+
+    --隐藏并移除当前frame的事件监听
+    function Frame:hide()
+        self:disable();
+        self.graphics:clean();
+    end
+
+    --显示并重新添加当前frame的事件监听
+    function Frame:show()
+        self:enable();
+        self:repaint();
     end
 
     function Frame:onKeyDown(inputs)
@@ -279,14 +334,28 @@ end)();
         end
     end
 
+    function Frame:OnUpdate(time)
+        if #self.animation > 0 then
+            for i = #self.animation,1,-1 do
+                if self.animation[i]() ==false then
+                    table.remove(self.animation,i);
+                end
+            end
+            self:reset();
+            self:repaint();          
+        end
+    end
     IKit.Create(Frame,"Frame");
 end)();
 
 (function()
     local Component = {};
     function Component:constructor(tag)
+        --组件的标签,用于查找特定组件
         self.tag = tag;
+        --是否渲染当前组件(不包括子组件)
         self.isvisible = true;
+        --组件是否可被选中
         --self.isfreeze = false;
         self.x = 0;
         self.y = 0;
@@ -297,23 +366,29 @@ end)();
             top = 0,
             width = 0,
             height = 0,
+            --设置组建的定位方式
             position = "relative",
+            --背景颜色
             backgroundcolor = {red = 255,green = 255,blue=255,alpha=255},
-            border = {top = 1,left = 1,right = 1,bottom = 1},
+            --边框
+            border = {top = 0,left = 0,right = 0,bottom = 0},
+            --边框颜色
             bordercolor = {red = 0,green = 0,blue=0,alpha=255},
+            --是否换行
             newline = false,
         };
         self.father = 0;
         self.children = {};
     end
 
-    function Component:getIndex()
-        for i = 1, #self.father.children, 1 do
-            if self.father.children[i] == self then
-                return i;
-            end
-        end
-    end
+    --没有用的东西
+    -- function Component:getIndex()
+    --     for i = 1, #self.father.children, 1 do
+    --         if self.father.children[i] == self then
+    --             return i;
+    --         end
+    --     end
+    -- end
 
     function Component:paint(graphics)
         graphics.color = self.style.backgroundcolor;
@@ -356,8 +431,9 @@ end)();
 
     end
 
-    function Component:animate(params,speed)
-        self.super:animate(self,params,speed);
+    function Component:animate(params,timeslice,callback,component)
+        component = component or self;
+        self.father:animate(params,timeslice,callback,component);
     end
 
     function Component:setFocus(component)
@@ -392,10 +468,10 @@ end)();
         if #self.children > 0 then
             self.children[self.index]:onFocus();
         end
-        self.style.border.left = self.style.border.left + 5;
-        self.style.border.right = self.style.border.right + 5;
-        self.style.border.top = self.style.border.top + 5;
-        self.style.border.bottom = self.style.border.bottom + 5;
+        self.style.border.left = self.style.border.left + 3;
+        self.style.border.right = self.style.border.right + 3;
+        self.style.border.top = self.style.border.top + 3;
+        self.style.border.bottom = self.style.border.bottom + 3;
         self:repaint();
     end
 
@@ -403,10 +479,10 @@ end)();
         if #self.children > 0 then
             self.children[self.index]:onBlur();
         end
-        self.style.border.left = self.style.border.left - 5;
-        self.style.border.right = self.style.border.right - 5;
-        self.style.border.top = self.style.border.top - 5;
-        self.style.border.bottom = self.style.border.bottom - 5;
+        self.style.border.left = self.style.border.left - 3;
+        self.style.border.right = self.style.border.right - 3;
+        self.style.border.top = self.style.border.top - 3;
+        self.style.border.bottom = self.style.border.bottom - 3;
         self:repaint();
     end
 
@@ -474,10 +550,19 @@ end)();
 
     function Lable:constructor(tag,text)
         self.super(tag);
+        --要显示的文本
         self.text = IKit.New("String",text);
-        self.style.fontsize = 2;
-        self.style.letterspacing = 22;
+        --文字大小
+        self.style.fontsize = 3;
+        --文字间距
+        self.style.letterspacing = 50;
+        --文本对齐方式,可为 "center","left","rigth"
         self.style.textalign = "center";
+        --文本x轴偏移量
+        self.style.offsetx = 0;
+        --文本y轴偏移量
+        self.style.offsety = 0;
+        --文本颜色
         self.style.color = {red = 0,green = 0,blue=0,alpha=255};
     end
 
@@ -486,11 +571,11 @@ end)();
         graphics.color = self.style.color;
         local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
         if self.style.textalign == "center" then
-            graphics:drawText(self.x + (self.width - w)/2,self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
+            graphics:drawText(self.x + (self.width - w)/2 + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,self.text);
         elseif self.style.textalign == "left" then
-            graphics:drawText(self.x,self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
+            graphics:drawText(self.x + self.style.offsetx,self.y + (self.height - h) / 2 + self.style.offsety ,self.style.fontsize,self.style.letterspacing,self.text);
         elseif self.style.textalign == "rigth" then
-            graphics:drawText(self.x + (self.width - w),self.y + (self.height + h) / 2,self.style.fontsize,self.style.letterspacing,self.text);
+            graphics:drawText(self.x + (self.width - w) + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,self.text);
         end
     end
 
@@ -500,10 +585,13 @@ end)();
 (function()
     local Edit = {};
 
-    function Edit:constructor(tag)
-        self.super(tag);
+    function Edit:constructor(tag,text)
+        self.super(tag,text);
+        --光标位置
         self.cursor = 0;
+        --输入类型,可为 "all" "number" "english"
         self.intype="all";
+        --最大输入长度
         self.maxlength = 10;
     end
 
@@ -512,26 +600,24 @@ end)();
         local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
 
         if self.style.textalign == "center" then
-            graphics:drawRect(self.x + (self.width - w)/2 + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+            graphics:drawRect(self.x + (self.width - w)/2 + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
             self.y + (self.height - h) / 2,
             self.style.fontsize / 2,
-            self.style.fontsize * 5);
+            self.style.fontsize * 12);
         elseif self.style.textalign == "left" then
-            graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+            graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
             self.y + (self.height - h) / 2,
             self.style.fontsize / 2,
-            self.style.fontsize * 5);
+            self.style.fontsize * 12);
         elseif self.style.textalign == "rigth" then
-            graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing + (self.width - w) - (self.style.letterspacing - self.style.fontsize * 3)/2 ,
+            graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing + (self.width - w) - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
             self.y + (self.height - h) / 2,
             self.style.fontsize / 2,
-            self.style.fontsize * 5);
+            self.style.fontsize * 12);
         end
     end
 
     function Edit:onKeyDown(inputs)
-        self.super:onKeyDown(inputs);
-
         for key, value in pairs(inputs) do
             if value == true then
                 if self.text.length < self.maxlength then
@@ -576,8 +662,6 @@ end)();
                 end
             end
         end
-        
-        print(self.text:toString())
         self:repaint();
     end
 
@@ -629,4 +713,11 @@ end)();
     end
     
     IKit.Create(SelectBox,"SelectBox","Plane");
+end)();
+
+
+(function()
+    local MessageBox = {};
+    
+    IKit.Create(MessageBox,"MessageBox");
 end)();
