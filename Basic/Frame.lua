@@ -7,18 +7,43 @@ Font = {};
         self.color = {red = 255,green = 255,blue=255,alpha=255};
     end
 
-    function Graphics:drawRect(x,y,width,height)
+    function Graphics:drawRect(x,y,width,height,rect)
         local box = UI.Box.Create();
         if box == nil then
             error("无法绘制矩形:已超过最大限制");
         end
-        box:Set({x=x,y=y,width=width,height=height,r=self.color.red,g=self.color.green,b=self.color.blue,a=self.color.alpha});
+        if rect~=nil then
+            if x > rect.x + rect.width then
+                return;
+            end
+            if y > rect.y + rect.height then
+                return;
+            end
+            if x + width < rect.x or y + height < rect.y then
+                return;
+            end
+            if x < rect.x then
+                 x = rect.x; 
+            end
+            if y < rect.y then
+                 y = rect.y; 
+            end
+            if x + width > rect.x + rect.width then 
+                width = rect.x + rect.width - x;
+            end
+            if y + height > rect.y + rect.height then 
+                height = rect.y + rect.height - y;
+            end
+            box:Set({x=x,y=y,width=width,height=height,r=self.color.red,g=self.color.green,b=self.color.blue,a=self.color.alpha});
+        else
+            box:Set({x=x,y=y,width=width,height=height,r=self.color.red,g=self.color.green,b=self.color.blue,a=self.color.alpha});
+        end
         box:Show();
         table.insert(self.root,box);
     end;
 
     --在屏幕上绘制文字
-    function Graphics:drawText(x,y,size,letterSpacing,string)
+    function Graphics:drawText(x,y,size,letterSpacing,string,rect)
         for i=1,string.length do
             local char = string:charAt(i)
             if(Font[char] ~= nil) then
@@ -28,17 +53,22 @@ Font = {};
                     local y1 = Font[char][j+1];
                     local x2 = Font[char][j+2];
                     local y2 = Font[char][j+3];
-                    local box = UI.Box.Create();
-                    if box == nil then
-                        error("无法绘制文字:已超过最大限制");
-                    end
+                    -- local box = UI.Box.Create();
+                    -- if box == nil then
+                    --     error("无法绘制文字:已超过最大限制");
+                    -- end
                     if i == 1 then
-                        box:Set({x =x + x1*size, y = y + (12 - y2)*size, width = (x2 - x1)*size, height = (y2 - y1)*size, r = self.color.red, g = self.color.green, b = self.color.blue, a = self.color.alpha})
+                        self:drawRect(x + x1*size,y + (12 - y2)*size, (x2 - x1)*size, (y2 - y1)*size,rect);
                     else
-                        box:Set({x =x + (i-1) * letterSpacing + x1*size, y = y + (12 - y2)*size, width = (x2 - x1)*size, height = (y2 - y1)*size, r = self.color.red, g = self.color.green, b = self.color.blue, a = self.color.alpha})
+                        self:drawRect(x + (i-1) * letterSpacing + x1*size,y + (12 - y2)*size, (x2 - x1)*size, (y2 - y1)*size,rect);
                     end
-                    box:Show();
-                    table.insert(self.root,box);
+                    -- if i == 1 then
+                    --     box:Set({x =x + x1*size, y = y + (12 - y2)*size, width = (x2 - x1)*size, height = (y2 - y1)*size, r = self.color.red, g = self.color.green, b = self.color.blue, a = self.color.alpha})
+                    -- else
+                    --     box:Set({x =x + (i-1) * letterSpacing + x1*size, y = y + (12 - y2)*size, width = (x2 - x1)*size, height = (y2 - y1)*size, r = self.color.red, g = self.color.green, b = self.color.blue, a = self.color.alpha})
+                    -- end
+                    -- box:Show();
+                    -- table.insert(self.root,box);
                     j = j + 4;
                 end
             end
@@ -114,7 +144,7 @@ end)();
         --设置当前窗口的宽度,默认为屏幕的高度
         self.height = height or UI.ScreenSize().height;
         self.graphics = IKit.New("Graphics");
-        self.animation = {};
+        self.animation = 0;
         self.children = {};
         --当前得到焦点的物体，默认为空
         self.focused = 0;
@@ -151,7 +181,6 @@ end)();
             OnKeyDownEventId = 0;
             OnUpdateId = 0;
         end
-        self:enable();
     end
 
     --添加一个或多个组件
@@ -204,23 +233,23 @@ end)();
                             local temp = components[j];
                             while temp.father == components[j].father do
                                 if temp.style.newline == true then
-                                    components[i].x = components[i].father.width * (components[i].style.left /100);
+                                    components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
                                     components[i].y = temp.y + temp.height + components[i].father.height * (components[i].style.top /100);
                                     break;
                                 end
                                 j = j - 1;
-                                if j < 1 then
+                                temp = components[j];
+                                if j == 1 then
                                     break;
                                 end
-                                temp = components[j];
                             end
-                            if j == 0 then
+                            if j == 1 then
                                 components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
                                 components[i].y = components[i].father.children[1].y + components[i].father.children[1].height + components[i].father.height * (components[i].style.top /100);
                             end
                         else
                             components[i].x = components[i - 1].x + components[i - 1].width + components[i].father.width * (components[i].style.left /100);
-                            components[i].y = components[i].father.y + components[i].father.height * (components[i].style.top /100);
+                            components[i].y = components[i - 1].y + components[i].father.height * (components[i].style.top /100);
                         end
                     end
                 elseif components[i].style.position == "absolute" then
@@ -265,7 +294,7 @@ end)();
         end
     end
 
-    --设置动画{"x",5,"style.backgroundcolor.r",125}
+    --设置动画,对性能有较大影响Frame:animate{"x",5,"style.backgroundcolor.r",125},nil,Button);
     function Frame:animate(params,timeslice,callback,component)
         local style = {};
         local object;
@@ -288,11 +317,8 @@ end)();
                 params[i+1],
                 (params[i+1] - object[key:toString()])/ timeslice
             });
-            print(params[i+1])
-            print(object[key:toString()])
-            print(timeslice)
         end
-        self.animation[#self.animation+1] = function()
+        component.animation = function()
             if timeslice == 0 then
                 for i = 1, #style, 1 do
                     style[i][1][style[i][2]] = style[i][3];
@@ -308,6 +334,7 @@ end)();
             timeslice = timeslice - 1;
             return true;
         end
+        self.animation = self.animation + 1;
     end
 
     --隐藏并移除当前frame的事件监听
@@ -319,6 +346,7 @@ end)();
     --显示并重新添加当前frame的事件监听
     function Frame:show()
         self:enable();
+        self:reset();
         self:repaint();
     end
 
@@ -335,14 +363,24 @@ end)();
     end
 
     function Frame:OnUpdate(time)
-        if #self.animation > 0 then
-            for i = #self.animation,1,-1 do
-                if self.animation[i]() ==false then
-                    table.remove(self.animation,i);
+        if self.animation > 0 then
+            local function forEach(component)
+                if component.animation ~= 0 then
+                    if component.animation() == false then
+                        component.animation = 0;
+                        self.animation = self.animation - 1;
+                    end
+                end
+                for i = 1, #component.children, 1 do
+                    forEach(component.children[i]);
                 end
             end
+            for i = 1, #self.children, 1 do
+                forEach(self.children[i]);
+            end
+
             self:reset();
-            self:repaint();          
+            self:repaint();
         end
     end
     IKit.Create(Frame,"Frame");
@@ -355,6 +393,7 @@ end)();
         self.tag = tag;
         --是否渲染当前组件(不包括子组件)
         self.isvisible = true;
+        self.animation = 0;
         --组件是否可被选中
         --self.isfreeze = false;
         self.x = 0;
@@ -366,7 +405,7 @@ end)();
             top = 0,
             width = 0,
             height = 0,
-            --设置组建的定位方式
+            --设置组建的定位方式,可为 "relative" "absolute"
             position = "relative",
             --背景颜色
             backgroundcolor = {red = 255,green = 255,blue=255,alpha=255},
@@ -409,19 +448,22 @@ end)();
         end
     end
 
-    function Component:onBlur()
-        self.style.backgroundcolor.red = self.style.backgroundcolor.red - 128;
-        self.style.backgroundcolor.green = self.style.backgroundcolor.green - 128;
-        self.style.backgroundcolor.blue = self.style.backgroundcolor.blue - 128;
+    function Component:onFocus()
+        -- self.style.backgroundcolor.red = self.style.backgroundcolor.red - 20;
+        -- self.style.backgroundcolor.green = self.style.backgroundcolor.green - 20;
+        -- self.style.backgroundcolor.blue = self.style.backgroundcolor.blue - 20;
+        self:animate({"style.backgroundcolor.red",0},50,nil,self);
         self:repaint();
     end
 
-    function Component:onFocus()
-        self.style.backgroundcolor.red = self.style.backgroundcolor.red + 128;
-        self.style.backgroundcolor.green = self.style.backgroundcolor.green + 128;
-        self.style.backgroundcolor.blue = self.style.backgroundcolor.blue + 128;
+    function Component:onBlur()
+        -- self.style.backgroundcolor.red = self.style.backgroundcolor.red + 20;
+        -- self.style.backgroundcolor.green = self.style.backgroundcolor.green + 20;
+        -- self.style.backgroundcolor.blue = self.style.backgroundcolor.blue + 20;
+        self:animate({"style.backgroundcolor.red",255},50,nil,self);
         self:repaint();
     end
+
 
     function Component:onKeyDown(inputs)
 
@@ -489,6 +531,7 @@ end)();
     function Plane:onKeyDown(inputs)
         if inputs[UI.KEY.UP] == true then
             if #self.children > 0 then
+                print(self.children[self.index].type);
                 self.children[self.index]:onBlur();
                 if self.index == 1 then
                     self.index = #self.children;
@@ -558,6 +601,8 @@ end)();
         self.style.letterspacing = 25;
         --文本对齐方式,可为 "center","left","rigth"
         self.style.textalign = "center";
+        --对超出区域的文本的操作 可为 "hiddne" "none"
+        self.overflow = "hidden";
         --文本x轴偏移量
         self.style.offsetx = 0;
         --文本y轴偏移量
@@ -568,14 +613,18 @@ end)();
 
     function Lable:paint(graphics)
         self.super:paint(graphics);
+        local rect = nil;
+        if self.overflow == "hidden" then
+            rect = {x = self.x,y = self.y,width = self.width,height = self.height};
+        end
         graphics.color = self.style.color;
         local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
         if self.style.textalign == "center" then
-            graphics:drawText(self.x + (self.width - w)/2 + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,self.text);
+            graphics:drawText(self.x + (self.width - w)/2 + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,self.text,rect);
         elseif self.style.textalign == "left" then
-            graphics:drawText(self.x + self.style.offsetx,self.y + (self.height - h) / 2 + self.style.offsety ,self.style.fontsize,self.style.letterspacing,self.text);
+            graphics:drawText(self.x + self.style.offsetx,self.y + (self.height - h) / 2 + self.style.offsety ,self.style.fontsize,self.style.letterspacing,self.text,rect);
         elseif self.style.textalign == "rigth" then
-            graphics:drawText(self.x + (self.width - w) + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,self.text);
+            graphics:drawText(self.x + (self.width - w) + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,self.text,rect);
         end
     end
 
@@ -598,22 +647,25 @@ end)();
     function Edit:paint(graphics)
         self.super:paint(graphics);
         local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
-
+        local rect = nil;
+        if self.overflow == "hidden" then
+            rect = {x = self.x,y = self.y,width = self.width,height = self.height};
+        end
         if self.style.textalign == "center" then
             graphics:drawRect(self.x + (self.width - w)/2 + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
             self.y + (self.height - h) / 2,
             self.style.fontsize / 2,
-            self.style.fontsize * 12);
+            self.style.fontsize * 12,rect);
         elseif self.style.textalign == "left" then
             graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
             self.y + (self.height - h) / 2,
             self.style.fontsize / 2,
-            self.style.fontsize * 12);
+            self.style.fontsize * 12,rect);
         elseif self.style.textalign == "rigth" then
             graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing + (self.width - w) - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
             self.y + (self.height - h) / 2,
             self.style.fontsize / 2,
-            self.style.fontsize * 12);
+            self.style.fontsize * 12,rect);
         end
     end
 
@@ -685,11 +737,11 @@ end)();
 
     function Button:onKeyDown(inputs)
         if inputs[UI.KEY.MOUSE1] == true then
-            self:onMouseClick();
+            self:onClick();
         end
     end
 
-    function Button:onMouseClick()
+    function Button:onClick()
 
     end
 
@@ -719,5 +771,13 @@ end)();
 (function()
     local MessageBox = {};
     
+    function MessageBox:constructor(text,caption,style)
+        self.messagebox = IKit.New("Frame");
+        self.messagebox:add(
+            IKit.New("Lable",1,caption),
+            IKit.New("Lable",2,text),
+            IKit.New("Button",3,"确定")
+        );
+    end
     IKit.Create(MessageBox,"MessageBox");
 end)();

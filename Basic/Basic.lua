@@ -111,6 +111,12 @@ IKit = (function()
         Instanceof = instanceof,
     }
 end)();
+IKit.iif = function (arg1, arg2, arg3)
+    if arg1 == true then
+        return arg2;
+    end
+    return arg3
+end
 
 (function()
     local function charSize(curByte)
