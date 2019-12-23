@@ -229,23 +229,18 @@ end)();
                         components[i].y = components[i].father.y + components[i].father.height * (components[i].style.top /100);
                     else
                         if components[i].style.newline == true then
-                            local j = i - 1;
-                            local temp = components[j];
-                            while temp.father == components[j].father do
+                            local temp;
+                            for j = i - 1, 1 , -1 do
+                                temp = components[j];
                                 if temp.style.newline == true then
                                     components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
                                     components[i].y = temp.y + temp.height + components[i].father.height * (components[i].style.top /100);
                                     break;
                                 end
-                                j = j - 1;
-                                temp = components[j];
                                 if j == 1 then
-                                    break;
+                                    components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
+                                    components[i].y = components[i].father.children[1].y + components[i].father.children[1].height + components[i].father.height * (components[i].style.top /100);
                                 end
-                            end
-                            if j == 1 then
-                                components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
-                                components[i].y = components[i].father.children[1].y + components[i].father.children[1].height + components[i].father.height * (components[i].style.top /100);
                             end
                         else
                             components[i].x = components[i - 1].x + components[i - 1].width + components[i].father.width * (components[i].style.left /100);
@@ -337,6 +332,9 @@ end)();
         self.animation = self.animation + 1;
     end
 
+    function Frame:getRectSize()
+        return #self.graphics.root;
+    end
     --隐藏并移除当前frame的事件监听
     function Frame:hide()
         self:disable();
@@ -452,7 +450,10 @@ end)();
         -- self.style.backgroundcolor.red = self.style.backgroundcolor.red - 20;
         -- self.style.backgroundcolor.green = self.style.backgroundcolor.green - 20;
         -- self.style.backgroundcolor.blue = self.style.backgroundcolor.blue - 20;
-        self:animate({"style.backgroundcolor.red",0},50,nil,self);
+        self:animate({"style.backgroundcolor.red",222,
+                      "style.backgroundcolor.green",222,
+                      "style.backgroundcolor.blue",222,
+                    },10,nil,self);
         self:repaint();
     end
 
@@ -460,7 +461,10 @@ end)();
         -- self.style.backgroundcolor.red = self.style.backgroundcolor.red + 20;
         -- self.style.backgroundcolor.green = self.style.backgroundcolor.green + 20;
         -- self.style.backgroundcolor.blue = self.style.backgroundcolor.blue + 20;
-        self:animate({"style.backgroundcolor.red",255},50,nil,self);
+        self:animate({"style.backgroundcolor.red",255,
+                      "style.backgroundcolor.green",255,
+                      "style.backgroundcolor.blue",255
+                    },10,nil,self);
         self:repaint();
     end
 
@@ -531,7 +535,6 @@ end)();
     function Plane:onKeyDown(inputs)
         if inputs[UI.KEY.UP] == true then
             if #self.children > 0 then
-                print(self.children[self.index].type);
                 self.children[self.index]:onBlur();
                 if self.index == 1 then
                     self.index = #self.children;
@@ -771,13 +774,49 @@ end)();
 (function()
     local MessageBox = {};
     
-    function MessageBox:constructor(text,caption,style)
-        self.messagebox = IKit.New("Frame");
-        self.messagebox:add(
-            IKit.New("Lable",1,caption),
-            IKit.New("Lable",2,text),
-            IKit.New("Button",3,"确定")
+    function MessageBox:constructor(caption,text)
+        local messagebox = IKit.New("Frame");
+
+        local plane = IKit.New("Plane",1);
+        plane.style.top = 25;
+        plane.style.left = 25;
+        plane.style.width = 50;
+        plane.style.height = 30;
+
+        local caption = IKit.New("Lable",2,caption);
+        caption.style.top = 5;
+        caption.style.left = 2;
+        caption.style.width = 96;
+        caption.style.height = 20;
+        caption.style.fontsize = 2;
+        caption.style.textalign = "left"
+
+        local text = IKit.New("Lable",3,text);
+        text.style.left = 2;
+        text.style.width = 96;
+        text.style.height = 50;
+        text.style.newline = true;
+
+        local mb_ok = IKit.New("Button",4,"确定");
+        mb_ok.style.top = 5;
+        mb_ok.style.left = 40;
+        mb_ok.style.width = 20;
+        mb_ok.style.height = 15;
+        mb_ok.style.newline = true;
+
+        function mb_ok:onClick()
+            messagebox:hide();
+        end
+
+        messagebox:add(
+            plane:add(
+                caption,
+                text,
+                mb_ok
+            )
         );
+        messagebox:setFocus(plane);
+        messagebox:show();
     end
     IKit.Create(MessageBox,"MessageBox");
 end)();
