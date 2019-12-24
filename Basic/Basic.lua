@@ -1,6 +1,8 @@
 IKit = (function()
     local class = {};
 
+    --local interface = {};
+
     local classtree = {};
 
     local call = function(table,...)
@@ -320,23 +322,35 @@ end)();
         error("事件:'" ..name.."'不存在");
     end
 
-    function Event:addEventListener (name,event)
+    function Event:addEventListener(name,event)
+        if self.array[name] ~= nil then
+            error("未找到事件'" .. name .. "'");
+        end
         if type(event) == "function" then
-            self.array[name][self.id] = event;
+            self.array[name][#self.array[name] + 1] = {self.id,event};
             self.id = self.id + 1;
             return self.id - 1;
         else
             error("它应该是一个函数");
         end
-    end;
+    end
 
     function Event:detachEventListener(name,id)
-        self.array[name][id] = nil;
-    end;
+        if self.array[name] ~= nil then
+            error("未找到'" .. name .. "'");
+        end
+        for i = 1, #self.array[name],1 do
+            if self.array[name][i][1] == id then
+                table.remove(self.array[name],i);
+                return;
+            end
+        end
+        error("未找到'" .. id .. "'在Event[" .. name .."]内");
+    end
 
     function Event:forEach(name,...)
-        for key, value in pairs(self.array[name]) do
-            value(...)
+        for i = #self.array[name],1,-1 do
+            self.array[name][i][2](...);
         end
     end
 

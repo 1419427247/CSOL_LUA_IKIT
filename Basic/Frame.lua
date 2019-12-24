@@ -386,7 +386,7 @@ end)();
 
 (function()
     local Component = {};
-    function Component:constructor(tag)
+    function Component:constructor(tag,left,top,width,heigth)
         --组件的标签,用于查找特定组件
         self.tag = tag;
         --是否渲染当前组件(不包括子组件)
@@ -399,10 +399,10 @@ end)();
         self.width = 0;
         self.height = 0;
         self.style = {
-            left = 0,
-            top = 0,
-            width = 0,
-            height = 0,
+            left = left or 0,
+            top = top or 0,
+            width = width or 0,
+            height = heigth or 0,
             --设置组建的定位方式,可为 "relative" "absolute"
             position = "relative",
             --背景颜色
@@ -496,8 +496,8 @@ end)();
 (function()
     local Plane = {};
 
-    function Plane:constructor(tag)
-        self.super(tag);
+    function Plane:constructor(tag,left,top,width,heigth)
+        self.super(tag,left,top,width,heigth);
         self.index = 1;
     end
 
@@ -594,8 +594,8 @@ end)();
 (function()
     local Lable = {};
 
-    function Lable:constructor(tag,text)
-        self.super(tag);
+    function Lable:constructor(tag,left,top,width,heigth,text)
+        self.super(tag,left,top,width,heigth);
         --要显示的文本
         self.text = IKit.New("String",text);
         --文字大小
@@ -637,8 +637,8 @@ end)();
 (function()
     local Edit = {};
 
-    function Edit:constructor(tag,text)
-        self.super(tag,text);
+    function Edit:constructor(tag,left,top,width,heigth,text)
+        self.super(tag,left,top,width,heigth,text);
         --光标位置
         self.cursor = 0;
         --输入类型,可为 "all" "number" "english"
@@ -730,8 +730,8 @@ end)();
 (function()
     local Button = {};
 
-    function Button:constructor(tag,text)
-        self.super(tag,text);
+    function Button:constructor(tag,left,top,width,heigth,text)
+        self.super(tag,left,top,width,heigth,text);
     end
 
     function Button:paint(graphics)
@@ -754,8 +754,8 @@ end)();
 (function()
     local SelectBox = {};
     
-    function SelectBox:constructor(tag)
-        self.super(tag);
+    function SelectBox:constructor(tag,left,top,width,heigth)
+        self.super(tag,left,top,width,heigth);
         self.list = {};
     end
     
@@ -774,38 +774,26 @@ end)();
 (function()
     local MessageBox = {};
     
-    function MessageBox:constructor(caption,text)
+    function MessageBox:constructor(caption,text,callback)
         local messagebox = IKit.New("Frame");
 
-        local plane = IKit.New("Plane",1);
-        plane.style.top = 25;
-        plane.style.left = 25;
-        plane.style.width = 50;
-        plane.style.height = 30;
+        local plane = IKit.New("Plane",1,25,25,50,30);
 
-        local caption = IKit.New("Lable",2,caption);
-        caption.style.top = 5;
-        caption.style.left = 2;
-        caption.style.width = 96;
-        caption.style.height = 20;
-        caption.style.fontsize = 2;
+        local caption = IKit.New("Lable",2,2,2,96,20,caption);
+        caption.style.fontsize = 1.5;
         caption.style.textalign = "left"
 
-        local text = IKit.New("Lable",3,text);
-        text.style.left = 2;
-        text.style.width = 96;
-        text.style.height = 50;
+        local text = IKit.New("Lable",3,2,0,96,50,text);
         text.style.newline = true;
 
-        local mb_ok = IKit.New("Button",4,"确定");
-        mb_ok.style.top = 5;
-        mb_ok.style.left = 40;
-        mb_ok.style.width = 20;
-        mb_ok.style.height = 15;
+        local mb_ok = IKit.New("Button",4,30,5,40,15,"确定");
         mb_ok.style.newline = true;
 
         function mb_ok:onClick()
             messagebox:hide();
+            if callback ~= nil then
+                callback();
+            end
         end
 
         messagebox:add(
