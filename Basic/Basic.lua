@@ -323,7 +323,7 @@ end)();
     end
 
     function Event:addEventListener(name,event)
-        if self.array[name] ~= nil then
+        if self.array[name] == nil then
             error("未找到事件'" .. name .. "'");
         end
         if type(event) == "function" then
@@ -336,7 +336,7 @@ end)();
     end
 
     function Event:detachEventListener(name,id)
-        if self.array[name] ~= nil then
+        if self.array[name] == nil then
             error("未找到'" .. name .. "'");
         end
         for i = 1, #self.array[name],1 do

@@ -1,4 +1,3 @@
-
 Frame = IKit.New("Frame");
 Frame:add(
     IKit.New("Plane",1,25,0,50,100):add(
@@ -8,20 +7,11 @@ Frame:add(
     )
 );
 
-
-Component2 = Frame:findByTag(2);
-Component2.style.newline = true;
-
-Component3 = Frame:findByTag(3);
-Component3.style.newline = true;
-
-Component4 = Frame:findByTag(4);
-
-function Component4:onClick()
+Frame:findByTag(2).style.newline = true;
+Frame:findByTag(3).style.newline = true;
+Frame:findByTag(4).onClick = function(self)
     print("你点击了我QWQ");
 end
-
-
 
 IKit.New("MessageBox","标题","你好啊,亲爱的冒险者,欢迎来到我的世界",function()
     Frame:setFocus(Frame:findByTag(1));
