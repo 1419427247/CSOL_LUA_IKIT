@@ -91,7 +91,7 @@ Font = {};
         collectgarbage("collect");
     end
 
-    IKit.Create(Graphics,"Graphics");
+    IKit.Class(Graphics,"Graphics");
 end)();
 
 -- (function()
@@ -129,7 +129,7 @@ end)();
 --         end
 --     end
 
---     IKit.Create(ComponentBox,"ComponentBox");
+--     IKit.Class(ComponentBox,"ComponentBox");
 -- end)();
 
 (function()
@@ -195,6 +195,9 @@ end)();
 
     --将焦点指向component并触发相应事件
     function Frame:setFocus(component)
+        if component.isfreeze == true then
+            error(component.type .. "组件已被冻结");
+        end
         if self.focused ~= 0 then
             self.focused:onBlur();
         end
@@ -266,9 +269,7 @@ end)();
     function Frame:repaint()
         self.graphics:clean();
         self:forEach(function(component)
-            if component.isvisible == true then
-                component:paint(self.graphics);
-            end
+            component:paint(self.graphics);
         end);
     end
 
@@ -289,7 +290,9 @@ end)();
         end
     end
 
-    --设置动画,对性能有较大影响Frame:animate{"x",5,"style.backgroundcolor.r",125},nil,Button);
+    --设置动画,对性能有一定影响
+    --Frame:animate({"x",5,"style.backgroundcolor.r",125},100,nil,Button);
+    --Component:animate({"x",5,"style.backgroundcolor.r",125},100);
     function Frame:animate(params,timeslice,callback,component)
         local style = {};
         local object;
@@ -381,7 +384,7 @@ end)();
             self:repaint();
         end
     end
-    IKit.Create(Frame,"Frame");
+    IKit.Class(Frame,"Frame");
 end)();
 
 (function()
@@ -389,11 +392,12 @@ end)();
     function Component:constructor(tag,left,top,width,heigth)
         --组件的标签,用于查找特定组件
         self.tag = tag;
-        --是否渲染当前组件(不包括子组件)
-        self.isvisible = true;
+        --是否渲染当前组件以及子组件
+        --self.isvisible = true;
         self.animation = 0;
-        --组件是否可被选中
-        --self.isfreeze = false;
+        --组件是否被冻结
+        self.isfreeze = false;
+
         self.x = 0;
         self.y = 0;
         self.width = 0;
@@ -403,7 +407,7 @@ end)();
             top = top or 0,
             width = width or 0,
             height = heigth or 0,
-            --设置组建的定位方式,可为 "relative" "absolute"
+            --设置组件的定位方式,可为 "relative" "absolute"
             position = "relative",
             --背景颜色
             backgroundcolor = {red = 255,green = 255,blue=255,alpha=255},
@@ -453,7 +457,7 @@ end)();
         self:animate({"style.backgroundcolor.red",222,
                       "style.backgroundcolor.green",222,
                       "style.backgroundcolor.blue",222,
-                    },10,nil,self);
+                    },15,nil,self);
         self:repaint();
     end
 
@@ -464,7 +468,7 @@ end)();
         self:animate({"style.backgroundcolor.red",255,
                       "style.backgroundcolor.green",255,
                       "style.backgroundcolor.blue",255
-                    },10,nil,self);
+                    },15,nil,self);
         self:repaint();
     end
 
@@ -490,7 +494,7 @@ end)();
         self.father:repaint();
     end
 
-    IKit.Create(Component,"Component");
+    IKit.Class(Component,"Component");
 end)();
 
 (function()
@@ -498,6 +502,7 @@ end)();
 
     function Plane:constructor(tag,left,top,width,heigth)
         self.super(tag,left,top,width,heigth);
+        self.components = {};
         self.index = 1;
     end
 
@@ -507,12 +512,23 @@ end)();
             components[i].father = self;
             table.insert(self.children,components[i]);
         end
+        self:refresh();
         return self;
     end
 
+    function Plane:refresh()
+        self.components = {};
+        for i = 1, #self.children, 1 do
+            if self.children[i].isfreeze == false then
+                self.components[#self.components+1] = self.children[i];
+            end
+        end
+    end
+
     function Plane:onFocus()
-        if #self.children > 0 then
-            self.children[self.index]:onFocus();
+        self:refresh();
+        if #self.components > 0 then
+            self.components[self.index]:onFocus();
         end
         self.style.border.left = self.style.border.left + 3;
         self.style.border.right = self.style.border.right + 3;
@@ -522,8 +538,9 @@ end)();
     end
 
     function Plane:onBlur()
-        if #self.children > 0 then
-            self.children[self.index]:onBlur();
+        self:refresh();
+        if #self.components > 0 then
+            self.components[self.index]:onBlur();
         end
         self.style.border.left = self.style.border.left - 3;
         self.style.border.right = self.style.border.right - 3;
@@ -533,32 +550,34 @@ end)();
     end
 
     function Plane:onKeyDown(inputs)
+        self:refresh();
         if inputs[UI.KEY.UP] == true then
-            if #self.children > 0 then
-                self.children[self.index]:onBlur();
+            if #self.components > 0 then
+                self.components[self.index]:onBlur();
                 if self.index == 1 then
-                    self.index = #self.children;
+                    self.index = #self.components;
                 else
                     self.index = self.index - 1;
                 end
-                self.children[self.index]:onFocus();
+                self.components[self.index]:onFocus();
+
             end
         end
         if inputs[UI.KEY.DOWN] == true then
-            if #self.children > 0 then
-                self.children[self.index]:onBlur();
-                if self.index == #self.children then
+            if #self.components > 0 then
+                self.components[self.index]:onBlur();
+                if self.index == #self.components then
                     self.index = 1;
                 else
                     self.index = self.index + 1;
                 end
-                self.children[self.index]:onFocus();
+                self.components[self.index]:onFocus();
             end
         end
         if inputs[UI.KEY.MOUSE1] == true then
-            if #self.children > 0 then
-                if self.children[self.index].type == "Plane" then
-                    self:setFocus(self.children[self.index]);
+            if #self.components > 0 then
+                if self.components[self.index].type == "Plane" then
+                    self:setFocus(self.components[self.index]);
                 end
             end
         end
@@ -568,17 +587,18 @@ end)();
                 return;
             end
         end
-        if #self.children > 0 then
-            if self.children[self.index].type~="Plane" then
-                self.children[self.index]:onKeyDown(inputs);
+        if #self.components > 0 then
+            if self.components[self.index].type~="Plane" then
+                self.components[self.index]:onKeyDown(inputs);
             end
         end
     end
 
     function Plane:onKeyUp(inputs)
-        if #self.children > 0 then
-            if self.children[self.index].type~="Plane" then
-                self.children[self.index]:onKeyUp(inputs);
+        self:refresh();
+        if #self.components > 0 then
+            if self.components[self.index].type~="Plane" then
+                self.components[self.index]:onKeyUp(inputs);
             end
         end
     end
@@ -587,7 +607,7 @@ end)();
         self.super:paint(graphics);
     end
 
-    IKit.Create(Plane,"Plane","Component");
+    IKit.Class(Plane,"Plane","Component");
 end)();
 
 
@@ -596,6 +616,7 @@ end)();
 
     function Lable:constructor(tag,left,top,width,heigth,text)
         self.super(tag,left,top,width,heigth);
+        self.isfreeze = true;
         --要显示的文本
         self.text = IKit.New("String",text);
         --文字大小
@@ -631,7 +652,7 @@ end)();
         end
     end
 
-    IKit.Create(Lable,"Lable","Component");
+    IKit.Class(Lable,"Lable","Component");
 end)();
 
 (function()
@@ -639,6 +660,7 @@ end)();
 
     function Edit:constructor(tag,left,top,width,heigth,text)
         self.super(tag,left,top,width,heigth,text);
+        self.isfreeze = false;
         --光标位置
         self.cursor = 0;
         --输入类型,可为 "all" "number" "english"
@@ -724,7 +746,7 @@ end)();
         return self.text;
     end
 
-    IKit.Create(Edit,"Edit","Lable");
+    IKit.Class(Edit,"Edit","Lable");
 end)();
 
 (function()
@@ -732,6 +754,7 @@ end)();
 
     function Button:constructor(tag,left,top,width,heigth,text)
         self.super(tag,left,top,width,heigth,text);
+        self.isfreeze = false;
     end
 
     function Button:paint(graphics)
@@ -748,7 +771,7 @@ end)();
 
     end
 
-    IKit.Create(Button,"Button","Lable");
+    IKit.Class(Button,"Button","Lable");
 end)();
 
 (function()
@@ -756,6 +779,7 @@ end)();
     
     function SelectBox:constructor(tag,left,top,width,heigth)
         self.super(tag,left,top,width,heigth);
+        self.isfreeze = false;
         self.list = {};
     end
     
@@ -767,7 +791,7 @@ end)();
     
     end
     
-    IKit.Create(SelectBox,"SelectBox","Plane");
+    IKit.Class(SelectBox,"SelectBox","Plane");
 end)();
 
 
@@ -780,7 +804,7 @@ end)();
         local plane = IKit.New("Plane",1,25,25,50,30);
 
         local caption = IKit.New("Lable",2,2,2,96,20,caption);
-        caption.style.fontsize = 1.5;
+        caption.style.fontsize = 2;
         caption.style.textalign = "left"
 
         local text = IKit.New("Lable",3,2,0,96,50,text);
@@ -806,5 +830,5 @@ end)();
         messagebox:setFocus(plane);
         messagebox:show();
     end
-    IKit.Create(MessageBox,"MessageBox");
+    IKit.Class(MessageBox,"MessageBox");
 end)();

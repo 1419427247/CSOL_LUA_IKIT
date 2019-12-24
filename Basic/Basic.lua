@@ -66,7 +66,7 @@ IKit = (function()
         return object;
     end
 
-    local function create(object,name,father)
+    local function createclass(object,name,father)
         if object.constructor == nil then
             function object:constructor()
             end
@@ -108,7 +108,7 @@ IKit = (function()
     end
 
     return {
-        Create = create,
+        Class = createclass,
         New = new,
         Instanceof = instanceof,
     }
@@ -132,26 +132,33 @@ end
 
     function String:constructor(value)
         self.array = {};
+        --字符串的长度,请不要直接修改它
         self.length = 0;
         self:insert(value);
     end
 
     function String:charAt(index)
-        return self.array[index];
+        if index > 0 and index <= self.length then
+            return self.array[index];
+        end
+        error("数组下标越界");
     end
 
-    function String:substring(beginIndex,endIndex)
+    --截取一段字符并返回它
+    function String:substring(beginindex,endindex)
         local text = IKit.New("String");
-        for i = beginIndex, endIndex, 1 do
+        for i = beginindex, endindex, 1 do
             text:insert(self.array[i]);
         end
         return text;
     end
 
+    --当前字符串长度是否为0
     function String:isEmpty()
         return self.length == 0;
     end
 
+    --在第pos处插入字符串value,pos若为空则在末尾添加字符串value
     function String:insert(value,pos)
         pos = pos or self.length + 1;
         if type(value) == "string" then
@@ -211,16 +218,23 @@ end
         end
     end
 
+    --移除第pos个字符
     function String:remove(pos)
-        table.remove(self.array,pos);
-        self.length = self.length - 1;
+        if pos > 0 or pos <= self.length then
+            table.remove(self.array,pos);
+            self.length = self.length - 1;
+        else
+            error("数组下标越界");
+        end
     end
 
+    --清除所有字符
     function String:clean()
         self.array = {};
         self.length = 0;
     end
 
+    --将字符串转换为byte数组
     function String:toBytes()
         local bytes = {};
         for i = 1, self.length, 1 do
@@ -230,7 +244,8 @@ end
         end
         return bytes;
     end
-
+    
+    --字符串转数字
     function String:toNumber()
         local sum = 0;
         local neg = false;
@@ -260,15 +275,17 @@ end
         end
         return sum;
     end
-
+    --转默认字符串
     function String:toString()
         return table.concat(self.array);
     end
 
+    --重载#运算符,返回字符串的长度
     function String:__len()
         return self.length;
     end
 
+    --重载==运算符,比较2字符串是否相等
     function String:__eq(value)
         return self.length == value.length and function()
             for i = 1, self.length, 1 do
@@ -279,23 +296,23 @@ end
             return true;
         end
     end
-
+    --重载+运算符
     function String:__add(value)
         self:insert(value);
         return self;
     end
-
+    --重载..运算符,返回一个合并后新的字符串
     function String:__concat(value)
         local str1 = IKit.New("String",self);
         str1:insert(value);
         return str1;
     end
+    -- --重载()运算符
+    -- function String:__call(index)
+    --     return self.array[index];
+    -- end
 
-    function String:__call(index)
-        return self.array[index];
-    end
-
-    IKit.Create(String,"String");
+    IKit.Class(String,"String");
 end)();
 
 (function()
@@ -354,7 +371,7 @@ end)();
         end
     end
 
-    IKit.Create(Event,"Event");
+    IKit.Class(Event,"Event");
 end)();
 
 (function()
@@ -417,7 +434,7 @@ end)();
         self.task = {}
     end
 
-    IKit.Create(Timer,"Timer");
+    IKit.Class(Timer,"Timer");
 end)();
 
 (function()
@@ -433,15 +450,14 @@ end)();
         self.methods[name] = fun;
     end
 
-    IKit.Create(Command,"Command");
+    IKit.Class(Command,"Command");
 end)();
 
 (function()
-    local  ServerCommand = {};
+    local ServerCommand = {};
     
     function ServerCommand:constructor()
         self.super();
-
         local OnPlayerSignalId = 0;
         function self:connection()
             OnPlayerSignalId = Event:addEventListener("OnPlayerSignal",function(player,signal)
@@ -496,7 +512,7 @@ end)();
         self.methods[name:toString()](player,args);
     end
 
-    IKit.Create(ServerCommand,"ServerCommand","Command");
+    IKit.Class(ServerCommand,"ServerCommand","Command");
 end)();
 
 (function()
@@ -511,7 +527,6 @@ end)();
                 self:OnSignal(signal);
             end);
         end
-
         function self:disconnect()
             Event:detachEventListener("OnSignal",OnSignalId);
         end
@@ -557,7 +572,7 @@ end)();
         self.methods[name:toString()](args);
     end
 
-    IKit.Create(ClientCommand,"ClientCommand","Command");
+    IKit.Class(ClientCommand,"ClientCommand","Command");
 end)();
 
 Event = IKit.New("Event");
