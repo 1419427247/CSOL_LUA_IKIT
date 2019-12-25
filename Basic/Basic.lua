@@ -1,3 +1,5 @@
+--基础工具库,包含了基础的面向对象,事件处理,字符串与计时器,写的太烂了,实在抱歉QWQ
+
 IKit = (function()
     local class = {};
 
@@ -82,6 +84,10 @@ IKit = (function()
         class[name] = object;
     end
 
+    local function createinterface(object,name,father)
+        
+    end
+    
     local newindex = function(table,key,value)
         local tobject = table;
         while tobject ~= nil do
@@ -95,6 +101,7 @@ IKit = (function()
         end
         error("没有找到字段'" .. key .. "'在'" .. table.type .."'内");
     end
+
     local function new(name,...)
         local object = clone(class[name]);
         object.type = name;

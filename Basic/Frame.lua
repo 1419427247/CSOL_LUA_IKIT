@@ -12,6 +12,7 @@ Font = {};
         if box == nil then
             error("无法绘制矩形:已超过最大限制");
         end
+        --不绘制超出rect区域的图像
         if rect~=nil then
             if x > rect.x + rect.width then
                 return;
@@ -39,11 +40,12 @@ Font = {};
             box:Set({x=x,y=y,width=width,height=height,r=self.color.red,g=self.color.green,b=self.color.blue,a=self.color.alpha});
         end
         box:Show();
-        table.insert(self.root,box);
+        self.root[#self.root+1] = box;
     end;
 
-    --在屏幕上绘制文字
-    function Graphics:drawText(x,y,size,letterSpacing,string,rect)
+    --在屏幕上绘制文字,size是字体尺寸,letterspacing是字体间距,string应该属于String类
+    --这里和下面一个函数有2个魔数,可是不知道为什么,我真的不想多建2个变量啊::>_<::
+    function Graphics:drawText(x,y,size,letterspacing,string,rect)
         for i=1,string.length do
             local char = string:charAt(i)
             if(Font[char] ~= nil) then
@@ -53,29 +55,18 @@ Font = {};
                     local y1 = Font[char][j+1];
                     local x2 = Font[char][j+2];
                     local y2 = Font[char][j+3];
-                    -- local box = UI.Box.Create();
-                    -- if box == nil then
-                    --     error("无法绘制文字:已超过最大限制");
-                    -- end
                     if i == 1 then
                         self:drawRect(x + x1*size,y + (12 - y2)*size, (x2 - x1)*size, (y2 - y1)*size,rect);
                     else
-                        self:drawRect(x + (i-1) * letterSpacing + x1*size,y + (12 - y2)*size, (x2 - x1)*size, (y2 - y1)*size,rect);
+                        self:drawRect(x + (i-1) * letterspacing + x1*size,y + (12 - y2)*size, (x2 - x1)*size, (y2 - y1)*size,rect);
                     end
-                    -- if i == 1 then
-                    --     box:Set({x =x + x1*size, y = y + (12 - y2)*size, width = (x2 - x1)*size, height = (y2 - y1)*size, r = self.color.red, g = self.color.green, b = self.color.blue, a = self.color.alpha})
-                    -- else
-                    --     box:Set({x =x + (i-1) * letterSpacing + x1*size, y = y + (12 - y2)*size, width = (x2 - x1)*size, height = (y2 - y1)*size, r = self.color.red, g = self.color.green, b = self.color.blue, a = self.color.alpha})
-                    -- end
-                    -- box:Show();
-                    -- table.insert(self.root,box);
                     j = j + 4;
                 end
             end
         end
     end
 
-    --获取文字的宽高
+    --获取文字的像素宽高
     function Graphics:getTextSize(text,fontsize,letterspacing)
         local width = (text.length - 1) * letterspacing + 11 * fontsize;
         local height = 12 * fontsize;
@@ -144,7 +135,7 @@ end)();
         --设置当前窗口的宽度,默认为屏幕的高度
         self.height = height or UI.ScreenSize().height;
         self.graphics = IKit.New("Graphics");
-        self.animation = 0;
+        self.animation = {};
         self.children = {};
         --当前得到焦点的物体，默认为空
         self.focused = 0;
@@ -188,7 +179,7 @@ end)();
         local components = {...};
         for i = 1, #components, 1 do
             components[i].father = self;
-            table.insert(self.children,components[i]);
+            self.children[#self.children+1] = components[i];
         end
         return self;
     end
@@ -268,9 +259,18 @@ end)();
     --重绘当前frame
     function Frame:repaint()
         self.graphics:clean();
-        self:forEach(function(component)
+        local function forEach(component)
+            if component.isvisible == false then
+                return;
+            end
             component:paint(self.graphics);
-        end);
+            for i = 1, #component.children, 1 do
+                forEach(component.children[i]);
+            end
+        end
+        for i = 1, #self.children, 1 do
+            forEach(self.children[i]);
+        end
     end
 
     --通过标签查找子组件,若未查到相同tag的组件返回nil,查询到一个返回该组件，若查询到多个组件则返回包含多个组件的数组
@@ -309,12 +309,12 @@ end)();
                     key:insert(string.sub(params[i],j,j));
                 end
             end
-            table.insert(style,{
+            style[#style+1] = {
                 object,
                 key:toString(),
                 params[i+1],
                 (params[i+1] - object[key:toString()])/ timeslice
-            });
+            };
         end
         component.animation = function()
             if timeslice == 0 then
@@ -332,7 +332,14 @@ end)();
             timeslice = timeslice - 1;
             return true;
         end
-        self.animation = self.animation + 1;
+        --这样做并不好,可是它确实很香╭(╯^╰)╮
+        for i = 1,#self.animation,1 do
+            if component == self.animation[i] then
+                self.animation[i] = component;
+                return;
+            end
+        end
+        self.animation[#self.animation+1] = component;
     end
 
     function Frame:getRectSize()
@@ -364,22 +371,10 @@ end)();
     end
 
     function Frame:OnUpdate(time)
-        if self.animation > 0 then
-            local function forEach(component)
-                if component.animation ~= 0 then
-                    if component.animation() == false then
-                        component.animation = 0;
-                        self.animation = self.animation - 1;
-                    end
-                end
-                for i = 1, #component.children, 1 do
-                    forEach(component.children[i]);
-                end
+        if #self.animation > 0 then
+            for i = 1,#self.animation,1 do
+                self.animation[i].animation();
             end
-            for i = 1, #self.children, 1 do
-                forEach(self.children[i]);
-            end
-
             self:reset();
             self:repaint();
         end
@@ -393,7 +388,7 @@ end)();
         --组件的标签,用于查找特定组件
         self.tag = tag;
         --是否渲染当前组件以及子组件
-        --self.isvisible = true;
+        self.isvisible = true;
         self.animation = 0;
         --组件是否被冻结
         self.isfreeze = false;
@@ -422,7 +417,19 @@ end)();
         self.children = {};
     end
 
-    --没有用的东西
+    --隐藏组件以及子组件,我感觉这样写好傻=￣ω￣=
+    function Component:hide()
+        self.isvisible = false;
+        self.isfreeze = true;
+    end
+
+    --显示组件以及子组件,我感觉这样写依旧好傻=￣ω￣=
+    function Component:show()
+        self.isvisible = true;
+        self.isfreeze = false;
+    end
+
+    --没有用的东西,可是我舍不得删QWQ
     -- function Component:getIndex()
     --     for i = 1, #self.father.children, 1 do
     --         if self.father.children[i] == self then
@@ -450,6 +457,7 @@ end)();
         end
     end
 
+    --获得焦点事件,我发现写注释比写代码还难,我好像根本写不来,我要gg了呜呜呜T_T
     function Component:onFocus()
         -- self.style.backgroundcolor.red = self.style.backgroundcolor.red - 20;
         -- self.style.backgroundcolor.green = self.style.backgroundcolor.green - 20;
@@ -461,6 +469,7 @@ end)();
         self:repaint();
     end
 
+    --失去焦点事件
     function Component:onBlur()
         -- self.style.backgroundcolor.red = self.style.backgroundcolor.red + 20;
         -- self.style.backgroundcolor.green = self.style.backgroundcolor.green + 20;
@@ -472,11 +481,12 @@ end)();
         self:repaint();
     end
 
-
+    --键盘按下事件
     function Component:onKeyDown(inputs)
 
     end
 
+    --键盘抬起事件
     function Component:onKeyUp(inputs)
 
     end
@@ -510,7 +520,7 @@ end)();
         local components = {...};
         for i = 1, #components, 1 do
             components[i].father = self;
-            table.insert(self.children,components[i]);
+            self.children[#self.children+1] = components[i];
         end
         self:refresh();
         return self;
@@ -777,21 +787,53 @@ end)();
 (function()
     local SelectBox = {};
     
-    function SelectBox:constructor(tag,left,top,width,heigth)
+    function SelectBox:constructor(tag,left,top,width,heigth,items)
         self.super(tag,left,top,width,heigth);
         self.isfreeze = false;
-        self.list = {};
+        self.items = items or {};
+        self.index = 1;
+        if #self.items > 0 then
+            self.text:clean();
+            self.text:insert("◀" .. self.items[self.index] .. "▶");
+        end
     end
     
-    function SelectBox:addItem()
-        
+    function SelectBox:addItem(item)
+        self.items[#self.items+1] = item;
     end
     
     function SelectBox:paint(graphics)
-    
+        self.super:paint(graphics);
     end
     
-    IKit.Class(SelectBox,"SelectBox","Plane");
+    function SelectBox:onKeyDown(inputs)
+        if #self.items > 0 then
+            if inputs[UI.KEY.LEFT] == true then
+                if self.index == 1 then
+                    self.index = #self.items;
+                else
+                    self.index = self.index - 1;
+                end
+            elseif inputs[UI.KEY.RIGHT] == true then
+                if self.index == #self.items then
+                    self.index = 1;
+                else
+                    self.index = self.index + 1;
+                end
+            end
+            self.text:clean();
+            self.text:insert("◀" .. self.items[self.index] .. "▶");
+            self:repaint();
+        end
+    end
+
+    function SelectBox:getSelected()
+        if #self.items > 0 then
+            return self.items[self.index];
+        end
+    end
+
+    IKit.Class(SelectBox,"SelectBox","Lable");
 end)();
 
 
