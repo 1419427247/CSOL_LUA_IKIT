@@ -237,7 +237,7 @@ end)();
                             end
                         else
                             components[i].x = components[i - 1].x + components[i - 1].width + components[i].father.width * (components[i].style.left /100);
-                            components[i].y = components[i - 1].y + components[i].father.height * (components[i].style.top /100);
+                            components[i].y = components[i - 1].y;
                         end
                     end
                 elseif components[i].style.position == "absolute" then
