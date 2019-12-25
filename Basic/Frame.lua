@@ -146,7 +146,7 @@ end)();
 
         --为当前Frame注册鼠标键盘监听事件
         function self:enable()
-            if OnKeyUpEventId ~= 0 or OnKeyDownEventId ~= 0 then
+            if OnKeyUpEventId ~= 0 or OnKeyDownEventId ~= 0 or OnUpdateId ~= 0  then
                 error("当前窗口以存在监听事件不可重复添加");
             end
             OnKeyDownEventId = Event:addEventListener("OnKeyDown",function(inputs)
@@ -159,7 +159,6 @@ end)();
                 self:OnUpdate(time);
             end);
         end
-
         --移除当前Frame注册的鼠标键盘监听事件
         function self:disable()
             if OnKeyUpEventId == 0 or OnKeyDownEventId == 0 or OnUpdateId == 0 then
@@ -321,10 +320,7 @@ end)();
                 for i = 1, #style, 1 do
                     style[i][1][style[i][2]] = style[i][3];
                 end
-                if callback ~= nil then
-                    callback();
-                end
-                return false;
+                return callback;
             end
             for i = 1, #style, 1 do
                 style[i][1][style[i][2]] = style[i][1][style[i][2]] + style[i][4];
@@ -372,8 +368,14 @@ end)();
 
     function Frame:OnUpdate(time)
         if #self.animation > 0 then
-            for i = 1,#self.animation,1 do
-                self.animation[i].animation();
+            for i = #self.animation,1,-1 do
+                local res = self.animation[i].animation();
+                if res == nil then
+                    table.remove(self.animation,i);
+                elseif res ~= true then
+                    table.remove(self.animation,i);
+                    res();
+                end
             end
             self:reset();
             self:repaint();
@@ -514,6 +516,9 @@ end)();
         self.super(tag,left,top,width,heigth);
         self.components = {};
         self.index = 1;
+
+        self.keyprevious = UI.KEY.UP;
+        self.keynext = UI.KEY.DOWN;
     end
 
     function Plane:add(...)
@@ -561,7 +566,7 @@ end)();
 
     function Plane:onKeyDown(inputs)
         self:refresh();
-        if inputs[UI.KEY.UP] == true then
+        if inputs[self.keyprevious] == true then
             if #self.components > 0 then
                 self.components[self.index]:onBlur();
                 if self.index == 1 then
@@ -573,7 +578,7 @@ end)();
 
             end
         end
-        if inputs[UI.KEY.DOWN] == true then
+        if inputs[self.keynext] == true then
             if #self.components > 0 then
                 self.components[self.index]:onBlur();
                 if self.index == #self.components then
@@ -677,6 +682,10 @@ end)();
         self.intype="all";
         --最大输入长度
         self.maxlength = 10;
+
+        self.keyprevious = UI.KEY.LEFT;
+        self.keynext = UI.KEY.RIGHT;
+        self.keybackspace = UI.KEY.SHIFT;
     end
 
     function Edit:paint(graphics)
@@ -731,17 +740,17 @@ end)();
                         end
                     end
                 end
-                if key == 41 then
+                if key == self.keyprevious then
                     if self.cursor > 0 then
                         self.cursor = self.cursor - 1;
                     end
                 end
-                if key == 42 then
+                if key == self.keynext then
                     if self.cursor < self.text.length then
                         self.cursor = self.cursor + 1;
                     end
                 end
-                if key == 36 then
+                if key == self.keybackspace then
                     if self.cursor > 0 then
                         self.text:remove(self.cursor);
                         self.cursor = self.cursor - 1;
@@ -796,6 +805,9 @@ end)();
             self.text:clean();
             self.text:insert("◀" .. self.items[self.index] .. "▶");
         end
+
+        self.keyprevious = UI.KEY.LEFT;
+        self.keynext = UI.KEY.RIGHT;
     end
     
     function SelectBox:addItem(item)
@@ -808,13 +820,13 @@ end)();
     
     function SelectBox:onKeyDown(inputs)
         if #self.items > 0 then
-            if inputs[UI.KEY.LEFT] == true then
+            if inputs[self.keyprevious] == true then
                 if self.index == 1 then
                     self.index = #self.items;
                 else
                     self.index = self.index - 1;
                 end
-            elseif inputs[UI.KEY.RIGHT] == true then
+            elseif inputs[self.keynext] == true then
                 if self.index == #self.items then
                     self.index = 1;
                 else
@@ -837,40 +849,34 @@ end)();
 end)();
 
 
-(function()
-    local MessageBox = {};
-    
-    function MessageBox:constructor(caption,text,callback)
-        local messagebox = IKit.New("Frame");
+function MessageBox(caption,text,callback)
+    local messagebox = IKit.New("Frame");
 
-        local plane = IKit.New("Plane",1,25,25,50,30);
+    local plane = IKit.New("Plane",1,25,25,50,30);
 
-        local caption = IKit.New("Lable",2,2,2,96,20,caption);
-        caption.style.fontsize = 2;
-        caption.style.textalign = "left"
+    local caption = IKit.New("Lable",2,2,2,96,20,caption);
+    caption.style.fontsize = 2;
+    caption.style.textalign = "left"
 
-        local text = IKit.New("Lable",3,2,0,96,50,text);
-        text.style.newline = true;
+    local text = IKit.New("Lable",3,2,0,96,50,text);
+    text.style.newline = true;
 
-        local mb_ok = IKit.New("Button",4,30,5,40,15,"确定");
-        mb_ok.style.newline = true;
+    local mb_ok = IKit.New("Button",4,30,5,40,15,"好的");
+    mb_ok.style.newline = true;
 
-        function mb_ok:onClick()
-            messagebox:hide();
-            if callback ~= nil then
-                callback();
-            end
+    function mb_ok:onClick()
+        messagebox:hide();
+        if callback ~= nil then
+            callback();
         end
-
-        messagebox:add(
-            plane:add(
-                caption,
-                text,
-                mb_ok
-            )
-        );
-        messagebox:setFocus(plane);
-        messagebox:show();
     end
-    IKit.Class(MessageBox,"MessageBox");
-end)();
+    messagebox:add(
+        plane:add(
+            caption,
+            text,
+            mb_ok
+        )
+    );
+    messagebox:setFocus(plane);
+    messagebox:show();
+end

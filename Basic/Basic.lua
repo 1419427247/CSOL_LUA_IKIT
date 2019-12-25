@@ -751,8 +751,29 @@ Timer = IKit.New("Timer");
 
 if Game ~= nil then
     Command = IKit.New("ServerCommand");
+
+    Command:register("killme",function(player,args)
+        for i = 1, #args,1 do
+            print(args[i]:toString());
+        end
+        player:Kill();
+    end)
+
+    Command:register("kill",function(player,args)
+        IKit.Player:find(args[1]):Kill();
+    end);
+    
+    Command:register("tp",function(player,args)
+        player.position = IKit.Player:find(args[1]).position;
+    end);
 end
 
 if UI ~= nil then
     Command = IKit.New("ClientCommand");
+
+    Command:register("kill",function(args)
+        for i = 1, #args,1 do
+            print(args[i]:toString());
+        end
+    end);
 end
