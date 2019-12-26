@@ -1,23 +1,21 @@
---新建一个框架
 local frame1 = IKit.New("Frame");
---新建一个文本框
-local lable1 = IKit.New("Lable","1",25,0,50,20,"你好世界")
-local lable2 = IKit.New("Lable","2",0,0,15,20,"你好")
-lable2.style.position = "absolute";
 
---设置该组件与其父组件上边界之间的偏移,单位百分比
-lable1.style.top = 50;
+local plane1 = IKit.New("Plane","2",0,0,30,100);
 
---设置背景颜色
-lable1.style.backgroundcolor = {red = 234,green = 123,blue=7,alpha=128};
+local lable1 = IKit.New("Lable","1",2,0,96,20,"你好世界");
+local button1 = IKit.New("Edit","3",2,0,96,20,"确定A");
+local button2 = IKit.New("SelectBox","4",2,0,96,20,{"玩家A","玩家B"});
 
---设置边框大小,单位是像素
-lable1.style.border = {top = 5,left = 1,right = 1,bottom = 5};
+button1.style.newline = true;
+button2.style.newline = true;
 
---在frame中添加一个文本框
-frame1:add(lable1);
-frame1:add(lable2);
---显示框架
+plane1:add(lable1);
+plane1:add(button1);
+plane1:add(button2);
+
+frame1:add(plane1);
+
+frame1:setFocus(plane1)
 frame1:show();
 
 
