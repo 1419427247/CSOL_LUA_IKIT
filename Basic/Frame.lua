@@ -217,9 +217,9 @@ end)();
     function Frame:reset(components)
         local components = components or self.children;
             for i = 1, #components, 1 do
+                components[i].width = components[i].father.width * (components[i].style.width /100);
+                components[i].height = components[i].father.height * (components[i].style.height /100);
                 if components[i].style.position == "relative" then
-                    components[i].width = components[i].father.width * (components[i].style.width /100);
-                    components[i].height = components[i].father.height * (components[i].style.height /100);
                     if i == 1 then
                         components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
                         components[i].y = components[i].father.y + components[i].father.height * (components[i].style.top /100);
