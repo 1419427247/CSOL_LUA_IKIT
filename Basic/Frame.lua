@@ -1,3 +1,4 @@
+--GUI工具库,包含了基本框架组件,写的太烂了,实在抱歉QWQ
 Font = {};
 
 (function ()
@@ -43,7 +44,7 @@ Font = {};
         self.root[#self.root+1] = box;
     end;
 
-    --在屏幕上绘制文字,size是字体尺寸,letterspacing是字体间距,string应该属于String类
+    --在屏幕上绘制文字,size是字体尺寸,letterspacing是字体间距,string是要显示的文字应该属于String类,rect是绘制范围
     --这里和下面一个函数有2个魔数,可是不知道为什么,我真的不想多建2个变量啊::>_<::
     function Graphics:drawText(x,y,size,letterspacing,string,rect)
         for i=1,string.length do
@@ -139,6 +140,8 @@ end)();
         self.children = {};
         --当前得到焦点的物体，默认为空
         self.focused = 0;
+
+        self.isrepaint = false;
 
         local OnKeyDownEventId = 0;
         local OnKeyUpEventId = 0;
@@ -254,9 +257,9 @@ end)();
     -- function Frame:freeze(component)
         
     -- end
-
+    
     --重绘当前frame
-    function Frame:repaint()
+    function Frame:paint()
         self.graphics:clean();
         local function forEach(component)
             if component.isvisible == false then
@@ -270,6 +273,10 @@ end)();
         for i = 1, #self.children, 1 do
             forEach(self.children[i]);
         end
+    end
+
+    function Frame:repaint()
+        self.isrepaint = true;
     end
 
     --通过标签查找子组件,若未查到相同tag的组件返回nil,查询到一个返回该组件，若查询到多个组件则返回包含多个组件的数组
@@ -367,7 +374,7 @@ end)();
     end
 
     function Frame:OnUpdate(time)
-        if #self.animation > 0 then
+        if #self.animation > 0 or self.isrepaint == true then
             for i = #self.animation,1,-1 do
                 local res = self.animation[i].animation();
                 if res == nil then
@@ -378,7 +385,10 @@ end)();
                 end
             end
             self:reset();
-            self:repaint();
+            self:paint();
+            if self.isrepaint == true then
+                self.isrepaint = false;
+            end
         end
     end
     IKit.Class(Frame,"Frame");
@@ -459,7 +469,7 @@ end)();
         end
     end
 
-    --获得焦点事件,我发现写注释比写代码还难,我好像根本写不来,我要gg了呜呜呜T_T
+    --获得焦点事件,我要gg了呜呜呜T_T
     function Component:onFocus()
         -- self.style.backgroundcolor.red = self.style.backgroundcolor.red - 20;
         -- self.style.backgroundcolor.green = self.style.backgroundcolor.green - 20;
@@ -648,6 +658,12 @@ end)();
         self.style.offsety = 0;
         --文本颜色
         self.style.color = {red = 0,green = 0,blue=0,alpha=255};
+    end
+
+    function Lable:setText(text)
+        self.text:clean();
+        self.text:insert(text);
+        self:repaint();
     end
 
     function Lable:paint(graphics)
@@ -847,6 +863,18 @@ end)();
 
     IKit.Class(SelectBox,"SelectBox","Lable");
 end)();
+
+-- (function()
+--     local  ProgressBar= {}
+    
+--     function ProgressBar:constructor(tag)
+--         self.super(tag);
+--         self.style.progresscolor = {red = 128,green = 128,blue=128,alpha=255};
+
+--     end
+
+--     IKit.Class(ProgressBar,"ProgressBar","Component");
+-- end)();
 
 
 function MessageBox(caption,text,callback)
