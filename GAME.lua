@@ -1,3 +1,3 @@
 -- Event:addEventListener("OnUpdate",function()
 --     Command:sendMessage(Game.Player:Create (1),"kill QWQ");
--- end);
+-- end); 
