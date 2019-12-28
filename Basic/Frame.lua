@@ -632,7 +632,7 @@ end)();
         self.super:paint(graphics);
     end
 
-    IKit.Class(Plane,"Plane","Component");
+    IKit.Class(Plane,"Plane",{extends="Component"});
 end)();
 
 
@@ -683,7 +683,7 @@ end)();
         end
     end
 
-    IKit.Class(Lable,"Lable","Component");
+    IKit.Class(Lable,"Lable",{extends="Component"});
 end)();
 
 (function()
@@ -781,7 +781,7 @@ end)();
         return self.text;
     end
 
-    IKit.Class(Edit,"Edit","Lable");
+    IKit.Class(Edit,"Edit",{extends="Lable"});
 end)();
 
 (function()
@@ -806,7 +806,7 @@ end)();
 
     end
 
-    IKit.Class(Button,"Button","Lable");
+    IKit.Class(Button,"Button",{extends="Lable"});
 end)();
 
 (function()
@@ -861,7 +861,7 @@ end)();
         end
     end
 
-    IKit.Class(SelectBox,"SelectBox","Lable");
+    IKit.Class(SelectBox,"SelectBox",{extends="Lable"});
 end)();
 
 -- (function()

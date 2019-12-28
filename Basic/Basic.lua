@@ -1,131 +1,245 @@
 --基础工具库,包含了基础的面向对象,事件处理,字符串与计时器,写的太烂了,实在抱歉QWQ
 
+-- IKit = (function()
+--     local class = {};
+
+--     --local interface = {};
+
+--     local classtree = {};
+
+--     local call = function(table,...)
+--         table:constructor(...);
+--     end;
+
+--     local newindex = function(table,key,value)
+--         local tobject = table;
+--         while tobject ~= nil do
+--             for k in pairs(tobject) do
+--                 if key == k then
+--                     rawset(tobject,key,value);
+--                     return;
+--                 end
+--             end
+--             tobject = getmetatable(tobject);
+--         end
+--         rawset(table,key,value);
+--     end
+
+--     local basic = {
+--         __newindex = newindex,
+--         __call = call,
+--     };
+
+--     class["Object"] = {
+--         type = "Object",
+--         __newindex = newindex,
+--         __call = call,
+--     };
+
+--     classtree["Object"] = nil;
+
+--     local function instanceof(value,string)
+--         if type(value) == "table" and  type(string) == "string" then
+--             local ttype = value.type;
+--             while ttype ~= nil do
+--                 if ttype == string then
+--                     return true;
+--                 end
+--                 ttype = classtree[ttype];
+--             end
+--         end
+--         return false;
+--     end
+
+--     local function clone(talbe)
+--         local object = {};
+--         for key, value in pairs(talbe) do
+--             object[key] = value;
+--         end
+--         object.__index = object;
+--         if getmetatable(talbe) ~= nil then
+--             object.super = clone(getmetatable(talbe))
+--             object.__newindex = object.super.__newindex;
+--             object.__call = object.super.__call;
+--             setmetatable(object,object.super);
+--         else
+--             setmetatable(object,basic);
+--         end
+--         return object;
+--     end
+
+--     local function createclass(object,name,father)
+--         if object.constructor == nil then
+--             function object:constructor()
+--             end
+--         end
+
+--         if father ~= nil then
+--             setmetatable(object,class[father]);
+--             classtree[name]=father;
+--         else
+--             setmetatable(object,class["Object"]);
+--             classtree[name]="Object";
+--         end
+--         class[name] = object;
+--     end
+
+--     local function createinterface(object,name,father)
+        
+--     end
+    
+--     local newindex = function(table,key,value)
+--         local tobject = table;
+--         while tobject ~= nil do
+--             for k in pairs(tobject) do
+--                 if key == k then
+--                     rawset(tobject,key,value);
+--                     return;
+--                 end
+--             end
+--             tobject = getmetatable(tobject);
+--         end
+--         error("没有找到字段'" .. key .. "'在'" .. table.type .."'内");
+--     end
+
+--     local function new(name,...)
+--         local object = clone(class[name]);
+--         object.type = name;
+--         object:constructor(...);
+--         local tobject = object;
+--         while tobject ~= nil do
+--             rawset(tobject,"__newindex",newindex);
+--             tobject = getmetatable(tobject);
+--         end
+--         return setmetatable({},object);
+--     end
+
+--     return {
+--         Class = createclass,
+--         New = new,
+--         Instanceof = instanceof,
+--     }
+-- end)();
+-- IKit.iif = function (arg1, arg2, arg3)
+--     if arg1 == true then
+--         return arg2;
+--     end
+--     return arg3
+-- end
+
 IKit = (function()
-    local class = {};
+    local CLASS = {};
+    local INTERFACES = {};
 
-    --local interface = {};
-
-    local classtree = {};
-
-    local call = function(table,...)
-        table:constructor(...);
-    end;
-
-    local newindex = function(table,key,value)
-        local tobject = table;
-        while tobject ~= nil do
-            for k in pairs(tobject) do
-                if key == k then
-                    rawset(tobject,key,value);
-                    return;
-                end
-            end
-            tobject = getmetatable(tobject);
+    local Interface = function(_name,_method,_super)
+        if INTERFACES[_name] ~= nil then
+            error("接口'".. _name .."'重复定义");
         end
-        rawset(table,key,value);
+        INTERFACES[_name] = _method;
     end
 
-    local basic = {
-        __newindex = newindex,
-        __call = call,
-    };
+    local Class = function(_table,_name,_super)
+        if CLASS[_name] ~= nil then
+            error("类'".. _name .."'重复定义");
+        end
 
-    class["Object"] = {
-        type = "Object",
-        __newindex = newindex,
-        __call = call,
-    };
+        _super = _super or {}
+        _super.extends = _super.extends or "Object";
+        _super.implements = _super.implements or {};
 
-    classtree["Object"] = nil;
+        for i = 1, #_super.implements, 1 do
+            for j = 1, #INTERFACES[_super.implements[i]],1 do
+                if rawget(_table,INTERFACES[_super.implements[i]][j]) == nil then
+                    error("未实现接口'" .. _super.implements[i] .. "'中的方法:" .. INTERFACES[_super.implements[i]][j]);
+                end
+            end
+        end
 
-    local function instanceof(value,string)
-        if type(value) == "table" and  type(string) == "string" then
-            local ttype = value.type;
-            while ttype ~= nil do
-                if ttype == string then
+        CLASS[_name] = {
+            Table = _table,
+            Super = _super.extends,
+            Interface = _super.implements;
+        };
+    end
+
+    local function _CALL(table,...)
+        table:constructor(...);
+    end
+
+    local function _NEWINDEX(table,key,value)
+        if value == nil then
+            error("不可将值设置为nil");
+        end
+
+        local temporary = table;
+        if temporary.type == "Object" then
+            rawset(temporary,key,value);
+        else
+            while table ~= nil do
+                for k in pairs(table) do
+                    if key == k then
+                        rawset(table,key,value);
+                        return;
+                    end
+                end
+                table = getmetatable(table);
+            end
+            error("没有找到字段'" .. key .. "'在'" .. temporary.type .."'内");
+        end
+    end
+
+    CLASS["Object"] = {
+        Table = {
+            type = "Object",
+            __call = _CALL,
+            __newindex = _NEWINDEX,
+        },
+        Super = "nil",
+        Interface = "nil",
+    }
+
+    local function Clone(_name)
+        local object = {};
+        for key, value in pairs(CLASS[_name].Table) do
+            object[key] = value;
+        end
+        object.__index = object;
+        if CLASS[_name].Super ~= "nil" then
+            object.super = Clone(CLASS[_name].Super)
+            object.__newindex = object.super.__newindex;
+            object.__call = object.super.__call;
+            setmetatable(object,object.super);
+        end
+        return object;
+    end
+
+    local New = function(_name,...)
+        local object = Clone(_name);
+        object(...);
+        object.type = _name;
+        return setmetatable({},object);
+    end
+
+    local function Instanceof(table,string)
+        if type(table) == "table" and  type(string) == "string" and CLASS[string] ~= nil then
+            local type = table.type;
+            while type ~= nil do
+                if type == string then
                     return true;
                 end
-                ttype = classtree[ttype];
+                type = CLASS[type].Super;
             end
         end
         return false;
     end
 
-    local function clone(talbe)
-        local object = {};
-        for key, value in pairs(talbe) do
-            object[key] = value;
-        end
-        object.__index = object;
-        if getmetatable(talbe) ~= nil then
-            object.super = clone(getmetatable(talbe))
-            object.__newindex = object.super.__newindex;
-            object.__call = object.super.__call;
-            setmetatable(object,object.super);
-        else
-            setmetatable(object,basic);
-        end
-        return object;
-    end
-
-    local function createclass(object,name,father)
-        if object.constructor == nil then
-            function object:constructor()
-            end
-        end
-
-        if father ~= nil then
-            setmetatable(object,class[father]);
-            classtree[name]=father;
-        else
-            setmetatable(object,class["Object"]);
-            classtree[name]="Object";
-        end
-        class[name] = object;
-    end
-
-    local function createinterface(object,name,father)
-        
-    end
-    
-    local newindex = function(table,key,value)
-        local tobject = table;
-        while tobject ~= nil do
-            for k in pairs(tobject) do
-                if key == k then
-                    rawset(tobject,key,value);
-                    return;
-                end
-            end
-            tobject = getmetatable(tobject);
-        end
-        error("没有找到字段'" .. key .. "'在'" .. table.type .."'内");
-    end
-
-    local function new(name,...)
-        local object = clone(class[name]);
-        object.type = name;
-        object:constructor(...);
-        local tobject = object;
-        while tobject ~= nil do
-            rawset(tobject,"__newindex",newindex);
-            tobject = getmetatable(tobject);
-        end
-        return setmetatable({},object);
-    end
-
-    return {
-        Class = createclass,
-        New = new,
-        Instanceof = instanceof,
-    }
+    return{
+        Interface = Interface,
+        Class = Class,
+        New = New,
+        Instanceof = Instanceof
+    };
 end)();
-IKit.iif = function (arg1, arg2, arg3)
-    if arg1 == true then
-        return arg2;
-    end
-    return arg3
-end
 
 (function()
     local function charSize(curByte)
@@ -449,8 +563,8 @@ end)();
     function Command:constructor()
         self.sendbuffer = {};
         self.receivbBuffer = {};
-
         self.methods = {};
+
     end
 
     function Command:register(name,fun)
@@ -466,16 +580,24 @@ end)();
     function ServerCommand:constructor()
         self.super();
         local OnPlayerSignalId = 0;
+        local OnUpdateId = 0;
         function self:connection()
+            OnUpdateId = Event:addEventListener("OnUpdate",function()
+                self:OnUpdate();
+            end);
             OnPlayerSignalId = Event:addEventListener("OnPlayerSignal",function(player,signal)
                 self:OnPlayerSignal(player,signal);
             end);
         end
-
         function self:disconnect()
             Event:detachEventListener("OnPlayerSignal",OnPlayerSignalId);
+            Event:detachEventListener("OnUpdate",OnUpdateId);
         end
         self:connection();
+    end
+
+    function ServerCommand:OnUpdate()
+
     end
 
     function ServerCommand:OnPlayerSignal(player,signal)
@@ -504,13 +626,15 @@ end)();
     end
 
     function ServerCommand:sendMessage(player,message)
-        local message = IKit.New("String",message):toBytes();
-        for i = 1, #message, 1 do
-            player:Signal(message[i]);
-            -- table.insert(self.sendbuffer,message[i]);
-        end
-        player:Signal(4);
-        -- table.insert(self.sendbuffer,-1);
+        -- local message = IKit.New("String",message):toBytes();
+        -- if self.sendbuffer[player.name] == nil then
+        --     self.sendbuffer[player.name] = {};
+        -- end
+        -- --player:Signal(message[i]);
+        -- table.insert(self.sendbuffer,player);
+        -- table.insert(message,4);
+        -- table.insert(self.sendbuffer,message);
+        -- --player:Signal(4);
     end
 
     function ServerCommand:execute(player,args)
@@ -519,7 +643,7 @@ end)();
         self.methods[name:toString()](player,args);
     end
 
-    IKit.Class(ServerCommand,"ServerCommand","Command");
+    IKit.Class(ServerCommand,"ServerCommand",{extends="Command"});
 end)();
 
 (function()
@@ -529,15 +653,24 @@ end)();
         self.super();
 
         local OnSignalId = 0;
+        local OnUpdateId = 0;
         function self:connection()
             OnSignalId = Event:addEventListener("OnSignal",function(signal)
                 self:OnSignal(signal);
             end);
+            OnUpdateId = Event:addEventListener("OnUpdate",function()
+                self:OnUpdate();
+            end);
         end
         function self:disconnect()
             Event:detachEventListener("OnSignal",OnSignalId);
+            Event:detachEventListener("OnUpdate",OnUpdateId);
         end
         self:connection();
+    end
+
+    function ClientCommand:OnUpdate()
+
     end
 
     function ClientCommand:OnSignal(signal)
@@ -579,7 +712,7 @@ end)();
         self.methods[name:toString()](args);
     end
 
-    IKit.Class(ClientCommand,"ClientCommand","Command");
+    IKit.Class(ClientCommand,"ClientCommand",{extends="Command"});
 end)();
 
 Event = IKit.New("Event");
