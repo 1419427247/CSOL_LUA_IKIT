@@ -669,7 +669,8 @@ end)();
     end
 
     function ClientCommand:sendMessage(message)
-        local message = IKit.New("String",message):toBytes();
+        local message = IKit.New("String",message)
+        local bytes = message:toBytes();
         for i = 1, #message, 1 do
             table.insert(self.sendbuffer,message[i]);
         end
