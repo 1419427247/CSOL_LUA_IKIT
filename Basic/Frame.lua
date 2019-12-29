@@ -86,44 +86,6 @@ Font = {};
     IKit.Class(Graphics,"Graphics");
 end)();
 
--- (function()
---     local ComponentBox = {};
-
---     function ComponentBox:constructor()
---         self.components = {};
---     end
-
---     function ComponentBox:set(key,value)
---         for i = 1, #self.components, 1 do
---             self.components[i][key] = value;
---         end
---     end
-    
---     function ComponentBox:get(tag)
---         local array = {};
---         for i = 1, #self.components, 1 do
---             if self.components[i] == tag then
---                 array[#array+1] = self.components[i];
---             end
---         end
---         return array;
---     end
-
---     function ComponentBox:call(key,...)
---         for i = 1, #self.components, 1 do
---             self.components[i][key](self.components[i],...);
---         end
---     end
-
---     function ComponentBox:forEach(func)
---         for i = 1, #self.components, 1 do
---             func(self.components[i]);
---         end
---     end
-
---     IKit.Class(ComponentBox,"ComponentBox");
--- end)();
-
 (function()
     local Frame = {};
     function Frame:constructor(width,height)
@@ -863,19 +825,6 @@ end)();
 
     IKit.Class(SelectBox,"SelectBox",{extends="Lable"});
 end)();
-
--- (function()
---     local  ProgressBar= {}
-    
---     function ProgressBar:constructor(tag)
---         self.super(tag);
---         self.style.progresscolor = {red = 128,green = 128,blue=128,alpha=255};
-
---     end
-
---     IKit.Class(ProgressBar,"ProgressBar","Component");
--- end)();
-
 
 function MessageBox(caption,text,callback)
     local messagebox = IKit.New("Frame");

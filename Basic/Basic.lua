@@ -2,7 +2,7 @@
 IKit = (function()
     local CLASS = {};
     local INTERFACES = {};
-
+    local OBJECTPOOL = {};
     local Interface = function(_name,_method,_super)
         if INTERFACES[_name] ~= nil then
             error("接口'".. _name .."'重复定义");
@@ -40,6 +40,7 @@ IKit = (function()
             Super = _super.extends,
             Interface = _super.implements;
         };
+        OBJECTPOOL[_name] = {};
     end
 
     local function _CALL(table,...)
@@ -48,13 +49,15 @@ IKit = (function()
 
     local function _NEWINDEX(table,key,value)
         if value == nil then
-            error("不可将值设置为nil");
+            error("不可将字段设置为nil");
         end
-
         local temporary = table;
         if temporary.type == "nil" then
             rawset(temporary,key,value);
         else
+            if key == "type" then
+                error("type不可修改");
+            end
             while table ~= nil do
                 for k in pairs(table) do
                     if key == k then
@@ -77,6 +80,7 @@ IKit = (function()
         Super = "nil",
         Interface = "nil",
     }
+    OBJECTPOOL["Object"] = {};
 
     local function Clone(_name)
         local object = {};
@@ -94,10 +98,18 @@ IKit = (function()
     end
 
     local New = function(_name,...)
+        if #OBJECTPOOL[_name] > 0 then
+            OBJECTPOOL[_name][#OBJECTPOOL[_name]](...);
+            return table.remove(OBJECTPOOL[_name],#OBJECTPOOL[_name]);
+        end
         local object = Clone(_name);
         object(...);
         object.type = _name;
         return setmetatable({},object);
+    end
+
+    local Destroy  = function(_object)
+        OBJECTPOOL[_object.type][#OBJECTPOOL[_object.type]+1] = _object;
     end
 
     local function Instanceof(_object,_name)
@@ -127,6 +139,7 @@ IKit = (function()
         Interface = Interface,
         Class = Class,
         New = New,
+        Destroy = Destroy;
         Instanceof = Instanceof
     };
 end)();
@@ -198,39 +211,7 @@ end)();
             return self.last[1];
         end
     end
-    function LinkedList:printf()
-        if self.length > 0 then
-            local node = self.first;
-            while node ~= nil do
-                print(node[1]);
-                node = node[3];
-            end
-        end
-    end
     IKit.Class(LinkedList,"LinkedList");
-end)();
-
-(function()
-    local ObjectPool = {};
-    function ObjectPool:constructor()
-
-    end
-    function ObjectPool:addObject()
-
-    end
-    function ObjectPool:getNumIdle()
-
-    end
-
-    function ObjectPool:getNumActive()
-
-    end
-
-    function ObjectPool:clear()
-        
-    end
-
-
 end)();
 
 (function()
@@ -256,7 +237,7 @@ end)();
         error("数组下标越界");
     end
 
-        function String:substring(beginindex,endindex)
+    function String:substring(beginindex,endindex)
         local text = IKit.New("String");
         for i = beginindex, endindex, 1 do
             text:insert(self.array[i]);
@@ -264,11 +245,11 @@ end)();
         return text;
     end
 
-        function String:isEmpty()
+    function String:isEmpty()
         return self.length == 0;
     end
 
-        function String:insert(value,pos)
+    function String:insert(value,pos)
         pos = pos or self.length + 1;
         if type(value) == "string" then
             local currentIndex = 1;
@@ -327,7 +308,7 @@ end)();
         end
     end
 
-        function String:remove(pos)
+    function String:remove(pos)
         if pos > 0 or pos <= self.length then
             table.remove(self.array,pos);
             self.length = self.length - 1;
@@ -336,12 +317,12 @@ end)();
         end
     end
 
-        function String:clean()
+    function String:clean()
         self.array = {};
         self.length = 0;
     end
 
-        function String:toBytes()
+    function String:toBytes()
         local bytes = {};
         for i = 1, self.length, 1 do
             for j = 1, #self.array[i], 1 do
@@ -351,7 +332,7 @@ end)();
         return bytes;
     end
     
-        function String:toNumber()
+    function String:toNumber()
         local sum = 0;
         local neg = false;
         local float = false;
@@ -578,7 +559,7 @@ end)();
                 self.sendbuffer[1][1]:Signal(self.sendbuffer[1][2][1]);
                 table.remove(self.sendbuffer[1][2],1);
                 k = k + 1;
-                if k == 50 then
+                if k == 1024 then
                     return;
                 end
             end
@@ -591,7 +572,6 @@ end)();
     function ServerCommand:OnPlayerSignal(player,signal)
         if signal == 4 then
             local command = IKit.New("String",self.receivbBuffer[player.name]);
-
             local args = {IKit.New("String")};
             for i = 1, command.length, 1 do
                 if command:charAt(i) == ' ' then
@@ -605,6 +585,7 @@ end)();
 
             self:execute(player,args);
             self.receivbBuffer[player.name] = {};
+            IKit.Destroy(command);
         else
             if self.receivbBuffer[player.name] == nil then
                 self.receivbBuffer[player.name] = {};
@@ -614,9 +595,11 @@ end)();
     end
 
     function ServerCommand:sendMessage(player,message)
-        local message = IKit.New("String",message):toBytes();
-        table.insert(message,4);
-        table.insert(self.sendbuffer,{player,message});
+        local message = IKit.New("String",message);
+        local bytes = message:toBytes();
+        table.insert(bytes,4);
+        table.insert(self.sendbuffer,{player,bytes});
+        IKit.Destroy(message);
     end
 
     function ServerCommand:execute(player,args)
@@ -666,7 +649,6 @@ end)();
     function ClientCommand:OnSignal(signal)
         if signal == 4 then
             local command = IKit.New("String",self.receivbBuffer);
-
             local args = {IKit.New("String")};
             for i = 1, command.length, 1 do
                 if command:charAt(i) == ' ' then
@@ -680,6 +662,7 @@ end)();
 
             self:execute(args);
             self.receivbBuffer = {};
+            IKit.Destroy(command);
         else
             table.insert(self.receivbBuffer,signal);
         end
@@ -691,6 +674,7 @@ end)();
             table.insert(self.sendbuffer,message[i]);
         end
         table.insert(self.sendbuffer,4);
+        IKit.Destroy(message);
     end
 
     function ClientCommand:execute(args)

@@ -1,1 +1,0 @@
-Command:sendMessage(Game.Player:Create (1),"kill 123");
