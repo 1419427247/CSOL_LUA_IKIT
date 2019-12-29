@@ -1,132 +1,4 @@
 --基础工具库,包含了基础的面向对象,事件处理,字符串与计时器,写的太烂了,实在抱歉QWQ
-
--- IKit = (function()
---     local class = {};
-
---     --local interface = {};
-
---     local classtree = {};
-
---     local call = function(table,...)
---         table:constructor(...);
---     end;
-
---     local newindex = function(table,key,value)
---         local tobject = table;
---         while tobject ~= nil do
---             for k in pairs(tobject) do
---                 if key == k then
---                     rawset(tobject,key,value);
---                     return;
---                 end
---             end
---             tobject = getmetatable(tobject);
---         end
---         rawset(table,key,value);
---     end
-
---     local basic = {
---         __newindex = newindex,
---         __call = call,
---     };
-
---     class["Object"] = {
---         type = "Object",
---         __newindex = newindex,
---         __call = call,
---     };
-
---     classtree["Object"] = nil;
-
---     local function instanceof(value,string)
---         if type(value) == "table" and  type(string) == "string" then
---             local ttype = value.type;
---             while ttype ~= nil do
---                 if ttype == string then
---                     return true;
---                 end
---                 ttype = classtree[ttype];
---             end
---         end
---         return false;
---     end
-
---     local function clone(talbe)
---         local object = {};
---         for key, value in pairs(talbe) do
---             object[key] = value;
---         end
---         object.__index = object;
---         if getmetatable(talbe) ~= nil then
---             object.super = clone(getmetatable(talbe))
---             object.__newindex = object.super.__newindex;
---             object.__call = object.super.__call;
---             setmetatable(object,object.super);
---         else
---             setmetatable(object,basic);
---         end
---         return object;
---     end
-
---     local function createclass(object,name,father)
---         if object.constructor == nil then
---             function object:constructor()
---             end
---         end
-
---         if father ~= nil then
---             setmetatable(object,class[father]);
---             classtree[name]=father;
---         else
---             setmetatable(object,class["Object"]);
---             classtree[name]="Object";
---         end
---         class[name] = object;
---     end
-
---     local function createinterface(object,name,father)
-        
---     end
-    
---     local newindex = function(table,key,value)
---         local tobject = table;
---         while tobject ~= nil do
---             for k in pairs(tobject) do
---                 if key == k then
---                     rawset(tobject,key,value);
---                     return;
---                 end
---             end
---             tobject = getmetatable(tobject);
---         end
---         error("没有找到字段'" .. key .. "'在'" .. table.type .."'内");
---     end
-
---     local function new(name,...)
---         local object = clone(class[name]);
---         object.type = name;
---         object:constructor(...);
---         local tobject = object;
---         while tobject ~= nil do
---             rawset(tobject,"__newindex",newindex);
---             tobject = getmetatable(tobject);
---         end
---         return setmetatable({},object);
---     end
-
---     return {
---         Class = createclass,
---         New = new,
---         Instanceof = instanceof,
---     }
--- end)();
--- IKit.iif = function (arg1, arg2, arg3)
---     if arg1 == true then
---         return arg2;
---     end
---     return arg3
--- end
-
 IKit = (function()
     local CLASS = {};
     local INTERFACES = {};
@@ -134,6 +6,14 @@ IKit = (function()
     local Interface = function(_name,_method,_super)
         if INTERFACES[_name] ~= nil then
             error("接口'".. _name .."'重复定义");
+        end
+        if _super ~= nil then
+            if INTERFACES[_super] == nil then
+                error("未找到接口'".. _super .."'");
+            end
+            for i = 1, #INTERFACES[_super],1 do
+                _method[#_method + 1] = INTERFACES[_super][i];
+            end
         end
         INTERFACES[_name] = _method;
     end
@@ -172,7 +52,7 @@ IKit = (function()
         end
 
         local temporary = table;
-        if temporary.type == "Object" then
+        if temporary.type == "nil" then
             rawset(temporary,key,value);
         else
             while table ~= nil do
@@ -190,7 +70,7 @@ IKit = (function()
 
     CLASS["Object"] = {
         Table = {
-            type = "Object",
+            type = "nil",
             __call = _CALL,
             __newindex = _NEWINDEX,
         },
@@ -220,14 +100,24 @@ IKit = (function()
         return setmetatable({},object);
     end
 
-    local function Instanceof(table,string)
-        if type(table) == "table" and  type(string) == "string" and CLASS[string] ~= nil then
-            local type = table.type;
-            while type ~= nil do
-                if type == string then
-                    return true;
+    local function Instanceof(_object,_name)
+        if type(_object) == "table" and  type(_name) == "string" and (CLASS[_name] ~= nil or INTERFACES[_name] ~= nil) then
+            if INTERFACES[_name] ~= nil then
+                local type = _object.type;
+                while type ~= nil do
+                    if type == _name then
+                        return true;
+                    end
+                    type = CLASS[type].Super;
                 end
-                type = CLASS[type].Super;
+            end
+            if INTERFACES[_name] ~= nil then
+                for i = 1, INTERFACES[_name], 2 do
+                    if rawget(_object,INTERFACES[_name][i]) == nil then
+                        return false;
+                    end
+                end
+                return true;
             end
         end
         return false;
@@ -242,6 +132,108 @@ IKit = (function()
 end)();
 
 (function()
+    local LinkedList = {};
+    function LinkedList:constructor()
+        self.first = "nil";
+        self.last = "nil";
+        self.length = 0;
+    end
+    function LinkedList:unshift(_value)
+        if self.length == 0 then
+            self.first = {_value,nil,nil};
+            self.last = self.first;
+        else
+            self.first = {_value,nil,self.first};
+            self.first[3][2] = self.first;
+        end
+        self.length = self.length + 1;
+    end
+    function LinkedList:shift()
+        local value;
+        if self.length == 1 then
+            value = self.first[1];
+            self.first = "nil";
+            self.last = "nil";
+            self.length = self.length - 1;
+        elseif self.length > 0 then 
+            value = self.first[1];
+            self.first = self.first[3];
+            self.first[2] = nil;
+            self.length = self.length - 1;
+        end
+        return value;
+    end
+    function LinkedList:push(_value)
+        if self.length == 0 then
+            self.first = {_value,nil,nil};
+            self.last = self.first;
+        else
+            self.last[3] = {_value,self.last,nil};
+            self.last = self.last[3];
+        end
+        self.length = self.length + 1;
+    end
+    function LinkedList:pop()
+        local value;
+        if self.length == 1 then
+            value = self.first[1];
+            self.first = "nil";
+            self.last = "nil";
+            self.length = self.length - 1;
+        elseif self.length > 0 then 
+            value = self.last[1];
+            self.last = self.last[2];
+            self.last[3] = nil;
+            self.length = self.length - 1;
+        end
+        return value;
+    end
+    function LinkedList:front()
+        if self.length>0 then
+            return self.first[1];
+        end
+    end
+    function LinkedList:back()
+        if self.length>0 then
+            return self.last[1];
+        end
+    end
+    function LinkedList:printf()
+        if self.length > 0 then
+            local node = self.first;
+            while node ~= nil do
+                print(node[1]);
+                node = node[3];
+            end
+        end
+    end
+    IKit.Class(LinkedList,"LinkedList");
+end)();
+
+(function()
+    local ObjectPool = {};
+    function ObjectPool:constructor()
+
+    end
+    function ObjectPool:addObject()
+
+    end
+    function ObjectPool:getNumIdle()
+
+    end
+
+    function ObjectPool:getNumActive()
+
+    end
+
+    function ObjectPool:clear()
+        
+    end
+
+
+end)();
+
+(function()
     local function charSize(curByte)
         local seperate = {0, 0xc0, 0xe0, 0xf0}
         for i = #seperate, 1, -1 do
@@ -253,7 +245,6 @@ end)();
 
     function String:constructor(value)
         self.array = {};
-        --字符串的长度,请不要直接修改它
         self.length = 0;
         self:insert(value);
     end
@@ -265,8 +256,7 @@ end)();
         error("数组下标越界");
     end
 
-    --截取一段字符并返回它
-    function String:substring(beginindex,endindex)
+        function String:substring(beginindex,endindex)
         local text = IKit.New("String");
         for i = beginindex, endindex, 1 do
             text:insert(self.array[i]);
@@ -274,13 +264,11 @@ end)();
         return text;
     end
 
-    --当前字符串长度是否为0
-    function String:isEmpty()
+        function String:isEmpty()
         return self.length == 0;
     end
 
-    --在第pos处插入字符串value,pos若为空则在末尾添加字符串value
-    function String:insert(value,pos)
+        function String:insert(value,pos)
         pos = pos or self.length + 1;
         if type(value) == "string" then
             local currentIndex = 1;
@@ -339,8 +327,7 @@ end)();
         end
     end
 
-    --移除第pos个字符
-    function String:remove(pos)
+        function String:remove(pos)
         if pos > 0 or pos <= self.length then
             table.remove(self.array,pos);
             self.length = self.length - 1;
@@ -349,14 +336,12 @@ end)();
         end
     end
 
-    --清除所有字符
-    function String:clean()
+        function String:clean()
         self.array = {};
         self.length = 0;
     end
 
-    --将字符串转换为byte数组
-    function String:toBytes()
+        function String:toBytes()
         local bytes = {};
         for i = 1, self.length, 1 do
             for j = 1, #self.array[i], 1 do
@@ -366,8 +351,7 @@ end)();
         return bytes;
     end
     
-    --字符串转数字
-    function String:toNumber()
+        function String:toNumber()
         local sum = 0;
         local neg = false;
         local float = false;
@@ -396,18 +380,15 @@ end)();
         end
         return sum;
     end
-    --转默认字符串
-    function String:toString()
+        function String:toString()
         return table.concat(self.array);
     end
 
-    --重载#运算符,返回字符串的长度
-    function String:__len()
+        function String:__len()
         return self.length;
     end
 
-    --重载==运算符,比较2字符串是否相等
-    function String:__eq(value)
+        function String:__eq(value)
         return self.length == value.length and function()
             for i = 1, self.length, 1 do
                 if self.array[i] ~= value.array[i] then
@@ -417,22 +398,16 @@ end)();
             return true;
         end
     end
-    --重载+运算符
-    function String:__add(value)
+        function String:__add(value)
         self:insert(value);
         return self;
     end
-    --重载..运算符,返回一个合并后新的字符串
-    function String:__concat(value)
+        function String:__concat(value)
         local str1 = IKit.New("String",self);
         str1:insert(value);
         return str1;
     end
-    -- --重载()运算符
-    -- function String:__call(index)
-    --     return self.array[index];
-    -- end
-
+                
     IKit.Class(String,"String");
 end)();
 
@@ -597,7 +572,20 @@ end)();
     end
 
     function ServerCommand:OnUpdate()
-
+        local k = 0;
+        while #self.sendbuffer > 0 do
+            while #self.sendbuffer[1][2] > 0 do
+                self.sendbuffer[1][1]:Signal(self.sendbuffer[1][2][1]);
+                table.remove(self.sendbuffer[1][2],1);
+                k = k + 1;
+                if k == 50 then
+                    return;
+                end
+            end
+            if #self.sendbuffer[1][2] == 0 then
+                table.remove(self.sendbuffer,1);
+            end
+        end
     end
 
     function ServerCommand:OnPlayerSignal(player,signal)
@@ -626,15 +614,9 @@ end)();
     end
 
     function ServerCommand:sendMessage(player,message)
-        -- local message = IKit.New("String",message):toBytes();
-        -- if self.sendbuffer[player.name] == nil then
-        --     self.sendbuffer[player.name] = {};
-        -- end
-        -- --player:Signal(message[i]);
-        -- table.insert(self.sendbuffer,player);
-        -- table.insert(message,4);
-        -- table.insert(self.sendbuffer,message);
-        -- --player:Signal(4);
+        local message = IKit.New("String",message):toBytes();
+        table.insert(message,4);
+        table.insert(self.sendbuffer,{player,message});
     end
 
     function ServerCommand:execute(player,args)
@@ -670,7 +652,15 @@ end)();
     end
 
     function ClientCommand:OnUpdate()
-
+        local i = 0;
+        while #self.sendbuffer > 0 do
+            UI.Signal(self.sendbuffer[1]);
+            table.remove(self.sendbuffer,1);
+            i = i + 1;
+            if i == 15 then
+                return;
+            end
+        end
     end
 
     function ClientCommand:OnSignal(signal)
@@ -695,15 +685,12 @@ end)();
         end
     end
 
-    --当传出信号值为4时表示传输结束
     function ClientCommand:sendMessage(message)
         local message = IKit.New("String",message):toBytes();
-            for i = 1, #message, 1 do
-                UI.Signal(message[i]);
-                -- table.insert(self.sendbuffer,message[i]);
-            end
-            UI.Signal(4);
-            -- table.insert(self.sendbuffer,-1);
+        for i = 1, #message, 1 do
+            table.insert(self.sendbuffer,message[i]);
+        end
+        table.insert(self.sendbuffer,4);
     end
 
     function ClientCommand:execute(args)
