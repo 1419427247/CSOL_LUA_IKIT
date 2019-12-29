@@ -582,7 +582,9 @@ end)();
                     args[#args]:insert(command:charAt(i));
                 end
             end
-
+            if args[#args].length == 0 then
+                IKit.Destroy(table.remove(args,#args));
+            end
             self:execute(player,args);
             self.receivbBuffer[player.name] = {};
             IKit.Destroy(command);
@@ -640,7 +642,7 @@ end)();
             UI.Signal(self.sendbuffer[1]);
             table.remove(self.sendbuffer,1);
             i = i + 1;
-            if i == 15 then
+            if i == 30 then
                 return;
             end
         end
@@ -659,7 +661,9 @@ end)();
                     args[#args]:insert(command:charAt(i));
                 end
             end
-
+            if args[#args].length == 0 then
+                IKit.Destroy(table.remove(args,#args));
+            end
             self:execute(args);
             self.receivbBuffer = {};
             IKit.Destroy(command);
@@ -671,8 +675,8 @@ end)();
     function ClientCommand:sendMessage(message)
         local message = IKit.New("String",message)
         local bytes = message:toBytes();
-        for i = 1, #message, 1 do
-            table.insert(self.sendbuffer,message[i]);
+        for i = 1, #bytes, 1 do
+            table.insert(self.sendbuffer,bytes[i]);
         end
         table.insert(self.sendbuffer,4);
         IKit.Destroy(message);

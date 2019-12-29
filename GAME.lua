@@ -3,7 +3,7 @@
 ----------------------
 
 Command:register("KeyInfo",function(player,args)
-    print(player.name);
+    print(player.name .. ":" .. #args);
     for i = 1, #args,1 do
         print(args[i]:toString());
     end

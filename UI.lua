@@ -11,13 +11,5 @@ Command:register("ShowKeyInfo",function(args)
 end);
 
 Event:addEventListener("OnKeyDown",function(inputs)
-    if ShowKeyInfo == true then
-        local keyInfo = {"KeyInfo "};
-        for key, value in pairs(inputs) do
-            if value == true then
-                keyInfo[#keyInfo+1] = key .. " ";
-            end
-        end
-        Command:sendMessage(table.concat(keyInfo));
-    end
+    Command:sendMessage("KeyInfo qwq 1 ");
 end);
