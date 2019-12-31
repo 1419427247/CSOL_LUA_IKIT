@@ -5,7 +5,8 @@
     "game": [
         "Basic/Basic.lua",
         "COMMON.lua",
-        "GAME.lua"
+        "GAME.lua",
+        "Demo/Demo_Command.lua"
     ],
     "ui": [
         "Basic/Basic.lua",
@@ -17,6 +18,6 @@
         "Basic/Font_5.lua",
         "Basic/Font_6.lua",
         "Basic/Font_7.lua",
-        "UI.lua"
+        "Demo/Demo_Command.lua"
     ]
 }

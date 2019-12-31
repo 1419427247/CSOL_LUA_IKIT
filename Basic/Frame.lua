@@ -49,19 +49,18 @@ Font = {};
     function Graphics:drawText(x,y,size,letterspacing,string,rect)
         for i=1,string.length do
             local char = string:charAt(i)
-            if(Font[char] ~= nil) then
-                local j=1;
-                while j < #Font[char] do
-                    local x1 = Font[char][j];
-                    local y1 = Font[char][j+1];
-                    local x2 = Font[char][j+2];
-                    local y2 = Font[char][j+3];
-                    if i == 1 then
-                        self:drawRect(x + x1*size,y + (12 - y2)*size, (x2 - x1)*size, (y2 - y1)*size,rect);
-                    else
-                        self:drawRect(x + (i-1) * letterspacing + x1*size,y + (12 - y2)*size, (x2 - x1)*size, (y2 - y1)*size,rect);
-                    end
-                    j = j + 4;
+            if Font[char] == nil then
+                char = '?';
+            end
+            for j = 1,#Font[char],4 do
+                local x1 = Font[char][j];
+                local y1 = Font[char][j+1];
+                local x2 = Font[char][j+2];
+                local y2 = Font[char][j+3];
+                if i == 1 then
+                    self:drawRect(x + x1*size,y + (12 - y2)*size, (x2 - x1)*size, (y2 - y1)*size,rect);
+                else
+                    self:drawRect(x + (i-1) * letterspacing + x1*size,y + (12 - y2)*size, (x2 - x1)*size, (y2 - y1)*size,rect);
                 end
             end
         end
@@ -97,6 +96,8 @@ end)();
         self.width = width or UI.ScreenSize().width;
         --设置当前窗口的宽度,默认为屏幕的高度
         self.height = height or UI.ScreenSize().height;
+        self.isvisible = false;
+
         self.graphics = IKit.New("Graphics");
         self.animation = {};
         self.children = {};
@@ -175,7 +176,7 @@ end)();
         end
     end
 
-    --计算子组件的位置,若components为nil则重新计算所有组建的位置
+    --计算子组件的位置,若components为nil则重新计算所有组件的位置
     function Frame:reset(components)
         local components = components or self.children;
             for i = 1, #components, 1 do
@@ -216,10 +217,6 @@ end)();
             end
     end
 
-    -- function Frame:freeze(component)
-        
-    -- end
-    
     --重绘当前frame
     function Frame:paint()
         self.graphics:clean();
@@ -312,14 +309,15 @@ end)();
     end
     --隐藏并移除当前frame的事件监听
     function Frame:hide()
+        self.isvisible = false;
         self:disable();
         self.graphics:clean();
     end
 
     --显示并重新添加当前frame的事件监听
     function Frame:show()
+        self.isvisible = true;
         self:enable();
-        self:reset();
         self:repaint();
     end
 
@@ -395,22 +393,24 @@ end)();
     function Component:hide()
         self.isvisible = false;
         self.isfreeze = true;
+        self.memory["posstyle"] = {self.style.top,self.style.left,self.style.width,self.style.height};
+        self.style.top = 0;
+        self.style.left = 0;
+        self.style.width = 0;
+        self.style.height = 0;
+        self:repaint();
     end
 
     --显示组件以及子组件,我感觉这样写依旧好傻=￣ω￣=
     function Component:show()
         self.isvisible = true;
         self.isfreeze = false;
+        self.style.top = self.memory["posstyle"][1];
+        self.style.left = self.memory["posstyle"][2];
+        self.style.width = self.memory["posstyle"][3];
+        self.style.height = self.memory["posstyle"][4];
+        self:repaint();
     end
-
-    --没有用的东西,可是我舍不得删QWQ
-    -- function Component:getIndex()
-    --     for i = 1, #self.father.children, 1 do
-    --         if self.father.children[i] == self then
-    --             return i;
-    --         end
-    --     end
-    -- end
 
     function Component:paint(graphics)
         graphics.color = self.style.backgroundcolor;
@@ -502,6 +502,17 @@ end)();
         self:refresh();
         return self;
     end
+
+    -- function Plane:remove(tag)
+    --     for i = 1,#self.children,1 do
+    --         if self.children[i].tag == tag then
+    --             table.remove(self.children,i);
+    --             break;
+    --         end
+    --     end
+    --     self:refresh();
+    --     self:repaint();
+    -- end
 
     function Plane:refresh()
         self.components = {};
@@ -804,17 +815,23 @@ end)();
                 else
                     self.index = self.index - 1;
                 end
+                self.onChange();
             elseif inputs[self.keynext] == true then
                 if self.index == #self.items then
                     self.index = 1;
                 else
                     self.index = self.index + 1;
                 end
+                self.onChange();
             end
             self.text:clean();
             self.text:insert("◀" .. self.items[self.index] .. "▶");
             self:repaint();
         end
+    end
+
+    function SelectBox:onChange()
+        
     end
 
     function SelectBox:getSelected()
@@ -856,4 +873,69 @@ function MessageBox(caption,text,callback)
     );
     messagebox:setFocus(plane);
     messagebox:show();
+end
+
+function SelectBox(caption,items,callback)
+    local selectbox = IKit.New("Frame");
+
+    local plane = IKit.New("Plane",1,25,25,50,30);
+
+    local caption = IKit.New("Lable",2,2,2,96,20,caption);
+    caption.style.fontsize = 2;
+    caption.style.textalign = "left"
+
+    local items = IKit.New("SelectBox",1,5,5,90,40,items);
+    items.style.newline = true;
+
+    local mb_ok = IKit.New("Button",4,30,5,40,15,"选择");
+    mb_ok.style.newline = true;
+
+    function mb_ok:onClick()
+        selectbox:hide();
+        if callback ~= nil then
+            callback(items:getSelected());
+        end
+    end
+    selectbox:add(
+        plane:add(
+            caption,
+            items,
+            mb_ok
+        )
+    );
+    selectbox:setFocus(plane);
+    selectbox:show();
+end
+
+function EditBox(caption,text,type,callback)
+    local editbox = IKit.New("Frame");
+
+    local plane = IKit.New("Plane",1,25,25,50,30);
+
+    local caption = IKit.New("Lable",2,2,2,96,20,caption);
+    caption.style.fontsize = 2;
+    caption.style.textalign = "left"
+
+    local edit = IKit.New("Edit",1,5,5,90,40,text);
+    edit.style.newline = true;
+    edit.style.intype = type;
+
+    local mb_ok = IKit.New("Button",4,30,5,40,15,"选择");
+    mb_ok.style.newline = true;
+
+    function mb_ok:onClick()
+        editbox:hide();
+        if callback ~= nil then
+            callback(edit:getText());
+        end
+    end
+    editbox:add(
+        plane:add(
+            caption,
+            edit,
+            mb_ok
+        )
+    );
+    editbox:setFocus(plane);
+    editbox:show();
 end

@@ -2,7 +2,7 @@
 IKit = (function()
     local CLASS = {};
     local INTERFACES = {};
-    local OBJECTPOOL = {};
+
     local Interface = function(_name,_method,_super)
         if INTERFACES[_name] ~= nil then
             error("接口'".. _name .."'重复定义");
@@ -40,7 +40,6 @@ IKit = (function()
             Super = _super.extends,
             Interface = _super.implements;
         };
-        OBJECTPOOL[_name] = {};
     end
 
     local function _CALL(table,...)
@@ -73,6 +72,7 @@ IKit = (function()
 
     CLASS["Object"] = {
         Table = {
+            memory = {};
             type = "nil",
             __call = _CALL,
             __newindex = _NEWINDEX,
@@ -80,7 +80,6 @@ IKit = (function()
         Super = "nil",
         Interface = "nil",
     }
-    OBJECTPOOL["Object"] = {};
 
     local function Clone(_name)
         local object = {};
@@ -98,18 +97,10 @@ IKit = (function()
     end
 
     local New = function(_name,...)
-        if #OBJECTPOOL[_name] > 0 then
-            OBJECTPOOL[_name][#OBJECTPOOL[_name]](...);
-            return table.remove(OBJECTPOOL[_name],#OBJECTPOOL[_name]);
-        end
         local object = Clone(_name);
         object(...);
         object.type = _name;
         return setmetatable({},object);
-    end
-
-    local Destroy  = function(_object)
-        OBJECTPOOL[_object.type][#OBJECTPOOL[_object.type]+1] = _object;
     end
 
     local function Instanceof(_object,_name)
@@ -139,7 +130,6 @@ IKit = (function()
         Interface = Interface,
         Class = Class,
         New = New,
-        Destroy = Destroy;
         Instanceof = Instanceof
     };
 end)();
@@ -333,35 +323,10 @@ end)();
     end
     
     function String:toNumber()
-        local sum = 0;
-        local neg = false;
-        local float = false;
-        local s = 10;
-
-        local i = 1;
-        if self.array[1] == '-' then
-            neg = true;
-            i = 2;
-        end
-        while i <= #self.array do
-            if self.array[i] == '.' then
-                float = true;
-            else
-                if float == false then
-                    sum = sum * 10 + string.byte(self.array[i]) - 48;
-                else
-                    sum = sum + (string.byte(self.array[i]) - 48) / s;
-                    s = s * 10;
-                end
-            end
-            i = i + 1;
-        end
-        if neg == true then
-            sum = sum * -1;
-        end
-        return sum;
+        tonumber(self:toString());
     end
-        function String:toString()
+
+    function String:toString()
         return table.concat(self.array);
     end
 
@@ -463,28 +428,26 @@ end)();
     end
 
     function Timer:OnUpdate(time)
-        local i = 1;
-        while i <= #self.task do
-            if self.task[i].time < time then
-                if not pcall(self.task[i].func) then
-                    table.remove(self.task,i);
-                    print("Timer:ID为:[" .. self.task[i].id .. "]的函数发生了异常");
-                elseif self.task[i].period == nil then
-                    table.remove(self.task,i);
+        for key, value in pairs(self.task) do
+            if value.time < time then
+                if not pcall(value.func) then
+                    self.task[key] = nil;
+                    print("Timer:ID为:[" .. key .. "]的函数发生了异常");
+                elseif value.period == nil then
+                    self.task[key] = nil;
                 else
-                    self.task[i].time = time + self.task[i].period;
+                    value.time = time + value.period;
                 end
             end
-            i = i + 1;
         end
     end
 
     function Timer:schedule(fun,delay,period)
         if Game ~= nil then
-            self.task[#self.task+1] = {id = self.id,func = fun,time = Game.GetTime() + delay,period = period};
+            self.task[self.id] = {func = fun,time = Game.GetTime() + delay,period = period};
         end
         if UI ~= nil then
-            self.task[#self.task+1] = {id = self.id,func = fun,time = UI.GetTime() + delay,period = period};
+            self.task[self.id] = {func = fun,time = UI.GetTime() + delay,period = period};
         end
         self.id = self.id + 1;
         return self.id - 1;
@@ -500,13 +463,14 @@ end)();
     end
 
     function Timer:cancel(id)
-        for i = 1, #self.task, 1 do
-            if self.task[i].id == id then
-                table.remove(self.task,i);
+        for key, value in pairs(self.task) do
+            if id == key then
+                self.task[key] = nil;
                 return;
             end
         end
     end
+    
     function Timer:purge()
         self.task = {}
     end
@@ -583,11 +547,10 @@ end)();
                 end
             end
             if args[#args].length == 0 then
-                IKit.Destroy(table.remove(args,#args));
+                table.remove(args,#args);
             end
             self:execute(player,args);
             self.receivbBuffer[player.name] = {};
-            IKit.Destroy(command);
         else
             if self.receivbBuffer[player.name] == nil then
                 self.receivbBuffer[player.name] = {};
@@ -601,15 +564,15 @@ end)();
         local bytes = message:toBytes();
         table.insert(bytes,4);
         table.insert(self.sendbuffer,{player,bytes});
-        IKit.Destroy(message);
     end
 
     function ServerCommand:execute(player,args)
         local name = args[1];
         table.remove(args,1);
-        self.methods[name:toString()](player,args);
+        if pcall(self.methods[name:toString()],player,args) == false then
+            print("在执行'" .. name:toString() .. "'命令时发生异常");
+        end
     end
-
     IKit.Class(ServerCommand,"ServerCommand",{extends="Command"});
 end)();
 
@@ -662,11 +625,10 @@ end)();
                 end
             end
             if args[#args].length == 0 then
-                IKit.Destroy(table.remove(args,#args));
+                table.remove(args,#args);
             end
             self:execute(args);
             self.receivbBuffer = {};
-            IKit.Destroy(command);
         else
             table.insert(self.receivbBuffer,signal);
         end
@@ -679,13 +641,14 @@ end)();
             table.insert(self.sendbuffer,bytes[i]);
         end
         table.insert(self.sendbuffer,4);
-        IKit.Destroy(message);
     end
 
     function ClientCommand:execute(args)
         local name = args[1];
         table.remove(args,1);
-        self.methods[name:toString()](args);
+        if pcall(self.methods[name:toString()],args) == false then
+            print("在执行'" .. name:toString() .. "'命令时发生异常");
+        end
     end
 
     IKit.Class(ClientCommand,"ClientCommand",{extends="Command"});
