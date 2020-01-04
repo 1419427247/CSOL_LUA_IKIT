@@ -3,11 +3,11 @@ Font = {};
 
 (function ()
     local Graphics = {};
+
     function Graphics:constructor()
         self.root = {};
         self.color = {red = 255,green = 255,blue=255,alpha=255};
     end
-
     function Graphics:drawRect(x,y,width,height,rect)
         local box = UI.Box.Create();
         if box == nil then
@@ -97,7 +97,7 @@ end)();
         --设置当前窗口的宽度,默认为屏幕的高度
         self.height = height or UI.ScreenSize().height;
         self.isvisible = false;
-
+        self.isenable = false;
         self.graphics = IKit.New("Graphics");
         self.animation = {};
         self.children = {};
@@ -115,6 +115,7 @@ end)();
             if OnKeyUpEventId ~= 0 or OnKeyDownEventId ~= 0 or OnUpdateId ~= 0  then
                 error("当前窗口以存在监听事件不可重复添加");
             end
+            self.isenable = true;
             OnKeyDownEventId = Event:addEventListener("OnKeyDown",function(inputs)
                 self:onKeyDown(inputs);
             end);
@@ -130,6 +131,7 @@ end)();
             if OnKeyUpEventId == 0 or OnKeyDownEventId == 0 or OnUpdateId == 0 then
                 error("当前窗口以存在监听事件");
             end
+            self.isenable = false;
             Event:detachEventListener("OnKeyDown",OnKeyDownEventId);
             Event:detachEventListener("OnKeyUp",OnKeyUpEventId);
             Event:detachEventListener("OnUpdate",OnUpdateId);
@@ -256,7 +258,7 @@ end)();
     end
 
     --设置动画,对性能有一定影响
-    --Frame:animate({"x",5,"style.backgroundcolor.r",125},100,nil,Button);
+    --Frame:animate({"x",5,"style.backgroundcolor.r",125},100,nil,Component);
     --Component:animate({"x",5,"style.backgroundcolor.r",125},100);
     function Frame:animate(params,timeslice,callback,component)
         local style = {};
@@ -307,6 +309,7 @@ end)();
     function Frame:getRectSize()
         return #self.graphics.root;
     end
+
     --隐藏并移除当前frame的事件监听
     function Frame:hide()
         self.isvisible = false;
@@ -322,13 +325,13 @@ end)();
     end
 
     function Frame:onKeyDown(inputs)
-        if self.focused ~= 0 then
+        if self.focused ~= 0 and self.focused.isfreeze == false then
             self.focused:onKeyDown(inputs)
         end
     end
 
     function Frame:onKeyUp(inputs)
-        if self.focused ~= 0 then
+        if self.focused ~= 0 and self.focused.isfreeze == false then
             self.focused:onKeyUp(inputs)
         end
     end
@@ -503,17 +506,6 @@ end)();
         return self;
     end
 
-    -- function Plane:remove(tag)
-    --     for i = 1,#self.children,1 do
-    --         if self.children[i].tag == tag then
-    --             table.remove(self.children,i);
-    --             break;
-    --         end
-    --     end
-    --     self:refresh();
-    --     self:repaint();
-    -- end
-
     function Plane:refresh()
         self.components = {};
         for i = 1, #self.children, 1 do
@@ -528,10 +520,10 @@ end)();
         if #self.components > 0 then
             self.components[self.index]:onFocus();
         end
-        self.style.border.left = self.style.border.left + 3;
-        self.style.border.right = self.style.border.right + 3;
-        self.style.border.top = self.style.border.top + 3;
-        self.style.border.bottom = self.style.border.bottom + 3;
+        self.style.border.left = self.style.border.left + 1;
+        self.style.border.right = self.style.border.right + 1;
+        self.style.border.top = self.style.border.top + 1;
+        self.style.border.bottom = self.style.border.bottom + 1;
         self:repaint();
     end
 
@@ -540,10 +532,10 @@ end)();
         if #self.components > 0 then
             self.components[self.index]:onBlur();
         end
-        self.style.border.left = self.style.border.left - 3;
-        self.style.border.right = self.style.border.right - 3;
-        self.style.border.top = self.style.border.top - 3;
-        self.style.border.bottom = self.style.border.bottom - 3;
+        self.style.border.left = self.style.border.left - 1;
+        self.style.border.right = self.style.border.right - 1;
+        self.style.border.top = self.style.border.top - 1;
+        self.style.border.bottom = self.style.border.bottom - 1;
         self:repaint();
     end
 
@@ -558,7 +550,6 @@ end)();
                     self.index = self.index - 1;
                 end
                 self.components[self.index]:onFocus();
-
             end
         end
         if inputs[self.keynext] == true then
