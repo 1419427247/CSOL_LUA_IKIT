@@ -125,12 +125,20 @@ IKit = (function()
         end
         return false;
     end
-
+    local function TypeOf(value)
+        if type(value) == "table" then
+            if value.type ~= nil then
+                return value.type;
+            end
+        end
+        return type(value);
+    end
     return{
         Interface = Interface,
         Class = Class,
         New = New,
-        Instanceof = Instanceof
+        Instanceof = Instanceof,
+        TypeOf = TypeOf
     };
 end)();
 
