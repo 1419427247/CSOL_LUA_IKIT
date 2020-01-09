@@ -51,21 +51,21 @@ IKit = (function()
             error("不可将字段设置为nil");
         end
         local temporary = table;
+        if key == "type" and temporary.type ~= "nil" then
+            error("type不可修改");
+        end
+        while table ~= nil do
+            for k in pairs(table) do
+                if key == k then
+                    rawset(table,key,value);
+                    return;
+                end
+            end
+            table = getmetatable(table);
+        end
         if temporary.type == "nil" then
             rawset(temporary,key,value);
         else
-            if key == "type" then
-                error("type不可修改");
-            end
-            while table ~= nil do
-                for k in pairs(table) do
-                    if key == k then
-                        rawset(table,key,value);
-                        return;
-                    end
-                end
-                table = getmetatable(table);
-            end
             error("没有找到字段'" .. key .. "'在'" .. temporary.type .."'内");
         end
     end

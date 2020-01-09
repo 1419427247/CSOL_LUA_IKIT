@@ -114,7 +114,7 @@ end)();
         elseif type(value) == "string" then
             if string.find(value,"px") ~= nil then
                 return "px",tonumber(string.sub(value,1,#value - 2));
-            elseif string.find(value,"%")  ~= nil then
+            elseif string.find(value,"%%")  ~= nil then
                 return "%",tonumber(string.sub(value,1,#value - 1));
             end
         end
@@ -123,7 +123,7 @@ end)();
 
     function Component:paint(graphics)
         graphics.color = self.style.backgroundcolor;
-        graphics.opacity = self.opacity;
+        graphics.opacity = self.style.opacity;
         graphics:drawRect(self.x,self.y,self.width,self.height);
 
         graphics.color = self.style.bordercolor;
@@ -149,13 +149,14 @@ end)();
         
     end
 
-    IKit.New(Component,"Component");
+    IKit.Class(Component,"Component");
 end)();
 
 (function()
     local Container = {};
 
     function Container:constructor()
+        self.super();
         self.children = {};
     end
 
@@ -172,15 +173,19 @@ end)();
         return table.remove(self.children,index);
     end
 
-    IKit.New(Container,"Container",{extends = "Component"});
+    IKit.Class(Container,"Container",{extends = "Component"});
 end)();
 
 (function()
     local Windows = {};
 
     function Windows:constructor()
+        self.super();
         self.graphics = IKit.New("Graphics");
         self.activecomponent = "nil";
+
+        self.width = UI.ScreenSize().width;
+        self.height = UI.ScreenSize().height;
     end
 
     function Windows:select(name)
@@ -202,57 +207,57 @@ end)();
         self.activecomponent:onFocus();
     end
     
-    function Windows:paint(graphics)
-        self.super:paint(graphics);
+    function Windows:paint()
+        self.super:paint(self.graphics);
     end
 
     function Windows:reset(components)
         local components = components or self.children;
-            for i = 1, #components, 1 do
-                if components[i].style.position == "relative" then
-                    local unit,left = self:getUnitAndNumber(components[i].style.left);
-                    if unit == "%" then
-                        left = components[i].father.width * (left /100);
-                    end
-                    local unit,top = self:getUnitAndNumber(components[i].style.top);
-                    if unit == "%" then
-                        top = components[i].father.height * (top /100);
-                    end
-                    local unit,width = self:getUnitAndNumber(components[i].style.width);
-                    if unit == "%" then
-                        width =components[i].father.width * (width /100);
-                    end
-                    local unit,height = self:getUnitAndNumber(components[i].style.height);
-                    if unit == "%" then
-                        height =components[i].father.height * (height /100);
-                    end
-                    components[i].width = width;
-                    components[i].height = height;
+        for i = 1, #components, 1 do
+            if components[i].style.position == "relative" then
+                local unit,left = self:getUnitAndNumber(components[i].style.left);
+                if unit == "%" then
+                    left = components[i].father.width * (left /100);
+                end
+                local unit,top = self:getUnitAndNumber(components[i].style.top);
+                if unit == "%" then
+                    top = components[i].father.height * (top /100);
+                end
+                local unit,width = self:getUnitAndNumber(components[i].style.width);
+                if unit == "%" then
+                    width =components[i].father.width * (width /100);
+                end
+                local unit,height = self:getUnitAndNumber(components[i].style.height);
+                if unit == "%" then
+                    height =components[i].father.height * (height /100);
+                end
+                components[i].width = width;
+                components[i].height = height;
 
-                    if i == 1 then
-                        components[i].x = components[i].father.x + left;
-                        components[i].y = components[i].father.y + top;
-                    else
-                        if components[i].style.newline == true then
-                            local temp;
-                            for j = i - 1, 1 , -1 do
-                                temp = components[j];
-                                if temp.style.newline == true then
-                                    components[i].x = components[i].father.x + left;
-                                    components[i].y = temp.y + temp.height + top;
-                                    break;
-                                end
-                                if j == 1 then
-                                    components[i].x = components[i].father.x + left;
-                                    components[i].y = components[i].father.children[1].y + components[i].father.children[1].height + top;
-                                end
+                if i == 1 then
+                    components[i].x = components[i].father.x + left;
+                    components[i].y = components[i].father.y + top;
+                else
+                    if components[i].style.newline == true then
+                        local temp;
+                        for j = i - 1, 1 , -1 do
+                            temp = components[j];
+                            if temp.style.newline == true then
+                                components[i].x = components[i].father.x + left;
+                                components[i].y = temp.y + temp.height + top;
+                                break;
                             end
-                        else
-                            components[i].x = components[i - 1].x + components[i - 1].width + left;
-                            components[i].y = components[i - 1].y;
+                            if j == 1 then
+                                components[i].x = components[i].father.x + left;
+                                components[i].y = components[i].father.children[1].y + components[i].father.children[1].height + top;
+                            end
                         end
+                    else
+                        components[i].x = components[i - 1].x + components[i - 1].width + left;
+                        components[i].y = components[i - 1].y;
                     end
-                elseif components[i].style.position == "absolute" then
+                end
+            elseif components[i].style.position == "absolute" then
                     local unit,left = self:getUnitAndNumber(components[i].style.left);
                     if unit == "%" then
                         left = self.width * (left /100);
@@ -261,20 +266,34 @@ end)();
                     if unit == "%" then
                         top = self.height * (top /100);
                     end
+                    local unit,width = self:getUnitAndNumber(components[i].style.width);
+                    if unit == "%" then
+                        width = self.width * (width /100);
+                    end
+                    local unit,height = self:getUnitAndNumber(components[i].style.height);
+                    if unit == "%" then
+                        height = self.height * (height /100);
+                    end
                     components[i].x = self.x + left;
                     components[i].y = self.y + top;
-                end
+                    components[i].width = width;
+                    components[i].height = height;
             end
-            for i = 1, #components,1 do
+        end
+        for i = 1, #components,1 do
+            if components[i].children ~= nil then
                 self:reset(components[i].children);
             end
+        end
     end
 
     function Windows:repaint(component)
         local component = component or self;
         component:paint(self.graphics);
-        for i = 1,#component.children,1 do
-            component[i]:paint();
+        if component.children ~= nil then
+            for i = 1,#component.children,1 do
+                self:repaint(component.children[i]);
+            end
         end
     end
 
@@ -282,17 +301,18 @@ end)();
         self:repaint();
     end
 
-    IKit.New(Windows,"Windows",{extends = "Container"});
+    IKit.Class(Windows,"Windows",{extends = "Container"});
 end)();
 
 (function()
     local Div = {};
 
     function Div:constructor()
+        self.super();
 
     end
 
-    IKit.New(Div,"Div",{extends = "Container"});
+    IKit.Class(Div,"Div",{extends = "Container"});
 end)();
 
 (function()
