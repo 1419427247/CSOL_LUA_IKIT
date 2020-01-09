@@ -179,45 +179,7 @@ end)();
     end
 
     --计算子组件的位置,若components为nil则重新计算所有组件的位置
-    function Frame:reset(components)
-        local components = components or self.children;
-            for i = 1, #components, 1 do
-                components[i].width = components[i].father.width * (components[i].style.width /100);
-                components[i].height = components[i].father.height * (components[i].style.height /100);
-                if components[i].style.position == "relative" then
-                    if i == 1 then
-                        components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
-                        components[i].y = components[i].father.y + components[i].father.height * (components[i].style.top /100);
-                    else
-                        if components[i].style.newline == true then
-                            local temp;
-                            for j = i - 1, 1 , -1 do
-                                temp = components[j];
-                                if temp.style.newline == true then
-                                    components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
-                                    components[i].y = temp.y + temp.height + components[i].father.height * (components[i].style.top /100);
-                                    break;
-                                end
-                                if j == 1 then
-                                    components[i].x = components[i].father.x + components[i].father.width * (components[i].style.left /100);
-                                    components[i].y = components[i].father.children[1].y + components[i].father.children[1].height + components[i].father.height * (components[i].style.top /100);
-                                end
-                            end
-                        else
-                            components[i].x = components[i - 1].x + components[i - 1].width + components[i].father.width * (components[i].style.left /100);
-                            components[i].y = components[i - 1].y;
-                        end
-                    end
-                elseif components[i].style.position == "absolute" then
-                    components[i].x = self.x + self.width * (components[i].style.left /100);
-                    components[i].y = self.y + self.height * (components[i].style.top /100);
-                end
-            end
 
-            for i = 1, #components,1 do
-                self:reset(components[i].children);
-            end
-    end
 
     --重绘当前frame
     function Frame:paint()

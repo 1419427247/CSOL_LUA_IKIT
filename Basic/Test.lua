@@ -206,6 +206,70 @@ end)();
         self.super:paint(graphics);
     end
 
+    function Windows:reset(components)
+        local components = components or self.children;
+            for i = 1, #components, 1 do
+                if components[i].style.position == "relative" then
+                    local unit,left = self:getUnitAndNumber(components[i].style.left);
+                    if unit == "%" then
+                        left = components[i].father.width * (left /100);
+                    end
+                    local unit,top = self:getUnitAndNumber(components[i].style.top);
+                    if unit == "%" then
+                        top = components[i].father.height * (top /100);
+                    end
+                    local unit,width = self:getUnitAndNumber(components[i].style.width);
+                    if unit == "%" then
+                        width =components[i].father.width * (width /100);
+                    end
+                    local unit,height = self:getUnitAndNumber(components[i].style.height);
+                    if unit == "%" then
+                        height =components[i].father.height * (height /100);
+                    end
+                    components[i].width = width;
+                    components[i].height = height;
+
+                    if i == 1 then
+                        components[i].x = components[i].father.x + left;
+                        components[i].y = components[i].father.y + top;
+                    else
+                        if components[i].style.newline == true then
+                            local temp;
+                            for j = i - 1, 1 , -1 do
+                                temp = components[j];
+                                if temp.style.newline == true then
+                                    components[i].x = components[i].father.x + left;
+                                    components[i].y = temp.y + temp.height + top;
+                                    break;
+                                end
+                                if j == 1 then
+                                    components[i].x = components[i].father.x + left;
+                                    components[i].y = components[i].father.children[1].y + components[i].father.children[1].height + top;
+                                end
+                            end
+                        else
+                            components[i].x = components[i - 1].x + components[i - 1].width + left;
+                            components[i].y = components[i - 1].y;
+                        end
+                    end
+                elseif components[i].style.position == "absolute" then
+                    local unit,left = self:getUnitAndNumber(components[i].style.left);
+                    if unit == "%" then
+                        left = self.width * (left /100);
+                    end
+                    local unit,top = self:getUnitAndNumber(components[i].style.top);
+                    if unit == "%" then
+                        top = self.height * (top /100);
+                    end
+                    components[i].x = self.x + left;
+                    components[i].y = self.y + top;
+                end
+            end
+            for i = 1, #components,1 do
+                self:reset(components[i].children);
+            end
+    end
+
     function Windows:repaint(component)
         local component = component or self;
         component:paint(self.graphics);
@@ -229,4 +293,43 @@ end)();
     end
 
     IKit.New(Div,"Div",{extends = "Container"});
+end)();
+
+(function()
+    local Lable = {};
+
+    function Lable:constructor(tag,left,top,width,heigth,text)
+        self.super(tag,left,top,width,heigth);
+        self.text = IKit.New("String",text);
+        self.style.fontsize = 2;
+        self.style.letterspacing = 25;
+        self.style.textalign = "center";
+        self.overflow = "hidden";
+        self.style.offsetx = 0;
+        self.style.offsety = 0;
+        self.style.fontcolor = {red = 0,green = 0,blue=0,alpha=255};
+    end
+
+    function Lable:setText(text)
+        self.text = IKit.New("String",text);
+    end
+
+    function Lable:paint(graphics)
+        self.super:paint(graphics);
+        local rect = nil;
+        if self.overflow == "hidden" then
+            rect = {x = self.x,y = self.y,width = self.width,height = self.height};
+        end
+        graphics.color = self.style.color;
+        local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
+        if self.style.textalign == "center" then
+            graphics:drawText(self.x + (self.width - w)/2 + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,self.text,rect);
+        elseif self.style.textalign == "left" then
+            graphics:drawText(self.x + self.style.offsetx,self.y + (self.height - h) / 2 + self.style.offsety ,self.style.fontsize,self.style.letterspacing,self.text,rect);
+        elseif self.style.textalign == "rigth" then
+            graphics:drawText(self.x + (self.width - w) + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,self.text,rect);
+        end
+    end
+
+    IKit.Class(Lable,"Lable",{extends="Component"});
 end)();
