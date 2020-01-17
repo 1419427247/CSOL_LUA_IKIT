@@ -8,6 +8,7 @@ Font = {};
         self.color = {red = 255,green = 255,blue=255,alpha=255};
         self.opacity = 1;
     end
+
     function Graphics:drawRect(x,y,width,height,rect)
         local box = UI.Box.Create();
         if box == nil then
@@ -106,6 +107,7 @@ end)();
             border = {top = 0,left = 0,right = 0,bottom = 0},
             bordercolor = {red = 0,green = 0,blue=0,alpha=255},
         };
+        self.onclick = "nil";
     end
 
     function Component:getUnitAndNumber(value)
@@ -149,6 +151,24 @@ end)();
         
     end
 
+    function Component:set(params)
+        local object;
+        local key = IKit.New("String");
+        for i = 1, #params, 2 do
+            object = self;
+            key:clean();
+            for j = 1, #params[i], 1 do
+                if string.sub(params[i],j,j) == '.' then
+                    object = object[key:toString()];
+                    key:clean();
+                else
+                    key:insert(string.sub(params[i],j,j));
+                end
+            end
+            object[key:toString()] = params[i+1];
+        end
+    end
+
     IKit.Class(Component,"Component");
 end)();
 
@@ -186,6 +206,7 @@ end)();
 
         self.width = UI.ScreenSize().width;
         self.height = UI.ScreenSize().height;
+
     end
 
     function Windows:select(name)
