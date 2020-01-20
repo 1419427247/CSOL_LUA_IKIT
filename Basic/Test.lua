@@ -1,5 +1,40 @@
 Font = {};
 
+(function()
+    local Input = {};
+    local inputs = {};
+    function Input:constructor()
+        local OnKeyDownEventId = 0;
+        local OnKeyUpEventId = 0;
+        local OnUpdateEventId = 0;
+        
+            if  OnKeyDownEventId == 0 and OnKeyUpEventId == 0 and OnUpdateEventId == 0 then
+                OnKeyDownEventId = Event:addEventListener(function(inputs)
+                    self:keyDown(inputs);
+                end);
+                OnKeyUpEventId = Event:addEventListener(function(inputs)
+                    self:keyUp(inputs);
+                end);
+                OnUpdateEventId = Event:addEventListener(function(time)
+                    self:Update(time);
+                end);
+            end
+
+        function self:disable()
+            if  OnKeyDownEventId ~= 0 and OnKeyUpEventId ~= 0 and OnUpdateEventId ~= 0 then
+                Event:detachEventListener(OnKeyDownEventId);
+                Event:detachEventListener(OnKeyUpEventId);
+                Event:detachEventListener(OnUpdateEventId);
+                OnKeyDownEventId = 0;
+                OnKeyUpEventId = 0;
+                OnUpdateEventId = 0;
+            end
+        end
+    end
+
+    IKit.Class(Input,"Input");
+end)();
+
 (function ()
     local Graphics = {};
 
@@ -108,6 +143,11 @@ end)();
             bordercolor = {red = 0,green = 0,blue=0,alpha=255},
         };
         self.onclick = "nil";
+        self.onfouce = "nil";
+        self.onblur = "nil";
+        self.onkeydown = "nil";
+        self.onkeyup = "nil";
+        self.onupdate = "nil";
     end
 
     function Component:getUnitAndNumber(value)
@@ -143,14 +183,6 @@ end)();
         end
     end
 
-    function Component:onFocus()
-        
-    end
-
-    function Component:onBlur()
-        
-    end
-
     function Component:set(params)
         local object;
         local key = IKit.New("String");
@@ -178,6 +210,7 @@ end)();
     function Container:constructor()
         self.super();
         self.children = {};
+        self.index = 0;
     end
 
     function Container:add(...)
@@ -193,6 +226,23 @@ end)();
         return table.remove(self.children,index);
     end
 
+    function Container:moveNext()
+        if #self.children > 0 then
+            local i = self.index + 1;
+            while i ~= self.index do
+                if i > #self.children then
+                    i = 1;
+                end
+                if self.children[i].isenabled == true and self.children[i].isvisible == false then
+                    self.index = i;
+                    break;
+                end
+                i = i + 1;
+            end  
+        end
+    end
+
+
     IKit.Class(Container,"Container",{extends = "Component"});
 end)();
 
@@ -202,11 +252,23 @@ end)();
     function Windows:constructor()
         self.super();
         self.graphics = IKit.New("Graphics");
-        self.activecomponent = "nil";
+        self.activecomponent = self;
 
         self.width = UI.ScreenSize().width;
         self.height = UI.ScreenSize().height;
 
+    end
+
+    function Windows:keyDown(inputs)
+        
+    end
+
+    function Windows:keyUp(inputs)
+    
+    end
+
+    function Windows:update()
+        self:repaint();
     end
 
     function Windows:select(name)
@@ -316,10 +378,6 @@ end)();
                 self:repaint(component.children[i]);
             end
         end
-    end
-
-    function Windows:update()
-        self:repaint();
     end
 
     IKit.Class(Windows,"Windows",{extends = "Container"});
