@@ -5,8 +5,7 @@
     "game": [
         "Basic/Basic.lua",
         "COMMON.lua",
-        "GAME.lua",
-        "Demo/Demo_Command.lua"
+        "GAME.lua"
     ],
     "ui": [
         "Basic/Basic.lua",

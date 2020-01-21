@@ -229,7 +229,6 @@ end)();
         for i = 1, #params, 2 do
             object = component;
             key:clean();
-
             for j = 1, #params[i], 1 do
                 if string.sub(params[i],j,j) == '.' then
                     object = object[key:toString()];
@@ -396,7 +395,7 @@ end)();
         end
     end
 
-    --获得焦点事件,我要gg了呜呜呜T_T
+    --我要gg了呜呜呜T_T
     function Component:onFocus()
         -- self.style.backgroundcolor.red = self.style.backgroundcolor.red - 20;
         -- self.style.backgroundcolor.green = self.style.backgroundcolor.green - 20;
@@ -567,7 +566,6 @@ end)();
 
     function Lable:constructor(tag,left,top,width,heigth,text)
         self.super(tag,left,top,width,heigth);
-        self.isfreeze = true;
         --要显示的文本
         self.text = IKit.New("String",text);
         --文字大小
@@ -584,12 +582,6 @@ end)();
         self.style.offsety = 0;
         --文本颜色
         self.style.color = {red = 0,green = 0,blue=0,alpha=255};
-    end
-
-    function Lable:setText(text)
-        self.text:clean();
-        self.text:insert(text);
-        self:repaint();
     end
 
     function Lable:paint(graphics)

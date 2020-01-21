@@ -1,39 +1,39 @@
 Font = {};
 
-(function()
-    local Input = {};
-    local inputs = {};
-    function Input:constructor()
-        local OnKeyDownEventId = 0;
-        local OnKeyUpEventId = 0;
-        local OnUpdateEventId = 0;
+-- (function()
+--     local Input = {};
+--     local inputs = {};
+--     function Input:constructor()
+--         local OnKeyDownEventId = 0;
+--         local OnKeyUpEventId = 0;
+--         local OnUpdateEventId = 0;
         
-            if  OnKeyDownEventId == 0 and OnKeyUpEventId == 0 and OnUpdateEventId == 0 then
-                OnKeyDownEventId = Event:addEventListener(function(inputs)
-                    self:keyDown(inputs);
-                end);
-                OnKeyUpEventId = Event:addEventListener(function(inputs)
-                    self:keyUp(inputs);
-                end);
-                OnUpdateEventId = Event:addEventListener(function(time)
-                    self:Update(time);
-                end);
-            end
+--             if  OnKeyDownEventId == 0 and OnKeyUpEventId == 0 and OnUpdateEventId == 0 then
+--                 OnKeyDownEventId = Event:addEventListener(function(inputs)
+--                     self:keyDown(inputs);
+--                 end);
+--                 OnKeyUpEventId = Event:addEventListener(function(inputs)
+--                     self:keyUp(inputs);
+--                 end);
+--                 OnUpdateEventId = Event:addEventListener(function(time)
+--                     self:Update(time);
+--                 end);
+--             end
 
-        function self:disable()
-            if  OnKeyDownEventId ~= 0 and OnKeyUpEventId ~= 0 and OnUpdateEventId ~= 0 then
-                Event:detachEventListener(OnKeyDownEventId);
-                Event:detachEventListener(OnKeyUpEventId);
-                Event:detachEventListener(OnUpdateEventId);
-                OnKeyDownEventId = 0;
-                OnKeyUpEventId = 0;
-                OnUpdateEventId = 0;
-            end
-        end
-    end
+--         function self:disable()
+--             if  OnKeyDownEventId ~= 0 and OnKeyUpEventId ~= 0 and OnUpdateEventId ~= 0 then
+--                 Event:detachEventListener(OnKeyDownEventId);
+--                 Event:detachEventListener(OnKeyUpEventId);
+--                 Event:detachEventListener(OnUpdateEventId);
+--                 OnKeyDownEventId = 0;
+--                 OnKeyUpEventId = 0;
+--                 OnUpdateEventId = 0;
+--             end
+--         end
+--     end
 
-    IKit.Class(Input,"Input");
-end)();
+--     IKit.Class(Input,"Input");
+-- end)();
 
 (function ()
     local Graphics = {};
@@ -142,12 +142,12 @@ end)();
             border = {top = 0,left = 0,right = 0,bottom = 0},
             bordercolor = {red = 0,green = 0,blue=0,alpha=255},
         };
-        self.onclick = "nil";
-        self.onfouce = "nil";
-        self.onblur = "nil";
-        self.onkeydown = "nil";
-        self.onkeyup = "nil";
-        self.onupdate = "nil";
+        self.onclick = function() end;
+        self.onfouce = function() end;
+        self.onblur = function() end;
+        self.onkeydown = function() end;
+        self.onkeyup = function() end;
+        self.onupdate = function() end;
     end
 
     function Component:getUnitAndNumber(value)
@@ -219,6 +219,9 @@ end)();
             components[i].father = self;
             self.children[#self.children+1] = components[i];
         end
+        if #self.children == 0 or #self.children == 1 then
+            self.index = #self.children;
+        end
         return self;
     end
 
@@ -232,13 +235,14 @@ end)();
             while i ~= self.index do
                 if i > #self.children then
                     i = 1;
+                else
+                    if self.children[i].isenabled == true and self.children[i].isvisible == true then
+                        self.index = i;
+                        break;
+                    end
+                    i = i + 1;
                 end
-                if self.children[i].isenabled == true and self.children[i].isvisible == false then
-                    self.index = i;
-                    break;
-                end
-                i = i + 1;
-            end  
+            end
         end
     end
 
@@ -257,18 +261,94 @@ end)();
         self.width = UI.ScreenSize().width;
         self.height = UI.ScreenSize().height;
 
-    end
+        local OnKeyDownEventId = 0;
+        local OnKeyUpEventId = 0;
+        local OnUpdateId = 0;
 
-    function Windows:keyDown(inputs)
+        function self:onkeydown(inputs)
+            if inputs[UI.KEY.MOUSE1] == true then
+                if self.index ~= 0 then
+                    self.activecomponent = self.children[self.index];
+                end
+            end
+            if inputs[UI.KEY.MOUSE2] == true then
+                if self.activecomponent.father ~= "nil" then
+                    self.activecomponent = self.activecomponent.father;
+                    return;
+                end
+            end
+            if inputs[UI.KEY.UP] == true then
+                print(self.index)
+                self:moveNext();
+                if self.activecomponent ~= self.children[self.index] then
+                    self.activecomponent:onblur();
+                    self.activecomponent = self.children[self.index];
+                    self.activecomponent:onfouce();
+                end
+                return;
+            end
+            if inputs[UI.KEY.DOWN] == true then
+                self:moveNext();
+                if self.activecomponent ~= self.children[self.index] then
+                    self.activecomponent:onblur();
+                    self.activecomponent = self.children[self.index];
+                    self.activecomponent:onfouce();
+                end
+                return;
+            end
+            if self.activecomponent.onkeydown ~= "nil" and self.activecomponent ~= self then
+                self.activecomponent:onkeydown(inputs);
+            end
+        end
+
+        function self:onkeyup(inputs)
+            if self.activecomponent.onkeyup ~= "nil" and self.activecomponent ~= self then
+                self.activecomponent:onkeyup(inputs);
+            end
+        end
         
-    end
+        function self:onupdate(time)
+            if self.activecomponent.onupdate ~= "nil" and self.activecomponent ~= self then
+                self.activecomponent:onupdate(time);
+            end
+            self:reset();
+            self:repaint();
+        end
 
-    function Windows:keyUp(inputs)
-    
-    end
+        function self:onclick()
+            print("QWQ");
+        end
+        
 
-    function Windows:update()
-        self:repaint();
+        function self:enable()
+            if OnKeyUpEventId ~= 0 or OnKeyDownEventId ~= 0 or OnUpdateId ~= 0  then
+                error("当前窗口以存在监听事件不可重复添加");
+            end
+            OnKeyDownEventId = Event:addEventListener("OnKeyDown",function(inputs)
+                self:onkeydown(inputs);
+            end);
+            OnKeyUpEventId = Event:addEventListener("OnKeyUp",function(inputs)
+                self:onkeyup(inputs);
+            end);
+            OnUpdateId = Event:addEventListener("OnUpdate",function(time)
+                self:onupdate(time);
+            end);
+            self.isenabled = true;
+        end
+
+        function self:disable()
+            if OnKeyUpEventId == 0 or OnKeyDownEventId == 0 or OnUpdateId == 0 then
+                error("当前窗口以存在监听事件");
+            end
+            Event:detachEventListener("OnKeyDown",OnKeyDownEventId);
+            Event:detachEventListener("OnKeyUp",OnKeyUpEventId);
+            Event:detachEventListener("OnUpdate",OnUpdateId);
+            OnKeyUpEventId = 0;
+            OnKeyDownEventId = 0;
+            OnUpdateId = 0;
+            self.isenabled = false;
+        end
+
     end
 
     function Windows:select(name)
@@ -372,6 +452,9 @@ end)();
 
     function Windows:repaint(component)
         local component = component or self;
+        if component == self then
+            self.graphics:clean();
+        end
         component:paint(self.graphics);
         if component.children ~= nil then
             for i = 1,#component.children,1 do
@@ -397,8 +480,8 @@ end)();
 (function()
     local Lable = {};
 
-    function Lable:constructor(tag,left,top,width,heigth,text)
-        self.super(tag,left,top,width,heigth);
+    function Lable:constructor(text)
+        self.super();
         self.text = IKit.New("String",text);
         self.style.fontsize = 2;
         self.style.letterspacing = 25;
@@ -419,7 +502,7 @@ end)();
         if self.overflow == "hidden" then
             rect = {x = self.x,y = self.y,width = self.width,height = self.height};
         end
-        graphics.color = self.style.color;
+        graphics.color = self.style.fontcolor;
         local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
         if self.style.textalign == "center" then
             graphics:drawText(self.x + (self.width - w)/2 + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,self.text,rect);
@@ -431,4 +514,100 @@ end)();
     end
 
     IKit.Class(Lable,"Lable",{extends="Component"});
+end)();
+
+(function()
+    local Edit = {};
+
+    function Edit:constructor(text)
+        self.super(text);
+        --光标位置
+        self.cursor = 0;
+        --输入类型,可为 "all" "number" "english"
+        self.intype="all";
+        --最大输入长度
+        self.maxlength = 10;
+
+        self.keyprevious = UI.KEY.LEFT;
+        self.keynext = UI.KEY.RIGHT;
+        self.keybackspace = UI.KEY.SHIFT;
+    end
+
+    function Edit:paint(graphics)
+        self.super:paint(graphics);
+        local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
+        local rect = nil;
+        if self.overflow == "hidden" then
+            rect = {x = self.x,y = self.y,width = self.width,height = self.height};
+        end
+        if self.style.textalign == "center" then
+            graphics:drawRect(self.x + (self.width - w)/2 + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
+            self.y + (self.height - h) / 2,
+            self.style.fontsize / 2,
+            self.style.fontsize * 12,rect);
+        elseif self.style.textalign == "left" then
+            graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
+            self.y + (self.height - h) / 2,
+            self.style.fontsize / 2,
+            self.style.fontsize * 12,rect);
+        elseif self.style.textalign == "rigth" then
+            graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing + (self.width - w) - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
+            self.y + (self.height - h) / 2,
+            self.style.fontsize / 2,
+            self.style.fontsize * 12,rect);
+        end
+    end
+
+    function Edit:onkeydown(inputs)
+        for key, value in pairs(inputs) do
+            if value == true then
+                if self.text.length < self.maxlength then
+                    if self.intype == "all" or self.intype == "number" then
+                        if key >=0 and key <= 8 then
+                            self.text:insert(string.char(key+49),self.cursor+1);
+                            self.cursor = self.cursor + 1;
+                        end
+                        if key == 9 then
+                            self.text:insert('0',self.cursor);
+                            self.cursor = self.cursor + 1;
+                        end
+                    end
+
+                    if self.intype == "all" or self.intype == "english" then
+                        if key >= 10 and key <= 35 then
+                            self.text:insert(string.char(key+87),self.cursor+1);
+                            self.cursor = self.cursor + 1;
+                        end
+
+                        if key == 37 then
+                            self.text:insert(' ',self.cursor+1);
+                            self.cursor = self.cursor + 1;
+                        end
+                    end
+                end
+                if key == self.keyprevious then
+                    if self.cursor > 0 then
+                        self.cursor = self.cursor - 1;
+                    end
+                end
+                if key == self.keynext then
+                    if self.cursor < self.text.length then
+                        self.cursor = self.cursor + 1;
+                    end
+                end
+                if key == self.keybackspace then
+                    if self.cursor > 0 then
+                        self.text:remove(self.cursor);
+                        self.cursor = self.cursor - 1;
+                    end
+                end
+            end
+        end
+    end
+
+    function Edit:getText()
+        return self.text;
+    end
+
+    IKit.Class(Edit,"Edit",{extends="Lable"});
 end)();
