@@ -120,7 +120,7 @@ end)();
 (function()
     local Component = {};
 
-    function Component:constructor()
+    function Component:constructor(value)
         self.id = "nil";
         self.tag = "nil";
         self.father = "nil";
@@ -148,6 +148,8 @@ end)();
         self.onkeydown = function() end;
         self.onkeyup = function() end;
         self.onupdate = function() end;
+
+        self:set(value);
     end
 
     function Component:getUnitAndNumber(value)
@@ -184,6 +186,9 @@ end)();
     end
 
     function Component:set(params)
+        if params == nil then
+            return;
+        end
         local object;
         local key = IKit.New("String");
         for i = 1, #params, 2 do
@@ -229,7 +234,7 @@ end)();
         return table.remove(self.children,index);
     end
 
-    function Container:moveNext()
+    function Container:moveToNext()
         if #self.children > 0 then
             local i = self.index + 1;
             while i ~= self.index do
@@ -246,6 +251,22 @@ end)();
         end
     end
 
+    function Container:moveToPrevious()
+        if #self.children > 0 then
+            local i = self.index - 1;
+            while i ~= self.index do
+                if i < 1 then
+                    i = #self.children;
+                else
+                    if self.children[i].isenabled == true and self.children[i].isvisible == true then
+                        self.index = i;
+                        break;
+                    end
+                    i = i - 1;
+                end
+            end
+        end
+    end
 
     IKit.Class(Container,"Container",{extends = "Component"});
 end)();
@@ -253,14 +274,17 @@ end)();
 (function()
     local Windows = {};
 
-    function Windows:constructor()
+    function Windows:constructor(value)
         self.super();
+
         self.graphics = IKit.New("Graphics");
         self.activecomponent = self;
 
-        self.width = UI.ScreenSize().width;
-        self.height = UI.ScreenSize().height;
+        self.width,self.height = UI.ScreenSize().width,UI.ScreenSize().height;
+        self.style.backgroundcolor = {red = 255,green = 255,blue=255,alpha=0};
 
+        self:set(value);
+        
         local OnKeyDownEventId = 0;
         local OnKeyUpEventId = 0;
         local OnUpdateId = 0;
@@ -269,6 +293,7 @@ end)();
             if inputs[UI.KEY.MOUSE1] == true then
                 if self.index ~= 0 then
                     self.activecomponent = self.children[self.index];
+                    self.children[self.index]:onclick();
                 end
             end
             if inputs[UI.KEY.MOUSE2] == true then
@@ -278,8 +303,7 @@ end)();
                 end
             end
             if inputs[UI.KEY.UP] == true then
-                print(self.index)
-                self:moveNext();
+                self:moveToPrevious();
                 if self.activecomponent ~= self.children[self.index] then
                     self.activecomponent:onblur();
                     self.activecomponent = self.children[self.index];
@@ -288,7 +312,7 @@ end)();
                 return;
             end
             if inputs[UI.KEY.DOWN] == true then
-                self:moveNext();
+                self:moveToNext();
                 if self.activecomponent ~= self.children[self.index] then
                     self.activecomponent:onblur();
                     self.activecomponent = self.children[self.index];
@@ -348,11 +372,24 @@ end)();
             OnUpdateId = 0;
             self.isenabled = false;
         end
-
     end
 
-    function Windows:select(name)
+    -- function Windows:selectByTag()
 
+    -- end
+
+    -- function Windows:selectById()
+
+    -- end
+
+    -- function Windows:selectAll(...)
+
+    -- end
+
+    function Windows:select(...)
+         for key, value in pairs({...}) do
+             
+         end
     end
 
     function Windows:setStyle(name,params)
@@ -361,7 +398,8 @@ end)();
 
     function Windows:setFocus(component)
         if component.isenabled == false then
-            error("'" .. component.type .. "'不可用");
+            print("'" .. component.type .. "'不可用");
+            return;
         end
         if self.activecomponent ~= "nil" then
             self.activecomponent:onBlur();
@@ -375,7 +413,10 @@ end)();
     end
 
     function Windows:reset(components)
-        local components = components or self.children;
+        if components == nil then
+            self:reset(self.children);
+            return;
+        end
         for i = 1, #components, 1 do
             if components[i].style.position == "relative" then
                 local unit,left = self:getUnitAndNumber(components[i].style.left);
@@ -480,9 +521,9 @@ end)();
 (function()
     local Lable = {};
 
-    function Lable:constructor(text)
+    function Lable:constructor(value)
         self.super();
-        self.text = IKit.New("String",text);
+        self.text = "";
         self.style.fontsize = 2;
         self.style.letterspacing = 25;
         self.style.textalign = "center";
@@ -490,10 +531,12 @@ end)();
         self.style.offsetx = 0;
         self.style.offsety = 0;
         self.style.fontcolor = {red = 0,green = 0,blue=0,alpha=255};
+
+        self:set(value);
     end
 
     function Lable:setText(text)
-        self.text = IKit.New("String",text);
+        self.text = text;
     end
 
     function Lable:paint(graphics)
@@ -503,13 +546,13 @@ end)();
             rect = {x = self.x,y = self.y,width = self.width,height = self.height};
         end
         graphics.color = self.style.fontcolor;
-        local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
+        local w,h = graphics:getTextSize(IKit.New("String",self.text),self.style.fontsize,self.style.letterspacing);
         if self.style.textalign == "center" then
-            graphics:drawText(self.x + (self.width - w)/2 + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,self.text,rect);
+            graphics:drawText(self.x + (self.width - w)/2 + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,IKit.New("String",self.text),rect);
         elseif self.style.textalign == "left" then
-            graphics:drawText(self.x + self.style.offsetx,self.y + (self.height - h) / 2 + self.style.offsety ,self.style.fontsize,self.style.letterspacing,self.text,rect);
+            graphics:drawText(self.x + self.style.offsetx,self.y + (self.height - h) / 2 + self.style.offsety ,self.style.fontsize,self.style.letterspacing,IKit.New("String",self.text),rect);
         elseif self.style.textalign == "rigth" then
-            graphics:drawText(self.x + (self.width - w) + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,self.text,rect);
+            graphics:drawText(self.x + (self.width - w) + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,IKit.New("String",self.text),rect);
         end
     end
 
@@ -519,8 +562,8 @@ end)();
 (function()
     local Edit = {};
 
-    function Edit:constructor(text)
-        self.super(text);
+    function Edit:constructor(value)
+        self.super();
         --光标位置
         self.cursor = 0;
         --输入类型,可为 "all" "number" "english"
@@ -531,11 +574,13 @@ end)();
         self.keyprevious = UI.KEY.LEFT;
         self.keynext = UI.KEY.RIGHT;
         self.keybackspace = UI.KEY.SHIFT;
+
+        self:set(value);
     end
 
     function Edit:paint(graphics)
         self.super:paint(graphics);
-        local w,h = graphics:getTextSize(self.text,self.style.fontsize,self.style.letterspacing);
+        local w,h = graphics:getTextSize(IKit.New("String",self.text),self.style.fontsize,self.style.letterspacing);
         local rect = nil;
         if self.overflow == "hidden" then
             rect = {x = self.x,y = self.y,width = self.width,height = self.height};
@@ -559,28 +604,29 @@ end)();
     end
 
     function Edit:onkeydown(inputs)
+        local text = IKit.New("String",self.text);
         for key, value in pairs(inputs) do
             if value == true then
-                if self.text.length < self.maxlength then
+                if text.length < self.maxlength then
                     if self.intype == "all" or self.intype == "number" then
                         if key >=0 and key <= 8 then
-                            self.text:insert(string.char(key+49),self.cursor+1);
+                            text:insert(string.char(key+49),self.cursor+1);
                             self.cursor = self.cursor + 1;
                         end
                         if key == 9 then
-                            self.text:insert('0',self.cursor);
+                            text:insert('0',self.cursor);
                             self.cursor = self.cursor + 1;
                         end
                     end
 
                     if self.intype == "all" or self.intype == "english" then
                         if key >= 10 and key <= 35 then
-                            self.text:insert(string.char(key+87),self.cursor+1);
+                            text:insert(string.char(key+87),self.cursor+1);
                             self.cursor = self.cursor + 1;
                         end
 
                         if key == 37 then
-                            self.text:insert(' ',self.cursor+1);
+                            text:insert(' ',self.cursor+1);
                             self.cursor = self.cursor + 1;
                         end
                     end
@@ -591,18 +637,19 @@ end)();
                     end
                 end
                 if key == self.keynext then
-                    if self.cursor < self.text.length then
+                    if self.cursor < text.length then
                         self.cursor = self.cursor + 1;
                     end
                 end
                 if key == self.keybackspace then
                     if self.cursor > 0 then
-                        self.text:remove(self.cursor);
+                        text:remove(self.cursor);
                         self.cursor = self.cursor - 1;
                     end
                 end
             end
         end
+        self.text = text:toString();
     end
 
     function Edit:getText()
@@ -610,4 +657,19 @@ end)();
     end
 
     IKit.Class(Edit,"Edit",{extends="Lable"});
+end)();
+
+(function()
+    local Br = {};
+    
+    function Br:constructor(value)
+        self.super();
+
+        self.style.newline = true;
+        self.isenabled = false;
+
+        self:set(value);
+    end
+
+    IKit.Class(Br,"Br",{extends="Component"});
 end)();
