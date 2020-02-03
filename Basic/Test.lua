@@ -152,6 +152,26 @@ end)();
         self:set(value);
     end
 
+    function Component:onClick()
+        self:onclick();
+    end
+
+    function Component:onFouce()
+        self:onfouce();
+    end
+
+    function Component:onKeyDown()
+        self:onkeydown();
+    end
+
+    function Component:onKeyUp()
+        self:onkeyup();
+    end
+
+    function Component:onUpdate()
+        self:onupdate();
+    end
+    
     function Component:getUnitAndNumber(value)
         if type(value) == "number" then
             return "px",value;
@@ -289,73 +309,18 @@ end)();
         local OnKeyUpEventId = 0;
         local OnUpdateId = 0;
 
-        function self:onkeydown(inputs)
-            if inputs[UI.KEY.MOUSE1] == true then
-                if self.index ~= 0 then
-                    self.activecomponent = self.children[self.index];
-                    self.children[self.index]:onclick();
-                end
-            end
-            if inputs[UI.KEY.MOUSE2] == true then
-                if self.activecomponent.father ~= "nil" then
-                    self.activecomponent = self.activecomponent.father;
-                    return;
-                end
-            end
-            if inputs[UI.KEY.UP] == true then
-                self:moveToPrevious();
-                if self.activecomponent ~= self.children[self.index] then
-                    self.activecomponent:onblur();
-                    self.activecomponent = self.children[self.index];
-                    self.activecomponent:onfouce();
-                end
-                return;
-            end
-            if inputs[UI.KEY.DOWN] == true then
-                self:moveToNext();
-                if self.activecomponent ~= self.children[self.index] then
-                    self.activecomponent:onblur();
-                    self.activecomponent = self.children[self.index];
-                    self.activecomponent:onfouce();
-                end
-                return;
-            end
-            if self.activecomponent.onkeydown ~= "nil" and self.activecomponent ~= self then
-                self.activecomponent:onkeydown(inputs);
-            end
-        end
-
-        function self:onkeyup(inputs)
-            if self.activecomponent.onkeyup ~= "nil" and self.activecomponent ~= self then
-                self.activecomponent:onkeyup(inputs);
-            end
-        end
-        
-        function self:onupdate(time)
-            if self.activecomponent.onupdate ~= "nil" and self.activecomponent ~= self then
-                self.activecomponent:onupdate(time);
-            end
-            self:reset();
-            self:repaint();
-        end
-
-        function self:onclick()
-            print("QWQ");
-        end
-        
-
         function self:enable()
             if OnKeyUpEventId ~= 0 or OnKeyDownEventId ~= 0 or OnUpdateId ~= 0  then
                 error("当前窗口以存在监听事件不可重复添加");
             end
             OnKeyDownEventId = Event:addEventListener("OnKeyDown",function(inputs)
-                self:onkeydown(inputs);
+                self:onKeyDown(inputs);
             end);
             OnKeyUpEventId = Event:addEventListener("OnKeyUp",function(inputs)
-                self:onkeyup(inputs);
+                self:onKeyUp(inputs);
             end);
             OnUpdateId = Event:addEventListener("OnUpdate",function(time)
-                self:onupdate(time);
+                self:onUpdate(time);
             end);
             self.isenabled = true;
         end
@@ -371,6 +336,66 @@ end)();
             OnKeyDownEventId = 0;
             OnUpdateId = 0;
             self.isenabled = false;
+        end
+    end
+
+    function Windows:onKeyDown(inputs)
+        self.super:onKeyDown(inputs);
+        if inputs[UI.KEY.MOUSE1] == true then
+            if self.index ~= 0 then
+                self.activecomponent = self.children[self.index];
+                self.children[self.index]:onclick();
+            end
+        end
+        if inputs[UI.KEY.MOUSE2] == true then
+            if self.activecomponent.father ~= "nil" then
+                self.activecomponent = self.activecomponent.father;
+                return;
+            end
+        end
+        if inputs[UI.KEY.UP] == true then
+            self:moveToPrevious();
+            if self.activecomponent ~= self.children[self.index] then
+                self.activecomponent:onBlur();
+                self.activecomponent = self.children[self.index];
+                self.activecomponent:onFouce();
+            end
+            return;
+        end
+        if inputs[UI.KEY.DOWN] == true then
+            self:moveToNext();
+            if self.activecomponent ~= self.children[self.index] then
+                self.activecomponent:onBlur();
+                self.activecomponent = self.children[self.index];
+                self.activecomponent:onFouce();
+            end
+            return;
+        end
+        if self.activecomponent ~= self then
+            self.activecomponent:onKeyDown(inputs);
+        end
+    end
+
+    function Windows:onKeyUp(inputs)
+        self.super:onKeyUp(inputs);
+        if self.activecomponent ~= self then
+            self.activecomponent:onKeyUp(inputs);
+        end
+    end
+    
+    function Windows:onUpdate(time)
+        self.super:onUpdate(time);
+        if self.activecomponent ~= self then
+            self.activecomponent:onupdate(time);
+        end
+        self:reset();
+        self:repaint();
+    end
+
+    function Windows:onClick()
+        self.super:onClick();
+        if self.activecomponent ~= self then
+            self.activecomponent:onClick();
         end
     end
 
