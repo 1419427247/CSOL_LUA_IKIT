@@ -1,40 +1,5 @@
 Font = {};
 
--- (function()
---     local Input = {};
---     local inputs = {};
---     function Input:constructor()
---         local OnKeyDownEventId = 0;
---         local OnKeyUpEventId = 0;
---         local OnUpdateEventId = 0;
-        
---             if  OnKeyDownEventId == 0 and OnKeyUpEventId == 0 and OnUpdateEventId == 0 then
---                 OnKeyDownEventId = Event:addEventListener(function(inputs)
---                     self:keyDown(inputs);
---                 end);
---                 OnKeyUpEventId = Event:addEventListener(function(inputs)
---                     self:keyUp(inputs);
---                 end);
---                 OnUpdateEventId = Event:addEventListener(function(time)
---                     self:Update(time);
---                 end);
---             end
-
---         function self:disable()
---             if  OnKeyDownEventId ~= 0 and OnKeyUpEventId ~= 0 and OnUpdateEventId ~= 0 then
---                 Event:detachEventListener(OnKeyDownEventId);
---                 Event:detachEventListener(OnKeyUpEventId);
---                 Event:detachEventListener(OnUpdateEventId);
---                 OnKeyDownEventId = 0;
---                 OnKeyUpEventId = 0;
---                 OnUpdateEventId = 0;
---             end
---         end
---     end
-
---     IKit.Class(Input,"Input");
--- end)();
-
 (function ()
     local Graphics = {};
 
