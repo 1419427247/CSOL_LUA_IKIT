@@ -589,17 +589,12 @@ end)();
 
     function Edit:constructor(value)
         self.super();
-        --光标位置
         self.cursor = 0;
-        --输入类型,可为 "all" "number" "english"
         self.intype="all";
-        --最大输入长度
         self.maxlength = 10;
-
         self.keyprevious = UI.KEY.LEFT;
         self.keynext = UI.KEY.RIGHT;
         self.keybackspace = UI.KEY.SHIFT;
-
         self:set(value);
     end
 
@@ -628,7 +623,7 @@ end)();
         end
     end
 
-    function Edit:onkeydown(inputs)
+    function Edit:onKeyDown(inputs)
         local text = IKit.New("String",self.text);
         for key, value in pairs(inputs) do
             if value == true then
