@@ -125,6 +125,10 @@ end)();
         self:onfouce();
     end
 
+    function Component:onBlur()
+        self:onblur();
+    end
+    
     function Component:onKeyDown()
         self:onkeydown();
     end

@@ -4,8 +4,7 @@
     ],
     "game": [
         "Basic/Basic.lua",
-        "COMMON.lua",
-        "GAME.lua"
+        "Demo/Demo_ShowInput.lua"
     ],
     "ui": [
         "Basic/Basic.lua",
@@ -17,6 +16,6 @@
         "Basic/Font_5.lua",
         "Basic/Font_6.lua",
         "Basic/Font_7.lua",
-        "UI.lua"
+        "Demo/Demo_ShowInput.lua"
     ]
 }
