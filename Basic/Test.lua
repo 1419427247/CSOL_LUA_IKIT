@@ -45,9 +45,9 @@ Font = {};
         self.root[#self.root+1] = box;
     end;
 
-    function Graphics:drawText(x,y,size,letterspacing,string,rect)
-        for i=1,string.length do
-            local char = string:charAt(i)
+    function Graphics:drawText(x,y,size,letterspacing,text,rect)
+        for i=1,text.length do
+            local char = text:charAt(i)
             if Font[char] == nil then
                 char = '?';
             end
@@ -66,6 +66,12 @@ Font = {};
     end
 
     function Graphics:getTextSize(text,fontsize,letterspacing)
+        if IKit.TypeOf(text) == "string" then
+            text = IKit.New("String",text);
+        end
+        if text.length == 0 then
+            return 0;
+        end
         local width = (text.length - 1) * letterspacing + 11 * fontsize;
         local height = 12 * fontsize;
         return width,height;
@@ -85,7 +91,7 @@ end)();
 (function()
     local Component = {};
 
-    function Component:constructor(value)
+    function Component:constructor(values)
         self.id = "nil";
         self.tag = "nil";
         self.father = "nil";
@@ -104,7 +110,7 @@ end)();
             isvisible = true;
             position = "relative",
             backgroundcolor = {red = 255,green = 255,blue=255,alpha=255},
-            border = {top = 0,left = 0,right = 0,bottom = 0},
+            border = {top = 1,left = 1,right = 1,bottom = 1},
             bordercolor = {red = 0,green = 0,blue=0,alpha=255},
         };
         self.onclick = function() end;
@@ -114,7 +120,7 @@ end)();
         self.onkeyup = function() end;
         self.onupdate = function() end;
 
-        self:set(value);
+        self:set(values);
     end
 
     function Component:onClick()
@@ -141,6 +147,10 @@ end)();
         self:onupdate();
     end
     
+    function Component:getRect()
+        return {x = self.x,y = self.y,width = self.width,height = self.height};
+    end
+
     function Component:getUnitAndNumber(value)
         if type(value) == "number" then
             return "px",value;
@@ -263,7 +273,7 @@ end)();
 (function()
     local Windows = {};
 
-    function Windows:constructor(value)
+    function Windows:constructor(values)
         self.super();
 
         self.graphics = IKit.New("Graphics");
@@ -272,7 +282,7 @@ end)();
         self.width,self.height = UI.ScreenSize().width,UI.ScreenSize().height;
         self.style.backgroundcolor = {red = 255,green = 255,blue=255,alpha=0};
 
-        self:set(value);
+        self:set(values);
         
         local OnKeyDownEventId = 0;
         local OnKeyUpEventId = 0;
@@ -354,9 +364,6 @@ end)();
     
     function Windows:onUpdate(time)
         self.super:onUpdate(time);
-        if self.activecomponent ~= self then
-            self.activecomponent:onupdate(time);
-        end
         self:reset();
         self:repaint();
     end
@@ -422,6 +429,8 @@ end)();
                     top = components[i].father.height * (top /100);
                 end
                 local unit,width = self:getUnitAndNumber(components[i].style.width);
+                print(components[i].type);
+                print(width);
                 if unit == "%" then
                     width =components[i].father.width * (width /100);
                 end
@@ -431,7 +440,6 @@ end)();
                 end
                 components[i].width = width;
                 components[i].height = height;
-
                 if i == 1 then
                     components[i].x = components[i].father.x + left;
                     components[i].y = components[i].father.y + top;
@@ -504,160 +512,204 @@ end)();
 (function()
     local Div = {};
 
-    function Div:constructor()
+    function Div:constructor(values)
         self.super();
 
+        self:set(values)
     end
 
     IKit.Class(Div,"Div",{extends = "Container"});
 end)();
 
 (function()
-    local Lable = {};
+    local TextView = {};
 
-    function Lable:constructor(value)
+    function TextView:constructor(values)
         self.super();
         self.text = "";
         self.style.fontsize = 2;
         self.style.letterspacing = 25;
         self.style.textalign = "center";
-        self.overflow = "hidden";
+        self.style.overflow = "hidden";
+        self.style.singleline = false;
         self.style.offsetx = 0;
         self.style.offsety = 0;
-        self.style.fontcolor = {red = 0,green = 0,blue=0,alpha=255};
-
-        self:set(value);
+        self.style.textcolor = {red = 0,green = 0,blue=0,alpha=255};
+        
+        self:set(values);
     end
 
-    function Lable:setText(text)
+    function TextView:setText(text)
         self.text = text;
     end
 
-    function Lable:paint(graphics)
+    function TextView:paint(graphics)
         self.super:paint(graphics);
-        local rect = nil;
-        if self.overflow == "hidden" then
-            rect = {x = self.x,y = self.y,width = self.width,height = self.height};
-        end
-        graphics.color = self.style.fontcolor;
-        local w,h = graphics:getTextSize(IKit.New("String",self.text),self.style.fontsize,self.style.letterspacing);
-        if self.style.textalign == "center" then
-            graphics:drawText(self.x + (self.width - w)/2 + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,IKit.New("String",self.text),rect);
-        elseif self.style.textalign == "left" then
-            graphics:drawText(self.x + self.style.offsetx,self.y + (self.height - h) / 2 + self.style.offsety ,self.style.fontsize,self.style.letterspacing,IKit.New("String",self.text),rect);
-        elseif self.style.textalign == "rigth" then
-            graphics:drawText(self.x + (self.width - w) + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,IKit.New("String",self.text),rect);
-        end
-    end
-
-    IKit.Class(Lable,"Lable",{extends="Component"});
-end)();
-
-(function()
-    local Edit = {};
-
-    function Edit:constructor(value)
-        self.super();
-        self.cursor = 0;
-        self.intype="all";
-        self.maxlength = 10;
-        self.keyprevious = UI.KEY.LEFT;
-        self.keynext = UI.KEY.RIGHT;
-        self.keybackspace = UI.KEY.SHIFT;
-        self:set(value);
-    end
-
-    function Edit:paint(graphics)
-        self.super:paint(graphics);
-        local w,h = graphics:getTextSize(IKit.New("String",self.text),self.style.fontsize,self.style.letterspacing);
-        local rect = nil;
-        if self.overflow == "hidden" then
-            rect = {x = self.x,y = self.y,width = self.width,height = self.height};
-        end
-        if self.style.textalign == "center" then
-            graphics:drawRect(self.x + (self.width - w)/2 + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
-            self.y + (self.height - h) / 2,
-            self.style.fontsize / 2,
-            self.style.fontsize * 12,rect);
-        elseif self.style.textalign == "left" then
-            graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
-            self.y + (self.height - h) / 2,
-            self.style.fontsize / 2,
-            self.style.fontsize * 12,rect);
-        elseif self.style.textalign == "rigth" then
-            graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing + (self.width - w) - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
-            self.y + (self.height - h) / 2,
-            self.style.fontsize / 2,
-            self.style.fontsize * 12,rect);
-        end
-    end
-
-    function Edit:onKeyDown(inputs)
         local text = IKit.New("String",self.text);
-        for key, value in pairs(inputs) do
-            if value == true then
-                if text.length < self.maxlength then
-                    if self.intype == "all" or self.intype == "number" then
-                        if key >=0 and key <= 8 then
-                            text:insert(string.char(key+49),self.cursor+1);
-                            self.cursor = self.cursor + 1;
-                        end
-                        if key == 9 then
-                            text:insert('0',self.cursor);
-                            self.cursor = self.cursor + 1;
-                        end
-                    end
-
-                    if self.intype == "all" or self.intype == "english" then
-                        if key >= 10 and key <= 35 then
-                            text:insert(string.char(key+87),self.cursor+1);
-                            self.cursor = self.cursor + 1;
-                        end
-
-                        if key == 37 then
-                            text:insert(' ',self.cursor+1);
-                            self.cursor = self.cursor + 1;
-                        end
-                    end
-                end
-                if key == self.keyprevious then
-                    if self.cursor > 0 then
-                        self.cursor = self.cursor - 1;
-                    end
-                end
-                if key == self.keynext then
-                    if self.cursor < text.length then
-                        self.cursor = self.cursor + 1;
+        local rect = nil;
+        if self.style.overflow == "hidden" then
+            rect = {x = self.x,y = self.y,width = self.width,height = self.height};
+        end
+        graphics.color = self.style.textcolor;
+        if self.style.singleline == false then
+            local w,h = graphics:getTextSize(text,self.style.fontsize,self.style.letterspacing);
+            if self.style.textalign == "center" then
+                graphics:drawText(self.x + (self.width - w)/2 + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,text,rect);
+            elseif self.style.textalign == "left" then
+                graphics:drawText(self.x + self.style.offsetx,self.y + (self.height - h) / 2 + self.style.offsety ,self.style.fontsize,self.style.letterspacing,text,rect);
+            elseif self.style.textalign == "rigth" then
+                graphics:drawText(self.x + (self.width - w) + self.style.offsetx ,self.y + (self.height - h) / 2 + self.style.offsety,self.style.fontsize,self.style.letterspacing,text,rect);
+            end
+        else
+            local array = {};
+            local i = 1;
+            while i <= text.length do
+                local t = IKit.New("String");
+                local w,h = graphics:getTextSize(t,self.style.fontsize,self.style.letterspacing);
+                if w > self.width - 11 * self.style.fontsize then
+                    t:insert(text:charAt(i));
+                    i = i + 1;
+                else
+                    while w < self.width - 11 * self.style.fontsize and i <= text.length do
+                        t:insert(text:charAt(i));
+                        w,h = graphics:getTextSize(t,self.style.fontsize,self.style.letterspacing);
+                        i = i + 1;
                     end
                 end
-                if key == self.keybackspace then
-                    if self.cursor > 0 then
-                        text:remove(self.cursor);
-                        self.cursor = self.cursor - 1;
-                    end
-                end
+                array[#array+1] = t;
+            end
+            for i = 1, #array, 1 do
+                local w,h = graphics:getTextSize(array[i],self.style.fontsize,self.style.letterspacing);
+                graphics:drawText(self.x + self.style.offsetx,self.y + self.style.offsety + (i - 1) * h ,self.style.fontsize,self.style.letterspacing,array[i],rect);
             end
         end
-        self.text = text:toString();
     end
 
-    function Edit:getText()
-        return self.text;
-    end
-
-    IKit.Class(Edit,"Edit",{extends="Lable"});
+    IKit.Class(TextView,"TextView",{extends="Component"});
 end)();
+
+-- (function()
+--     local EditText = {};
+
+--     function EditText:constructor(values)
+--         self.super();
+
+--         self.numeric="integer";
+--         self.password="false"
+--         self.hint = "";
+
+--         self:set(values);
+--     end
+
+--     IKit.Class(EditText,"EditText",{extends="TextView"});
+-- end)();
+
+
+-- (function()
+--     local Edit = {};
+
+--     function Edit:constructor(values)
+--         self.super();
+--         self.cursor = 0;
+--         self.intype="all";
+--         self.maxlength = 10;
+--         self.keyprevious = UI.KEY.LEFT;
+--         self.keynext = UI.KEY.RIGHT;
+--         self.keybackspace = UI.KEY.SHIFT;
+--         self:set(values);
+--     end
+
+--     function Edit:paint(graphics)
+--         self.super:paint(graphics);
+--         local w,h = graphics:getTextSize(IKit.New("String",self.text),self.style.fontsize,self.style.letterspacing);
+--         local rect = nil;
+--         if self.overflow == "hidden" then
+--             rect = {x = self.x,y = self.y,width = self.width,height = self.height};
+--         end
+--         if self.style.textalign == "center" then
+--             graphics:drawRect(self.x + (self.width - w)/2 + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
+--             self.y + (self.height - h) / 2,
+--             self.style.fontsize / 2,
+--             self.style.fontsize * 12,rect);
+--         elseif self.style.textalign == "left" then
+--             graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
+--             self.y + (self.height - h) / 2,
+--             self.style.fontsize / 2,
+--             self.style.fontsize * 12,rect);
+--         elseif self.style.textalign == "rigth" then
+--             graphics:drawRect(self.x + (self.cursor) * self.style.letterspacing + (self.width - w) - (self.style.letterspacing - self.style.fontsize * 11)/2 ,
+--             self.y + (self.height - h) / 2,
+--             self.style.fontsize / 2,
+--             self.style.fontsize * 12,rect);
+--         end
+--     end
+
+--     function Edit:onKeyDown(inputs)
+--         local text = IKit.New("String",self.text);
+--         for key, value in pairs(inputs) do
+--             if value == true then
+--                 if text.length < self.maxlength then
+--                     if self.intype == "all" or self.intype == "number" then
+--                         if key >=0 and key <= 8 then
+--                             text:insert(string.char(key+49),self.cursor+1);
+--                             self.cursor = self.cursor + 1;
+--                         end
+--                         if key == 9 then
+--                             text:insert('0',self.cursor);
+--                             self.cursor = self.cursor + 1;
+--                         end
+--                     end
+
+--                     if self.intype == "all" or self.intype == "english" then
+--                         if key >= 10 and key <= 35 then
+--                             text:insert(string.char(key+87),self.cursor+1);
+--                             self.cursor = self.cursor + 1;
+--                         end
+
+--                         if key == 37 then
+--                             text:insert(' ',self.cursor+1);
+--                             self.cursor = self.cursor + 1;
+--                         end
+--                     end
+--                 end
+--                 if key == self.keyprevious then
+--                     if self.cursor > 0 then
+--                         self.cursor = self.cursor - 1;
+--                     end
+--                 end
+--                 if key == self.keynext then
+--                     if self.cursor < text.length then
+--                         self.cursor = self.cursor + 1;
+--                     end
+--                 end
+--                 if key == self.keybackspace then
+--                     if self.cursor > 0 then
+--                         text:remove(self.cursor);
+--                         self.cursor = self.cursor - 1;
+--                     end
+--                 end
+--             end
+--         end
+--         self.text = text:toString();
+--     end
+
+--     function Edit:getText()
+--         return self.text;
+--     end
+
+--     IKit.Class(Edit,"Edit",{extends="Lable"});
+-- end)();
 
 (function()
     local Br = {};
     
-    function Br:constructor(value)
+    function Br:constructor(values)
         self.super();
 
         self.style.newline = true;
         self.isenabled = false;
 
-        self:set(value);
+        self:set(values);
     end
 
     IKit.Class(Br,"Br",{extends="Component"});

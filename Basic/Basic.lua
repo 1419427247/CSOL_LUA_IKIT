@@ -82,6 +82,9 @@ IKit = (function()
     }
 
     local function Clone(_name)
+        if CLASS[_name] == nil then
+            error("没有找到类'" .. _name .. "'");
+        end
         local object = {};
         for key, value in pairs(CLASS[_name].Table) do
             object[key] = value;
