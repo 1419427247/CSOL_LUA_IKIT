@@ -13,7 +13,6 @@ Font = {};
         if box == nil then
             error("无法绘制矩形:已超过最大限制");
         end
-        --不绘制超出rect区域的图像
         if rect~=nil then
             if x > rect.x + rect.width then
                 return;
@@ -44,8 +43,6 @@ Font = {};
         self.root[#self.root+1] = box;
     end;
 
-    --在屏幕上绘制文字,size是字体尺寸,letterspacing是字体间距,string是要显示的文字应该属于String类,rect是绘制范围
-    --这里和下面一个函数有2个魔数,可是不知道为什么,我真的不想多建2个变量啊::>_<::
     function Graphics:drawText(x,y,size,letterspacing,string,rect)
         for i=1,string.length do
             local char = string:charAt(i)
@@ -365,7 +362,6 @@ end)();
         self:repaint();
     end
 
-    --显示组件以及子组件,我感觉这样写依旧好傻=￣ω￣=
     function Component:show()
         self.isvisible = true;
         self.isfreeze = false;
