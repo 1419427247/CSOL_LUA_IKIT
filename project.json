@@ -2,10 +2,19 @@
     "common":[
         "COMMON.lua"
     ],
-    "game": [
-        "Demo/Demo_ShowInput.lua"
-    ],
-    "ui": [
-        "Demo/Demo_ShowInput.lua"
-    ]
+  "game": [
+    "Demo/Demo_Edit.lua"
+  ],
+  "ui": [
+    "Basic/Basic.lua",
+    "Basic/Windows.lua",
+    "Basic/Font_1.lua",
+    "Basic/Font_2.lua",
+    "Basic/Font_3.lua",
+    "Basic/Font_4.lua",
+    "Basic/Font_5.lua",
+    "Basic/Font_6.lua",
+    "Basic/Font_7.lua",
+    "Demo/Demo_Edit.lua"
+  ]
 }

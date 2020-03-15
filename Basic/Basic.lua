@@ -146,76 +146,6 @@ IKit = (function()
 end)();
 
 (function()
-    local LinkedList = {};
-    function LinkedList:constructor()
-        self.first = "nil";
-        self.last = "nil";
-        self.length = 0;
-    end
-    function LinkedList:unshift(_value)
-        if self.length == 0 then
-            self.first = {_value,nil,nil};
-            self.last = self.first;
-        else
-            self.first = {_value,nil,self.first};
-            self.first[3][2] = self.first;
-        end
-        self.length = self.length + 1;
-    end
-    function LinkedList:shift()
-        local value;
-        if self.length == 1 then
-            value = self.first[1];
-            self.first = "nil";
-            self.last = "nil";
-            self.length = self.length - 1;
-        elseif self.length > 0 then 
-            value = self.first[1];
-            self.first = self.first[3];
-            self.first[2] = nil;
-            self.length = self.length - 1;
-        end
-        return value;
-    end
-    function LinkedList:push(_value)
-        if self.length == 0 then
-            self.first = {_value,nil,nil};
-            self.last = self.first;
-        else
-            self.last[3] = {_value,self.last,nil};
-            self.last = self.last[3];
-        end
-        self.length = self.length + 1;
-    end
-    function LinkedList:pop()
-        local value;
-        if self.length == 1 then
-            value = self.first[1];
-            self.first = "nil";
-            self.last = "nil";
-            self.length = self.length - 1;
-        elseif self.length > 0 then 
-            value = self.last[1];
-            self.last = self.last[2];
-            self.last[3] = nil;
-            self.length = self.length - 1;
-        end
-        return value;
-    end
-    function LinkedList:front()
-        if self.length>0 then
-            return self.first[1];
-        end
-    end
-    function LinkedList:back()
-        if self.length>0 then
-            return self.last[1];
-        end
-    end
-    IKit.Class(LinkedList,"LinkedList");
-end)();
-
-(function()
     local function charSize(curByte)
         local seperate = {0, 0xc0, 0xe0, 0xf0}
         for i = #seperate, 1, -1 do
@@ -341,11 +271,11 @@ end)();
         return table.concat(self.array);
     end
 
-        function String:__len()
+    function String:__len()
         return self.length;
     end
 
-        function String:__eq(value)
+    function String:__eq(value)
         return self.length == value.length and function()
             for i = 1, self.length, 1 do
                 if self.array[i] ~= value.array[i] then
@@ -355,11 +285,13 @@ end)();
             return true;
         end
     end
-        function String:__add(value)
+
+    function String:__add(value)
         self:insert(value);
         return self;
     end
-        function String:__concat(value)
+
+    function String:__concat(value)
         local str1 = IKit.New("String",self);
         str1:insert(value);
         return str1;

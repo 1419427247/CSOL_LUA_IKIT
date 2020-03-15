@@ -70,7 +70,7 @@ Font = {};
             text = IKit.New("String",text);
         end
         if text.length == 0 then
-            return 0;
+            return 0,12 * fontsize;
         end
         local width = (text.length - 1) * letterspacing + 11 * fontsize;
         local height = 12 * fontsize;
@@ -91,7 +91,7 @@ end)();
 (function()
     local Component = {};
 
-    function Component:constructor(values)
+    function Component:constructor()
         self.id = "nil";
         self.tag = "nil";
         self.father = "nil";
@@ -120,7 +120,6 @@ end)();
         self.onkeyup = function() end;
         self.onupdate = function() end;
 
-        self:set(values);
     end
 
     function Component:onClick()
@@ -273,7 +272,7 @@ end)();
 (function()
     local Windows = {};
 
-    function Windows:constructor(values)
+    function Windows:constructor()
         self.super();
 
         self.graphics = IKit.New("Graphics");
@@ -282,8 +281,6 @@ end)();
         self.width,self.height = UI.ScreenSize().width,UI.ScreenSize().height;
         self.style.backgroundcolor = {red = 255,green = 255,blue=255,alpha=0};
 
-        self:set(values);
-        
         local OnKeyDownEventId = 0;
         local OnKeyUpEventId = 0;
         local OnUpdateId = 0;
@@ -429,8 +426,6 @@ end)();
                     top = components[i].father.height * (top /100);
                 end
                 local unit,width = self:getUnitAndNumber(components[i].style.width);
-                print(components[i].type);
-                print(width);
                 if unit == "%" then
                     width =components[i].father.width * (width /100);
                 end
@@ -512,10 +507,8 @@ end)();
 (function()
     local Div = {};
 
-    function Div:constructor(values)
+    function Div:constructor()
         self.super();
-
-        self:set(values)
     end
 
     IKit.Class(Div,"Div",{extends = "Container"});
@@ -524,19 +517,17 @@ end)();
 (function()
     local TextView = {};
 
-    function TextView:constructor(values)
+    function TextView:constructor()
         self.super();
         self.text = "";
         self.style.fontsize = 2;
         self.style.letterspacing = 25;
         self.style.textalign = "center";
         self.style.overflow = "hidden";
-        self.style.singleline = false;
+        self.style.singleline = true;
         self.style.offsetx = 0;
         self.style.offsety = 0;
         self.style.textcolor = {red = 0,green = 0,blue=0,alpha=255};
-        
-        self:set(values);
     end
 
     function TextView:setText(text)
@@ -591,7 +582,7 @@ end)();
 (function()
     local EditText = {};
 
-    function EditText:constructor(values)
+    function EditText:constructor()
         self.super();
 
         self.numeric="integer";
@@ -602,8 +593,6 @@ end)();
         self.keyprevious = UI.KEY.LEFT;
         self.keynext = UI.KEY.RIGHT;
         self.keybackspace = UI.KEY.SHIFT;
-
-        self:set(values);
     end
 
     function EditText:paint(graphics)
@@ -645,41 +634,50 @@ end)();
 (function()
     local Br = {};
     
-    function Br:constructor(values)
+    function Br:constructor()
         self.super();
 
         self.style.newline = true;
         self.isenabled = false;
-
-        self:set(values);
     end
 
     IKit.Class(Br,"Br",{extends="Component"});
 end)();
 
 function Windows(arg1,...)
-    local windows = IKit.New("Windows",arg1);
-    windows.add(...);
+    local windows = IKit.New("Windows");
+    windows:set(arg1);
+    windows:add(...);
     return windows;
 end
 
 function Div(arg1,...)
-    local div = IKit.New("Div",arg1);
-    div.add(...);
+    local div = IKit.New("Div");
+    div:set(arg1);
+    div:add(...);
     return div;
 end
 
+function Component(arg1)
+    local component = IKit.New("Component");
+    component:set(arg1);
+    return component;
+end
+
 function TextView(arg1)
-    local textview = IKit.New("TextView",arg1);
+    local textview = IKit.New("TextView");
+    textview:set(arg1);
     return textview;
 end
 
-function EditText(arg1,...)
-    local edittext = IKit.New("EditText",arg1);
+function EditText(arg1)
+    local edittext = IKit.New("EditText");
+    edittext:set(arg1);
     return edittext;
 end
 
-function Br(arg1,...)
-    local br = IKit.New("Br",arg1);
+function Br(arg1)
+    local br = IKit.New("Br");
+    br:set(arg1);
     return br;
 end

@@ -1,6 +1,5 @@
-local SIGNAL_NONE = 0;
+﻿local SIGNAL_NONE = 0;
 local SIGNAL_SPEED = 1;
-
 if Game~=nil then
     local Players = {};
     function Game.Rule:OnUpdate()
@@ -12,17 +11,15 @@ if Game~=nil then
             player.user.HistoricalSpeedZ = player.velocity.z;
         end
     end
-
     function Game.Rule:OnPlayerConnect(player)
         Players[player.name] = player;
         player.user.HistoricalSpeedZ = 0;
     end
-
     function Game.Rule:OnPlayerDisconnect(player)
         Players[player.name] = nil;
     end
+    print("哭")
 end
-
 if UI~=nil then
     LabelJumpspeed = UI.Text.Create();
     LabelJumpspeed:Set(
@@ -39,11 +36,8 @@ if UI~=nil then
             a = 250
         }
     );
-    
     local FTime = 0;
-
     local state = SIGNAL_NONE;
-
     function UI.Event:OnSignal(signal)
         if state == SIGNAL_NONE then
             state = signal;
@@ -58,10 +52,8 @@ if UI~=nil then
         LabelJumpspeed:Show();
         FTime = UI.GetTime();
     end
-
     function UI.Event:OnUpdate(time)
         if LabelJumpspeed:IsVisible() == true then
-            print(UI.GetTime() - FTime)
             if UI.GetTime() - FTime > 2 then
                 LabelJumpspeed:Hide();
             end
