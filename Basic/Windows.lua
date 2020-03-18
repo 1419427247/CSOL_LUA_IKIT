@@ -384,6 +384,10 @@ end)();
 
     -- end
 
+    function Windows:getRectSize()
+        return #self.graphics.root;
+    end
+
     function Windows:select(...)
          for key, value in pairs({...}) do
              
