@@ -1,18 +1,23 @@
-﻿local SIGNAL_NONE = 0;
-local SIGNAL_MONSTER_SKILL = {
-	FATALBLOW = 111, -- 致命打击
-    SUPERJUMP = 112, -- 火箭跳跃
-    GHOSTSTEP = 113, -- 鬼影步
-    LIGHTWEIGHT = 114, -- 轻如鸿毛
-    GRAVITY = 115, -- 地心引力
-    HITGROUND = 116, -- 撼地一击
-    LISTEN = 117, -- 聆听
-};
-local SIGNAL_HUMAN_SKILL = {
-	STEEL = 211, -- 铜头铁臂
-    SPRINTBURST = 212, -- 冲刺爆发
-    CURE = 213, -- 自我愈合
-};
+﻿local NONE = 0;
+
+local SKILL = {
+    MONSTER = {
+        FATALBLOW = {NAME = "致命打击",SIGNAL = 111,COOLDOWNTIME = 120,MEMORY = {}},
+        SUPERJUMP = {NAME = "火箭跳跃",SIGNAL = 112,COOLDOWNTIME = 5,MEMORY = {}},
+        GHOSTSTEP = {NAME = "鬼影步",SIGNAL = 113,COOLDOWNTIME = 5,MEMORY = {}},
+        LIGHTWEIGHT = {NAME = "轻如鸿毛",SIGNAL = 114,COOLDOWNTIME = 25,MEMORY = {}},
+        GRAVITY = {NAME = "地心引力",SIGNAL = 115,COOLDOWNTIME = 20,MEMORY = {}},
+        HITGROUND = {NAME = "撼地一击",SIGNAL = 116,COOLDOWNTIME = 15,MEMORY = {}},
+        LISTEN = {NAME = "聆听",SIGNAL = 117,COOLDOWNTIME = 10,MEMORY = {}},
+	},
+    HUMAN = {
+        STEEL = {NAME = "铜头铁臂",SIGNAL = 211,COOLDOWNTIME = 45,MEMORY = {}},
+        SPRINTBURST = {NAME = "冲刺爆发",SIGNAL = 212,COOLDOWNTIME = 30,MEMORY = {}},
+        CURE = {NAME = "自我愈合",SIGNAL = 213,COOLDOWNTIME = 60,MEMORY = {}},
+        FIRESTRIKE = {NAME = "火力打击",SIGNAL = 214,COOLDOWNTIME = 90,MEMORY = {}},
+        ADRENALHORMONE = {NAME = "肾上腺素",SIGNAL = 215,COOLDOWNTIME = 90,MEMORY = {}},
+	},
+}
 
 Event = (function()
     local Event = {
@@ -348,91 +353,6 @@ end)();
     end
 
     if UI~=nil then
-        Font = {};
-        Font["a"]={0,0,2,8,4,0,6,8,2,2,4,4,2,8,4,10};
-        Font["b"]={0,0,2,10,2,0,4,2,2,4,4,6,2,8,4,10,4,2,6,4,4,6,6,8};
-        Font["c"]={0,2,2,8,2,0,6,2,2,8,6,10};
-        Font["d"]={0,0,2,10,2,0,4,2,2,8,4,10,4,2,6,8};
-        Font["e"]={0,2,2,8,2,0,6,2,2,4,6,6,2,8,6,10};
-        Font["f"]={0,0,2,8,2,4,6,6,2,8,6,10};
-        Font["g"]={0,2,2,8,2,0,4,2,4,0,6,6,2,8,6,10};
-        Font["h"]={0,0,2,10,4,0,6,10,2,4,4,6};
-        Font["i"]={2,0,4,10};
-        Font["j"]={0,2,2,6,2,0,4,2,4,2,6,10};
-        Font["k"]={0,0,2,10,4,0,6,4,4,6,6,10,2,4,4,6};
-        Font["l"]={0,2,2,10,2,0,6,2};
-        Font["m"]={0,0,2,10,4,0,6,10,2,6,4,8};
-        Font["n"]={0,0,2,10,2,8,4,10,4,0,6,8};
-        Font["o"]={0,2,2,8,4,2,6,8,2,0,4,2,2,8,4,10};
-        Font["p"]={0,0,2,8,2,2,4,4,2,8,4,10,4,4,6,8};
-        Font["q"]={0,4,2,8,4,4,6,8,2,0,4,4,2,8,4,10};
-        Font["r"]={0,0,2,8,2,2,4,4,2,8,4,10,4,4,6,8,4,0,6,2};
-        Font["s"]={0,0,4,2,4,2,6,4,2,4,4,6,0,6,2,8,2,8,6,10};
-        Font["t"]={0,8,6,10,2,0,4,8};
-        Font["u"]={0,0,2,10,2,0,4,2,4,2,6,10};
-        Font["v"]={0,2,2,10,2,0,4,2,4,2,6,10};
-        Font["w"]={0,0,2,10,4,0,6,10,2,2,4,4};
-        Font["x"]={0,0,2,4,0,6,2,10,4,0,6,4,4,6,6,10,2,4,4,6};
-        Font["y"]={0,6,2,10,4,6,6,10,2,0,4,6};
-        Font["z"]={0,0,6,2,0,8,6,10,0,2,2,4,2,4,4,6,4,6,6,8};
-
-        Font["A"]={0,0,2,8,4,0,6,8,2,2,4,4,2,8,4,10};
-        Font["B"]={0,0,2,10,2,0,4,2,2,4,4,6,2,8,4,10,4,2,6,4,4,6,6,8};
-        Font["C"]={0,2,2,8,2,0,6,2,2,8,6,10};
-        Font["D"]={0,0,2,10,2,0,4,2,2,8,4,10,4,2,6,8};
-        Font["E"]={0,2,2,8,2,0,6,2,2,4,6,6,2,8,6,10};
-        Font["F"]={0,0,2,8,2,4,6,6,2,8,6,10};
-        Font["G"]={0,2,2,8,2,0,4,2,4,0,6,6,2,8,6,10};
-        Font["H"]={0,0,2,10,4,0,6,10,2,4,4,6};
-        Font["I"]={2,0,4,10};
-        Font["J"]={0,2,2,6,2,0,4,2,4,2,6,10};
-        Font["K"]={0,0,2,10,4,0,6,4,4,6,6,10,2,4,4,6};
-        Font["L"]={0,2,2,10,2,0,6,2};
-        Font["M"]={0,0,2,10,4,0,6,10,2,6,4,8};
-        Font["N"]={0,0,2,10,2,8,4,10,4,0,6,8};
-        Font["O"]={0,2,2,8,4,2,6,8,2,0,4,2,2,8,4,10};
-        Font["P"]={0,0,2,8,2,2,4,4,2,8,4,10,4,4,6,8};
-        Font["Q"]={0,4,2,8,4,4,6,8,2,0,4,4,2,8,4,10};
-        Font["R"]={0,0,2,8,2,2,4,4,2,8,4,10,4,4,6,8,4,0,6,2};
-        Font["S"]={0,0,4,2,4,2,6,4,2,4,4,6,0,6,2,8,2,8,6,10};
-        Font["T"]={0,8,6,10,2,0,4,8};
-        Font["U"]={0,0,2,10,2,0,4,2,4,2,6,10};
-        Font["V"]={0,2,2,10,2,0,4,2,4,2,6,10};
-        Font["W"]={0,0,2,10,4,0,6,10,2,2,4,4};
-        Font["X"]={0,0,2,4,0,6,2,10,4,0,6,4,4,6,6,10,2,4,4,6};
-        Font["Y"]={0,6,2,10,4,6,6,10,2,0,4,6};
-        Font["Z"]={0,0,6,2,0,8,6,10,0,2,2,4,2,4,4,6,4,6,6,8};
-
-        Font["0"]={3,0,5,10,7,0,9,10,5,0,7,2,5,8,7,10};
-        Font["1"]={5,0,7,10,3,6,5,8};
-        Font["2"]={3,0,5,6,7,4,9,10,5,0,9,2,5,4,7,6,3,8,7,10};
-        Font["3"]={7,0,9,10,3,0,7,2,3,4,7,6,3,8,7,10};
-        Font["4"]={3,4,5,10,7,0,9,10,5,4,7,6};
-        Font["5"]={3,4,5,10,3,0,9,2,5,4,9,6,5,8,9,10,7,2,9,4};
-        Font["6"]={3,0,5,10,5,0,9,2,5,4,9,6,5,8,9,10,7,2,9,4};
-        Font["7"]={3,8,9,10,7,0,9,8};
-        Font["8"]={3,0,5,10,7,0,9,10,5,0,7,2,5,4,7,6,5,8,7,10};
-        Font["9"]={3,0,9,2,7,2,9,10,3,4,5,10,5,4,7,6,5,8,7,10};
-        Font["<"]={7,0,9,2,5,2,7,4,3,4,5,6,5,6,7,8,7,8,9,10};
-        Font[">"]={3,0,5,2,5,2,7,4,7,4,9,6,3,8,5,10,5,6,7,8};
-        Font[":"]={5,2,7,4,5,6,7,8};
-        Font["?"]={5,0,7,2,5,4,7,6,7,4,9,10,3,8,7,10};
-        Font["!"]={5,0,7,2,5,4,7,10};
-        Font["+"]={5,2,7,8,3,4,9,6};
-        Font[","]={5,0,7,2};
-        Font["-"]={3,4,9,6};
-        Font["."]={5,0,7,2};
-        Font["'"]={5,6,7,10};
-        Font["("]={3,2,5,8,5,0,7,2,5,8,7,10};
-        Font[")"]={7,2,9,8,5,0,7,2,5,8,7,10};
-        Font["\\"]={3,6,5,10,5,4,7,6,7,0,9,4};
-        Font["/"]={3,0,5,4,5,4,7,6,7,6,9,10};
-
-        Font["▶"] = {3,0,5,10,5,2,7,8,7,4,9,6};
-        Font["◀"] = {3,4,5,6,7,8,5,2,7,10,9,0};
-
-        Font[" "] = {};
-
         Event = Event
         + "OnRoundStart"
         + "OnSpawn"
@@ -487,7 +407,7 @@ end)();
 end)();
 
 
-if Game~=nil then
+if Game ~= nil then
     local State = {
         Ready = 1,
         Start = 2,
@@ -498,114 +418,136 @@ if Game~=nil then
     local Players = {};
 
     local Monster = {
-        Player = { name = "" },
-        SkillsUsed = SIGNAL_NONE,
-        SkillsMemory = {
-            SuperJump = 10,
-            GhostStep = 100,
-            LightWeight = {
-                Id = -1,
-                Value = 0,
-            },
-        },
+        Players = {},
+        SkillsUsed = {},
     };
-    Monster.Skills = {
-        FatalBlow = function()
-            Event:addEventListener()
-		end,
-        SuperJump = function()
-            Monster.Player.velocity = {
-                x = Monster.Player.velocity.x,
-                y = Monster.Player.velocity.y,
-                z = Monster.Player.velocity.z + Monster.SkillsMemory.SuperJump * 10,
-            };
-		end,
-        GhostStep = function()
-            local length = math.sqrt(Monster.Player.velocity.x * Monster.Player.velocity.x + 
-            Monster.Player.velocity.y * Monster.Player.velocity.y + 
-            Monster.Player.velocity.z * Monster.Player.velocity.z);
-            Monster.Player.position = {
-                x = math.floor(Monster.Player.position.x + Monster.SkillsMemory.GhostStep * Monster.SkillsMemory.GhostStep / 400 * Monster.Player.velocity.x / length),
-                y = math.floor(Monster.Player.position.y + Monster.SkillsMemory.GhostStep * Monster.SkillsMemory.GhostStep / 400 * Monster.Player.velocity.y / length),
-                z = math.floor(Monster.Player.position.z),
-            };
-        end,
-        LightWeight = function() 
-            local value1 = Monster.SkillsMemory.LightWeight.Value;
-            local value2 = Monster.SkillsMemory.LightWeight.Value;
-            if Monster.SkillsMemory.LightWeight.Id == -1 then
-                Monster.SkillsMemory.LightWeight.Id = Event:addEventListener("OnUpdate",function(time)
-                    if Monster.Player.velocity.z > 0 then
-                        Monster.Player.velocity = {
-                            x = Monster.Player.velocity.x,
-                            y = Monster.Player.velocity.y,
-                            z = Monster.Player.velocity.z + 1.5 * value2,
+
+    local Human = {
+        Players = {},
+        SkillsUsed = {},
+    };
+
+    function SKILL.MONSTER.FATALBLOW:CALL(monster)
+        self.MEMORY.Id = self.MEMORY.Id or -1;
+        if self.MEMORY.Id == -1 then
+            self.MEMORY.Id = Event:addEventListener("OnTakeDamage",function(victim, attacker, damage, weapontype, hitbox)
+                if attacker:IsPlayer() and attacker:ToPlayer().name == monster.name then
+                    victim.health = 0;
+                end
+            end);
+            Timer:schedule(function()
+                Event:detachEventListener(self.MEMORY.Id);
+                self.MEMORY.Id = -1;
+            end,30);
+        end
+    end;
+
+    function SKILL.MONSTER.SUPERJUMP:CALL(monster)
+        monster.velocity = {
+            x = monster.velocity.x,
+            y = monster.velocity.y,
+            z = monster.velocity.z + self.MEMORY.VALUE * 10,
+        };
+    end
+
+    function SKILL.MONSTER.GHOSTSTEP:CALL(monster)
+        local length = math.sqrt(monster.velocity.x * monster.velocity.x + 
+        monster.velocity.y * monster.velocity.y + 
+        monster.velocity.z * monster.velocity.z);
+        monster.position = {
+            x = math.floor(monster.position.x + self.MEMORY.VALUE * self.MEMORY.VALUE / 400 * monster.velocity.x / length),
+            y = math.floor(monster.position.y + self.MEMORY.VALUE * self.MEMORY.VALUE / 400 * monster.velocity.y / length),
+            z = math.floor(monster.position.z),
+        };
+    end;
+
+    function SKILL.MONSTER.LIGHTWEIGHT:CALL(monster)
+        local value1 = self.MEMORY.Value;
+        local value2 = self.MEMORY.Value;
+        self.MEMORY.Id = self.MEMORY.Id or -1;
+        if self.MEMORY.Id == -1 then
+                self.MEMORY.Id = Event:addEventListener("OnUpdate",function(time)
+                    if monster.velocity.z > 0 then
+                        monster.velocity = {
+                            x = monster.velocity.x,
+                            y = monster.velocity.y,
+                            z = monster.velocity.z + 1.5 * value2,   
                         };
                         value2 = value2 / 2;
                     else
                         value2 = value1;
-                        Monster.Player.velocity = {
-                            x = Monster.Player.velocity.x,
-                            y = Monster.Player.velocity.y,
-                            z = Monster.Player.velocity.z * 0.75,
+                        monster.velocity = {
+                            x = monster.velocity.x,
+                            y = monster.velocity.y,
+                            z = monster.velocity.z * 0.75,
                         };
                     end
                 end);
                 Timer:schedule(function()
-                    Event:detachEventListener(Monster.SkillsMemory.LightWeight.Id);
-                    Monster.SkillsMemory.LightWeight.Id = -1;
+                    Event:detachEventListener(self.MEMORY.LightWeight.Id);
+                    self.MEMORY.LightWeight.Id = -1;
                 end,10);
+        end
+    end
+
+    local SignalState = NONE;
+    Event:addEventListener("OnPlayerSignal",function(player,signal)
+        if SignalState == NONE then
+            SignalState = signal;
+            return;
+        end
+
+        for key,value in pairs(SKILL.MONSTER) do
+            if SignalState == value.SIGNAL then
+                value.MEMORY.VALUE = signal;
+                Monster.SkillsUsed[#Monster.SkillsUsed + 1] = {player,value};
+                SignalState = NONE;
+                return;
             end
         end
-    }
+
+        for key,value in pairs(SKILL.HUMAN) do
+            if SignalState == value.SIGNAL then
+                value.MEMORY.VALUE = signal;
+                Human.SkillsUsed[#Human.SkillsUsed + 1] = {player,value};
+                SignalState = NONE;
+                return;
+            end
+        end
+    end);
+
     local SyncMonsterIndex = Game.SyncValue.Create("怪物Index");
     local SyncMonsterName = Game.SyncValue.Create("怪物名称");
     local SyncMonsterHealth = Game.SyncValue.Create("怪物血量");
 
-    local SignalState = SIGNAL_NONE;
-    Event:addEventListener("OnPlayerSignal",function(player,signal)
-        if SignalState == SIGNAL_NONE then
-            SignalState = signal;
-            if SignalState == SIGNAL_MONSTER_SKILL.FATALBLOW then
-                Monster.SkillsUsed = SignalState;
-                SignalState = SIGNAL_NONE;
-            end
-            return;
-        end
-        if SignalState == SIGNAL_MONSTER_SKILL.SUPERJUMP then
-            Monster.SkillsMemory.SuperJump = signal;
-        elseif SignalState == SIGNAL_MONSTER_SKILL.GHOSTSTEP then
-            Monster.SkillsMemory.GhostStep = signal;
-        elseif SignalState == SIGNAL_MONSTER_SKILL.LIGHTWEIGHT then
-            Monster.SkillsMemory.LightWeight.Value = signal;
-        end
-        Monster.SkillsUsed = SignalState;
-        SignalState = SIGNAL_NONE;
-    end);
-
     Event:addEventListener("OnUpdate",function(time)
         if GameState == State.Ready then
-            Monster.Player = Players[1];
-            if Monster.Player ~= nil then
+            Monster.Players[#Monster.Players + 1] = Players[1];
+            if #Monster.Players > 0 then
                 GameState = State.Start;
-                Monster.Player.model = Game.MODEL.DEIMOS_ZOMBIE;
-                Monster.Player.health = 10000;
-                SyncMonsterIndex.value = Monster.Player.index;
-                SyncMonsterName.value = Monster.Player.name;
+
+                Monster.Players[1].model = Game.MODEL.DEIMOS_ZOMBIE;
+                Monster.Players[1].health = 10000;
+                Monster.Players[1].flinch = 0;
+                Monster.Players[1].knockback = 0;
+                Monster.Players[1].maxspeed = 10;
+
+                SyncMonsterIndex.value = Monster.Players[1].index;
+                SyncMonsterName.value = Monster.Players[1].name;
             end
         elseif GameState == State.Start then
-            SyncMonsterHealth.value = Monster.Player.health;
+            SyncMonsterHealth.value = Monster.Players[1].health;
 
-            if Monster.SkillsUsed == SIGNAL_MONSTER_SKILL.FATALBLOW then 
-                Monster.Skills.FatalBlow();
-            elseif Monster.SkillsUsed == SIGNAL_MONSTER_SKILL.SUPERJUMP then
-                Monster.Skills.SuperJump();
-            elseif Monster.SkillsUsed == SIGNAL_MONSTER_SKILL.GHOSTSTEP then
-                Monster.Skills.GhostStep();
-            elseif Monster.SkillsUsed == SIGNAL_MONSTER_SKILL.LIGHTWEIGHT then
-                Monster.Skills.LightWeight();
+            for i=1,#Monster.SkillsUsed do
+	            Monster.SkillsUsed[i][2]:CALL(Monster.SkillsUsed[i][1]);
             end
-            Monster.SkillsUsed = SIGNAL_NONE;
+
+            for i=1,#Human.SkillsUsed do
+	            Human.SkillsUsed[i][2]:CALL(Human.SkillsUsed[i][1]);
+            end
+
+            Monster.SkillsUsed = {};
+            Human.SkillsUsed = {};
         end
     end);
 
@@ -622,9 +564,29 @@ if Game~=nil then
         end
     end);
 
+    Event:addEventListener("OnPlayerDisconnect",function(player)
+        for i=1,#Players do
+            if Players[i] == player then
+                table.remove(Players,i)
+                break;
+            end
+        end
+    end);
+
+    Event:addEventListener("OnTakeDamage",function(victim, attacker, damage, weapontype, hitbox)
+        for i=1,#Monster.Players do
+            if attacker.name == Monster.Players[i].name then
+                victim.velocity = {
+                    x = 700 * (victim.position.x - attacker.position.x),
+                    y = 700 * (victim.position.y - attacker.position.y),
+                    z = 300,
+                };
+            end
+        end
+    end);
 end
 
-if UI~=nil then
+if UI ~= nil then
     local OnInputs = {};
 
     local InputsOnKeyDown = {};
@@ -651,27 +613,41 @@ if UI~=nil then
     end
     
 
-    local SkillList = {};
-    local CoolingTime = 15;
+    local MonsterSkillList = {SKILL.MONSTER.FATALBLOW,SKILL.MONSTER.SUPERJUMP,SKILL.MONSTER.GHOSTSTEP};
+    local SkillIndex = 1;
+    local CoolingTime = 20;
     local Bar = 0;
 
     Event:addEventListener("OnUpdate",function(time)
+        Graphics:clean();
         if MonsterIndex == UI.PlayerIndex() then
+            Graphics.color = {red = 25,green = 25,blue=25,alpha=255};
+            Graphics:drawRect(36,30,120,24);
+            Graphics.color = {red = 222,green = 222,blue=222,alpha=255};
+            Graphics:drawText(40,30,2,30,MonsterSkillList[SkillIndex].NAME);
+            if OnInputs[UI.KEY.NUM1] == true then
+                SkillIndex = 1;
+                Bar = 0;
+            elseif OnInputs[UI.KEY.NUM2] == true then
+                SkillIndex = 2;
+                Bar = 0;
+            elseif OnInputs[UI.KEY.NUM3] == true then
+                SkillIndex = 3;
+                Bar = 0;
+            end
             if OnInputs[UI.KEY.SHIFT] == true then
+                Graphics.color = {red = 25,green = 25,blue=25,alpha=255};
+                Graphics:drawRect(18,28,14,102);
+                Graphics.color = {red = 255,green = 255,blue=255,alpha=255};
+                Graphics:drawRect(20,30,10,Bar);
                 if Bar < 100 then
                     Bar = Bar + 1;
-                    Graphics:clean();
-                    Graphics.color = {red = 25,green = 25,blue=25,alpha=255};
-                    Graphics:drawRect(18,18,14,102);
-                    Graphics.color = {red = 255,green = 255,blue=255,alpha=255};
-                    Graphics:drawRect(20,20,10,Bar);
                 else
                     
                 end
             elseif InputsOnKeyUp[UI.KEY.SHIFT] == true then
-                UI.Signal(SIGNAL_MONSTER_SKILL.LIGHTWEIGHT);
+                UI.Signal(MonsterSkillList[SkillIndex].SIGNAL);
                 UI.Signal(Bar);
-                Graphics:clean();
                 Bar = 0;
                 --UI.Signal(SIGNAL_MONSTER_SKILL.GHOSTSTEP);
             end
@@ -694,4 +670,5 @@ if UI~=nil then
     Event:addEventListener("OnKeyUp",function(inputs)
         InputsOnKeyUp = inputs;
     end);
+
 end
