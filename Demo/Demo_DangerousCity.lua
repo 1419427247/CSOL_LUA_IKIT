@@ -1,23 +1,32 @@
 ﻿local NONE = 0;
 
 local SKILL = {
+    WORLD = {
+        TOBEMONSTER = {NAME = "变身怪物",SIGNAL = 101,ISFREEZE = false,COOLDOWNTIME = 0,MEMORY = {}},
+        TOBEHUMAN = {NAME = "变身人类",SIGNAL = 102,ISFREEZE = false,COOLDOWNTIME = 0,MEMORY = {}},
+    },
     MONSTER = {
-        FATALBLOW = {NAME = "致命打击",SIGNAL = 111,COOLDOWNTIME = 120,MEMORY = {}},
-        SUPERJUMP = {NAME = "火箭跳跃",SIGNAL = 112,COOLDOWNTIME = 5,MEMORY = {}},
-        GHOSTSTEP = {NAME = "鬼影步",SIGNAL = 113,COOLDOWNTIME = 5,MEMORY = {}},
-        LIGHTWEIGHT = {NAME = "轻如鸿毛",SIGNAL = 114,COOLDOWNTIME = 25,MEMORY = {}},
-        GRAVITY = {NAME = "地心引力",SIGNAL = 115,COOLDOWNTIME = 20,MEMORY = {}},
-        HITGROUND = {NAME = "撼地一击",SIGNAL = 116,COOLDOWNTIME = 15,MEMORY = {}},
-        LISTEN = {NAME = "聆听",SIGNAL = 117,COOLDOWNTIME = 10,MEMORY = {}},
+        FATALBLOW = {NAME = "致命打击",SIGNAL = 101,ISFREEZE = false,COOLDOWNTIME = 60,MEMORY = {}},
+        SUPERJUMP = {NAME = "火箭跳跃",SIGNAL = 102,ISFREEZE = false,COOLDOWNTIME = 10,MEMORY = {}},
+        GHOSTSTEP = {NAME = "鬼影步",SIGNAL = 103,ISFREEZE = false,COOLDOWNTIME = 5,MEMORY = {}},
+        LIGHTWEIGHT = {NAME = "轻如鸿毛",SIGNAL = 104,ISFREEZE = false,COOLDOWNTIME = 25,MEMORY = {}},
+        GRAVITY = {NAME = "地心引力",SIGNAL = 105,ISFREEZE = false,COOLDOWNTIME = 20,MEMORY = {}},
+        HITGROUND = {NAME = "撼地一击",SIGNAL = 106,ISFREEZE = false,COOLDOWNTIME = 15,MEMORY = {}},
+        LISTEN = {NAME = "聆听",SIGNAL = 107,ISFREEZE = false,COOLDOWNTIME = 20,MEMORY = {}},
 	},
     HUMAN = {
-        STEEL = {NAME = "铜头铁臂",SIGNAL = 211,COOLDOWNTIME = 45,MEMORY = {}},
-        SPRINTBURST = {NAME = "冲刺爆发",SIGNAL = 212,COOLDOWNTIME = 30,MEMORY = {}},
-        CURE = {NAME = "自我愈合",SIGNAL = 213,COOLDOWNTIME = 60,MEMORY = {}},
-        FIRESTRIKE = {NAME = "火力打击",SIGNAL = 214,COOLDOWNTIME = 90,MEMORY = {}},
-        ADRENALHORMONE = {NAME = "肾上腺素",SIGNAL = 215,COOLDOWNTIME = 90,MEMORY = {}},
+        STEEL = {NAME = "铜头铁臂",SIGNAL = 201,ISFREEZE = false,COOLDOWNTIME = 45,MEMORY = {}},
+        SPRINTBURST = {NAME = "冲刺爆发",SIGNAL = 202,ISFREEZE = false,COOLDOWNTIME = 30,MEMORY = {}},
+        CURE = {NAME = "自我愈合",SIGNAL = 203,ISFREEZE = false,COOLDOWNTIME = 60,MEMORY = {}},
+        FIRESTRIKE = {NAME = "火力打击",SIGNAL = 204,ISFREEZE = false,COOLDOWNTIME = 90,MEMORY = {}},
+        ADRENALHORMONE = {NAME = "肾上腺素",SIGNAL = 205,ISFREEZE = false,COOLDOWNTIME = 90,MEMORY = {}},
 	},
 }
+
+local State = {
+    Ready = 1,
+    Start = 2,
+};
 
 Event = (function()
     local Event = {
@@ -406,13 +415,7 @@ end)();
     end);
 end)();
 
-
 if Game ~= nil then
-    local State = {
-        Ready = 1,
-        Start = 2,
-    };
-
     local GameState = State.Ready;
 
     local Players = {};
@@ -446,7 +449,7 @@ if Game ~= nil then
         monster.velocity = {
             x = monster.velocity.x,
             y = monster.velocity.y,
-            z = monster.velocity.z + self.MEMORY.VALUE * 10,
+            z = monster.velocity.z + self.MEMORY.VALUE * 5,
         };
     end
 
@@ -459,6 +462,11 @@ if Game ~= nil then
             y = math.floor(monster.position.y + self.MEMORY.VALUE * self.MEMORY.VALUE / 400 * monster.velocity.y / length),
             z = math.floor(monster.position.z),
         };
+        monster.velocity = {
+            x = 0,
+            y = 0,
+            z = 0,
+        };
     end;
 
     function SKILL.MONSTER.LIGHTWEIGHT:CALL(monster)
@@ -466,7 +474,7 @@ if Game ~= nil then
         local value2 = self.MEMORY.Value;
         self.MEMORY.Id = self.MEMORY.Id or -1;
         if self.MEMORY.Id == -1 then
-                self.MEMORY.Id = Event:addEventListener("OnUpdate",function(time)
+            self.MEMORY.Id = Event:addEventListener("OnUpdate",function(time)
                     if monster.velocity.z > 0 then
                         monster.velocity = {
                             x = monster.velocity.x,
@@ -482,11 +490,23 @@ if Game ~= nil then
                             z = monster.velocity.z * 0.75,
                         };
                     end
-                end);
-                Timer:schedule(function()
-                    Event:detachEventListener(self.MEMORY.LightWeight.Id);
-                    self.MEMORY.LightWeight.Id = -1;
-                end,10);
+            end);
+            Timer:schedule(function()
+                Event:detachEventListener(self.MEMORY.LightWeight.Id);
+                self.MEMORY.LightWeight.Id = -1;
+            end,10);
+        end
+    end
+
+    function SKILL.MONSTER.GRAVITY:CALL(monster)
+        
+    end
+
+    function SKILL.MONSTER.HITGROUND:CALL(monster)
+        for i=1,#Human.Players do
+	        local length = (monster.position.x - Human.Players[i].position.x) * (monster.position.x - Human.Players[i].position.x) + 
+            (monster.position.y - Human.Players[i].position.y) * (monster.position.y - Human.Players[i].position.y) +
+            (monster.position.z - Human.Players[i].position.z) * (monster.position.z - Human.Players[i].position.z);
         end
     end
 
@@ -516,28 +536,26 @@ if Game ~= nil then
         end
     end);
 
-    local SyncMonsterIndex = Game.SyncValue.Create("怪物Index");
-    local SyncMonsterName = Game.SyncValue.Create("怪物名称");
-    local SyncMonsterHealth = Game.SyncValue.Create("怪物血量");
+    local SyncGameState = Game.SyncValue.Create("游戏状态");
 
     Event:addEventListener("OnUpdate",function(time)
+        SyncGameState.value = GameState;
+
         if GameState == State.Ready then
-            Monster.Players[#Monster.Players + 1] = Players[1];
-            if #Monster.Players > 0 then
+            if #Players > 1 then
                 GameState = State.Start;
 
-                Monster.Players[1].model = Game.MODEL.DEIMOS_ZOMBIE;
+                Monster.Players[#Monster.Players + 1] = Players[1];
+                Monster.Players[1].model = Game.MODEL.BLOTTER_ZOMBIE_HOST;
                 Monster.Players[1].health = 10000;
                 Monster.Players[1].flinch = 0;
                 Monster.Players[1].knockback = 0;
-                Monster.Players[1].maxspeed = 10;
+                Monster.Players[1]:SetFirstPersonView();
 
-                SyncMonsterIndex.value = Monster.Players[1].index;
-                SyncMonsterName.value = Monster.Players[1].name;
+                Monster.Players[1]:Signal(SKILL.WORLD.TOBEMONSTER.SIGNAL);
+                Monster.Players[1]:Signal(0);
             end
         elseif GameState == State.Start then
-            SyncMonsterHealth.value = Monster.Players[1].health;
-
             for i=1,#Monster.SkillsUsed do
 	            Monster.SkillsUsed[i][2]:CALL(Monster.SkillsUsed[i][1]);
             end
@@ -545,14 +563,16 @@ if Game ~= nil then
             for i=1,#Human.SkillsUsed do
 	            Human.SkillsUsed[i][2]:CALL(Human.SkillsUsed[i][1]);
             end
-
             Monster.SkillsUsed = {};
             Human.SkillsUsed = {};
         end
     end);
 
-    Event:addEventListener("OnPlayerConnect",function(player)
+    Event:addEventListener("OnPlayerJoiningSpawn",function(player)
         Players[#Players + 1] = player;
+        player.flinch = 0;
+        player.knockback = 0;
+        player:SetThirdPersonView(90,90);
     end);
 
     Event:addEventListener("OnPlayerDisconnect",function(player)
@@ -581,6 +601,11 @@ if Game ~= nil then
                     y = 700 * (victim.position.y - attacker.position.y),
                     z = 300,
                 };
+                attacker.velocity = {
+                    x = 0,
+                    y = 0,
+                    z = 0,
+                };
             end
         end
     end);
@@ -588,77 +613,113 @@ end
 
 if UI ~= nil then
     local OnInputs = {};
-
     local InputsOnKeyDown = {};
     local InputsOnKeyUp = {};
 
-    local MonsterName = "未知";
-    local MonsterHealth = "未知";
-    local MonsterIndex = "未知";
+    local GameState = "未知";
+    local SelfType = "人类";
 
-    local SyncMonsterIndex = UI.SyncValue.Create("怪物Index");
-    local SyncMonsterName = UI.SyncValue.Create("怪物名称");
-    local SyncMonsterHealth = UI.SyncValue.Create("怪物血量");
+    local SyncGameState = UI.SyncValue.Create("游戏状态");
 
-    function SyncMonsterIndex:OnSync()
-        MonsterIndex = self.value;
+    function SKILL.WORLD.TOBEMONSTER:CALL()
+        SelfType = "怪物";
     end
 
-    function SyncMonsterName:OnSync()
-        MonsterName = self.value;
+    function SKILL.WORLD.TOBEHUMAN:CALL()
+        SelfType = "人类";
     end
 
-    function SyncMonsterHealth:OnSync()
-        MonsterHealth = self.value;
+
+
+    function SyncGameState:OnSync()
+        GameState = self.value;
     end
     
 
-    local MonsterSkillList = {SKILL.MONSTER.FATALBLOW,SKILL.MONSTER.SUPERJUMP,SKILL.MONSTER.GHOSTSTEP};
+    local MonsterSkillList = {SKILL.MONSTER.HITGROUND,SKILL.MONSTER.SUPERJUMP,SKILL.MONSTER.GHOSTSTEP};
     local SkillIndex = 1;
-    local CoolingTime = 20;
+
     local Bar = 0;
 
     Event:addEventListener("OnUpdate",function(time)
         Graphics:clean();
-        if MonsterIndex == UI.PlayerIndex() then
-            Graphics.color = {red = 25,green = 25,blue=25,alpha=255};
-            Graphics:drawRect(36,30,120,24);
-            Graphics.color = {red = 222,green = 222,blue=222,alpha=255};
-            Graphics:drawText(40,30,2,30,MonsterSkillList[SkillIndex].NAME);
-            if OnInputs[UI.KEY.NUM1] == true then
-                SkillIndex = 1;
-                Bar = 0;
-            elseif OnInputs[UI.KEY.NUM2] == true then
-                SkillIndex = 2;
-                Bar = 0;
-            elseif OnInputs[UI.KEY.NUM3] == true then
-                SkillIndex = 3;
-                Bar = 0;
-            end
-            if OnInputs[UI.KEY.SHIFT] == true then
+        if GameState == State.Ready then
+            Graphics.color = {red = 255,green = 255,blue=255,alpha=255};
+            Graphics:drawText(40,25,2,30,"等待开始");
+        elseif GameState == State.Start then
+            if SelfType == "怪物" then
                 Graphics.color = {red = 25,green = 25,blue=25,alpha=255};
-                Graphics:drawRect(18,28,14,102);
-                Graphics.color = {red = 255,green = 255,blue=255,alpha=255};
-                Graphics:drawRect(20,30,10,Bar);
-                if Bar < 100 then
-                    Bar = Bar + 1;
+                Graphics:drawRect(36,30,120,24);
+                Graphics.color = {red = 222,green = 222,blue=222,alpha=255};
+                if MonsterSkillList[SkillIndex].ISFREEZE == false then
+                    Graphics:drawText(40,30,2,30,MonsterSkillList[SkillIndex].NAME);
                 else
-                    
+                    Graphics.color = {red = 222,green = 30,blue=30,alpha=255};
+                    Graphics:drawText(40,30,2,30,MonsterSkillList[SkillIndex].NAME);
                 end
-            elseif InputsOnKeyUp[UI.KEY.SHIFT] == true then
-                UI.Signal(MonsterSkillList[SkillIndex].SIGNAL);
-                UI.Signal(Bar);
-                Bar = 0;
-                --UI.Signal(SIGNAL_MONSTER_SKILL.GHOSTSTEP);
+                if OnInputs[UI.KEY.NUM1] == true then
+                    SkillIndex = 1;
+                    Bar = 0;
+                elseif OnInputs[UI.KEY.NUM2] == true then
+                    SkillIndex = 2;
+                    Bar = 0;
+                elseif OnInputs[UI.KEY.NUM3] == true then
+                    SkillIndex = 3;
+                    Bar = 0;
+                end
+                if MonsterSkillList[SkillIndex].ISFREEZE == false then
+                    if OnInputs[UI.KEY.SHIFT] == true then
+                        Graphics.color = {red = 25,green = 25,blue=25,alpha=255};
+                        Graphics:drawRect(18,28,14,102);
+                        Graphics.color = {red = 255,green = 255,blue=255,alpha=255};
+                        Graphics:drawRect(20,30,10,Bar);
+                        if Bar < 100 then
+                            Bar = Bar + 1;
+                        else
+                        
+                        end
+                    elseif InputsOnKeyUp[UI.KEY.SHIFT] == true then
+                        UI.Signal(MonsterSkillList[SkillIndex].SIGNAL);
+                        UI.Signal(Bar);
+
+                        Bar = 0;
+                        MonsterSkillList[SkillIndex].ISFREEZE = true;
+                        local i = SkillIndex;
+                        Timer:schedule(function()
+                            MonsterSkillList[i].ISFREEZE = false;
+                            print(MonsterSkillList[i].NAME,"冷却完成")
+                        end,MonsterSkillList[i].COOLDOWNTIME);
+                    end
+                end
+            elseif SelfType == "人类" then
+                
             end
-        else
-            
         end
+    end);
+
+    Event:addEventListener("OnUpdate",function(time)
         OnInputs = {};
         InputsOnKeyDown = {};
         InputsOnKeyUp = {};
     end);
-    
+
+    local SignalState = NONE;
+    Event:addEventListener("OnSignal",function(signal)
+        if SignalState == NONE then
+            SignalState = signal;
+            return;
+        end
+
+        for key,value in pairs(SKILL.WORLD) do
+            if SignalState == value.SIGNAL then
+                value.MEMORY.VALUE = signal;
+                value:CALL();
+                SignalState = NONE;
+                return;
+            end
+        end
+    end);
+
     Event:addEventListener("OnInput",function(inputs)
         OnInputs = inputs;
     end);
@@ -672,3 +733,7 @@ if UI ~= nil then
     end);
 
 end
+
+
+
+
