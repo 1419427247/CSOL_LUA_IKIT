@@ -4,5 +4,8 @@
         "Game",
         "IKit",
         "Common"
+    ],
+    "Lua.diagnostics.disable": [
+        "undefined-global"
     ]
 }
