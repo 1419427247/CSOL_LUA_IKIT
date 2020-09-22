@@ -442,21 +442,13 @@ end)();
     
     function ServerCommand:constructor()
         self.super();
-        local OnPlayerSignalId = 0;
-        local OnUpdateId = 0;
-        function self:connection()
-            OnUpdateId = Event:addEventListener("OnUpdate",function()
-                self:OnUpdate();
-            end);
-            OnPlayerSignalId = Event:addEventListener("OnPlayerSignal",function(player,signal)
-                self:OnPlayerSignal(player,signal);
-            end);
-        end
-        function self:disconnect()
-            Event:detachEventListener("OnPlayerSignal",OnPlayerSignalId);
-            Event:detachEventListener("OnUpdate",OnUpdateId);
-        end
-        self:connection();
+        self.syncValue = Game.SyncValue:Create("SCValue");
+        Event:addEventListener("OnUpdate",function()
+            self:OnUpdate();
+        end);
+        Event:addEventListener("OnPlayerSignal",function(player,signal)
+            self:OnPlayerSignal(player,signal);
+        end);
     end
 
     function ServerCommand:OnUpdate()
@@ -479,20 +471,7 @@ end)();
     function ServerCommand:OnPlayerSignal(player,signal)
         if signal == 4 then
             local command = IKit.New("String",self.receivbBuffer[player.name]);
-            local args = {IKit.New("String")};
-            for i = 1, command.length, 1 do
-                if command:charAt(i) == ' ' then
-                    if args[#args].length > 0 then
-                        table.insert(args,IKit.New("String"));
-                    end
-                else
-                    args[#args]:insert(command:charAt(i));
-                end
-            end
-            if args[#args].length == 0 then
-                table.remove(args,#args);
-            end
-            self:execute(player,args);
+            self:execute(player,command);
             self.receivbBuffer[player.name] = {};
         else
             if self.receivbBuffer[player.name] == nil then
@@ -502,14 +481,30 @@ end)();
         end
     end
 
-    function ServerCommand:sendMessage(player,message)
-        local message = IKit.New("String",message);
-        local bytes = message:toBytes();
-        table.insert(bytes,4);
-        table.insert(self.sendbuffer,{player,bytes});
+    function ServerCommand:sendMessage(message,player)
+        if player ~= nil then
+            local bytes = IKit.New("String",message):toBytes();
+            bytes[#bytes+1] = 4;
+            table.insert(self.sendbuffer,{player,bytes});
+        else
+            syncValue.value = message;
+        end
     end
 
-    function ServerCommand:execute(player,args)
+    function ServerCommand:execute(player,command)
+        local args = {IKit.New("String")};
+        for i = 1, command.length, 1 do
+            if command:charAt(i) == ' ' then
+                if args[#args].length > 0 then
+                    table.insert(args,IKit.New("String"));
+                end
+            else
+                args[#args]:insert(command:charAt(i));
+            end
+        end
+        if args[#args].length == 0 then
+            table.remove(args,#args);
+        end
         local name = args[1];
         table.remove(args,1);
         if pcall(self.methods[name:toString()],player,args) == false then
@@ -524,22 +519,20 @@ end)();
     
     function ClientCommand:constructor()
         self.super();
+        self.syncValue = UI.SyncValue:Create("SCValue");
+        self.syncValue.OnSync = self.OnSync;
+        Event:addEventListener("OnSignal",function(signal)
+            self:OnSignal(signal);
+        end);
+        
+        Event:addEventListener("OnUpdate",function()
+            self:OnUpdate();
+        end);
+    end
 
-        local OnSignalId = 0;
-        local OnUpdateId = 0;
-        function self:connection()
-            OnSignalId = Event:addEventListener("OnSignal",function(signal)
-                self:OnSignal(signal);
-            end);
-            OnUpdateId = Event:addEventListener("OnUpdate",function()
-                self:OnUpdate();
-            end);
-        end
-        function self:disconnect()
-            Event:detachEventListener("OnSignal",OnSignalId);
-            Event:detachEventListener("OnUpdate",OnUpdateId);
-        end
-        self:connection();
+    function ClientCommand:OnSync()
+        local command = IKit.New("String",self.syncValue.message);
+        self:execute(command);
     end
 
     function ClientCommand:OnUpdate()
@@ -556,21 +549,7 @@ end)();
 
     function ClientCommand:OnSignal(signal)
         if signal == 4 then
-            local command = IKit.New("String",self.receivbBuffer);
-            local args = {IKit.New("String")};
-            for i = 1, command.length, 1 do
-                if command:charAt(i) == ' ' then
-                    if args[#args].length > 0 then
-                        table.insert(args,IKit.New("String"));
-                    end
-                else
-                    args[#args]:insert(command:charAt(i));
-                end
-            end
-            if args[#args].length == 0 then
-                table.remove(args,#args);
-            end
-            self:execute(args);
+            self:execute(IKit.New("String",self.receivbBuffer));
             self.receivbBuffer = {};
         else
             table.insert(self.receivbBuffer,signal);
@@ -578,15 +557,25 @@ end)();
     end
 
     function ClientCommand:sendMessage(message)
-        local message = IKit.New("String",message)
-        local bytes = message:toBytes();
-        for i = 1, #bytes, 1 do
-            table.insert(self.sendbuffer,bytes[i]);
-        end
-        table.insert(self.sendbuffer,4);
+        local bytes = IKit.New("String",message):toBytes();
+        bytes[#bytes+1] = 4;
+        table.insert(self.sendbuffer,bytes);
     end
 
-    function ClientCommand:execute(args)
+    function ClientCommand:execute(command)
+        local args = {IKit.New("String")};
+        for i = 1, command.length, 1 do
+            if command:charAt(i) == ' ' then
+                if args[#args].length > 0 then
+                    table.insert(args,IKit.New("String"));
+                end
+            else
+                args[#args]:insert(command:charAt(i));
+            end
+        end
+        if args[#args].length == 0 then
+            table.remove(args,#args);
+        end
         local name = args[1];
         table.remove(args,1);
         if pcall(self.methods[name:toString()],args) == false then
@@ -596,6 +585,353 @@ end)();
 
     IKit.Class(ClientCommand,"ClientCommand",{extends="Command"});
 end)();
+
+Font = Font or {};
+Font['?']={16,15,6,1,13,16,10,1,11,17,6,1,21,17,1,6,22,17,1,5,23,17,1,4,10,18,5,1,9,19,4,1,9,20,2,1,20,20,1,4,19,21,1,4,18,22,1,3,16,23,1,4,17,23,1,3,14,24,1,6,15,24,1,3,13,25,1,5,12,26,1,3}
+
+Font['Q']={14,10,4,1,12,11,2,1,18,11,2,1,11,12,1,2,19,12,1,1,10,13,1,5,20,13,1,6,15,17,1,2,11,18,1,1,16,18,1,1,19,18,1,4,12,19,1,1,17,19,2,1,13,20,6,1,20,21,1,2,21,22,1,1}
+Font['W']={10,10,1,3,15,10,1,3,21,10,1,3,11,13,1,5,14,13,1,3,16,13,1,4,20,13,1,3,13,16,1,2,19,16,1,3,17,17,1,2,12,18,1,3,18,19,1,2}
+Font['E']={12,10,1,10,13,10,6,1,13,15,6,1,13,20,6,1}
+Font['R']={12,10,1,11,13,10,3,1,16,11,1,1,17,12,1,4,13,16,4,1,14,17,2,1,16,18,1,1,17,19,1,1,18,20,1,1}
+Font['T']={11,10,9,1,15,11,1,10}
+Font['Y']={11,10,1,1,19,10,1,1,12,11,1,1,18,11,1,2,13,12,1,2,17,13,1,2,14,14,1,2,16,15,1,2,15,16,1,4,14,20,1,1}
+Font['U']={11,10,1,9,19,10,1,8,18,18,1,2,12,19,1,1,13,20,5,1}
+Font['I']={12,10,7,1,15,11,1,10,12,20,3,1,16,20,3,1}
+Font['O']={14,10,5,1,13,11,1,1,19,11,1,1,12,12,1,2,20,12,1,5,11,14,1,5,19,17,1,2,12,19,1,1,18,19,1,1,13,20,5,1}
+Font['P']={13,10,1,11,14,10,3,1,17,11,1,1,18,12,1,3,17,15,1,1,14,16,3,1}
+Font['L']={13,10,1,11,14,20,5,1}
+Font['K']={12,10,1,11,18,10,1,1,17,11,1,1,16,12,1,1,15,13,1,1,13,14,1,3,14,14,1,1,14,17,1,1,15,18,1,1,16,19,1,1,17,20,2,1}
+Font['J']={14,10,6,1,17,11,1,9,12,17,1,2,13,19,1,1,16,19,1,2,14,20,2,1}
+Font['H']={11,10,1,11,20,10,1,11,12,15,8,1}
+Font['G']={15,10,4,1,14,11,1,1,18,11,1,1,13,12,1,1,12,13,1,2,11,15,1,5,14,15,6,1,19,16,1,2,18,18,1,1,17,19,1,1,12,20,5,1}
+Font['F']={12,10,1,11,13,10,6,1,13,14,5,1}
+Font['D']={12,10,1,10,13,10,1,1,14,11,2,1,16,12,2,1,18,13,1,1,19,14,1,5,18,19,1,1,13,20,5,1}
+Font['S']={15,10,5,1,14,11,1,1,13,12,1,3,14,15,5,1,19,16,1,3,12,19,1,1,18,19,1,1,13,20,5,1}
+Font['A']={15,10,1,3,14,13,1,2,16,13,1,4,13,15,1,2,12,16,1,2,14,16,2,1,17,16,1,3,11,18,1,2,18,19,1,2,10,20,1,1}
+Font['Z']={11,10,10,1,19,11,1,1,18,12,1,1,17,13,1,1,16,14,1,1,15,15,1,1,14,16,1,1,13,17,1,1,12,18,1,1,11,19,1,2,12,20,9,1}
+Font['X']={11,10,1,1,20,10,1,1,12,11,1,1,19,11,1,1,13,12,1,1,18,12,1,1,14,13,1,1,17,13,1,1,15,14,1,3,16,14,1,2,17,16,1,2,14,17,1,1,13,18,1,1,18,18,1,1,12,19,1,1,19,19,1,1,11,20,1,1,20,20,1,1}
+Font['C']={15,10,4,1,14,11,1,1,18,11,1,1,13,12,1,1,12,13,1,2,11,15,1,4,12,19,1,1,17,19,2,1,13,20,4,1}
+Font['V']={12,10,1,3,19,10,1,3,13,13,1,3,18,13,1,2,17,15,1,2,14,16,1,3,16,17,1,2,15,19,1,2}
+Font['B']={13,10,1,11,14,10,4,1,18,11,1,3,17,14,1,2,14,15,3,1,18,16,1,1,19,17,1,2,18,19,1,1,14,20,4,1}
+Font['N']={11,10,1,11,20,10,1,11,12,11,1,1,13,12,1,2,14,14,1,1,15,15,1,1,16,16,1,1,17,17,1,1,18,18,1,1,19,19,1,1}
+Font['M']={12,10,1,4,17,10,1,5,11,14,1,3,13,14,1,3,16,14,1,5,18,15,1,2,10,17,1,2,14,17,1,2,19,17,1,2,15,18,1,3,9,19,1,2,20,19,1,2}
+Font['q']={15,13,4,1,14,14,1,1,18,14,1,11,13,15,1,4,14,19,1,1,15,20,3,1}
+Font['w']={12,13,1,3,16,13,1,3,20,13,1,3,13,16,1,3,15,16,1,3,17,16,1,3,19,16,1,3,14,19,1,2,18,19,1,2}
+Font['e']={15,13,3,1,14,14,1,2,18,14,1,2,13,16,1,4,17,16,1,1,15,17,2,1,14,18,1,1,18,19,1,1,14,20,4,1}
+Font['r']={13,13,1,8,15,13,3,1,14,14,1,1,17,14,1,2}
+Font['t']={15,11,1,10,13,13,2,1,16,13,2,1}
+Font['y']={12,13,1,2,18,13,1,2,13,15,1,2,17,15,1,2,14,17,1,2,16,17,1,2,15,19,1,2,14,21,1,3,13,24,1,1}
+Font['u']={13,13,1,7,18,13,1,8,14,20,4,1}
+Font['i']={16,10,1,1,16,13,1,8}
+Font['o']={15,13,2,1,14,14,1,1,17,14,1,1,13,15,1,4,18,15,1,4,14,19,1,1,17,19,1,1,15,20,2,1}
+Font['p']={13,13,1,12,15,13,3,1,14,14,1,1,17,14,2,1,18,15,1,4,17,19,1,1,14,20,3,1}
+Font['a']={15,13,4,1,14,14,1,1,18,14,1,6,13,15,1,4,14,19,1,1,17,19,1,1,15,20,2,1,19,20,1,1}
+Font['s']={15,13,3,1,14,14,1,1,17,14,1,1,13,15,1,1,14,16,2,1,16,17,1,1,17,18,1,2,13,19,1,1,14,20,3,1}
+Font['d']={19,9,1,12,15,13,3,1,14,14,1,1,18,14,1,1,13,15,1,4,14,19,1,1,18,19,1,1,15,20,3,1}
+Font['f']={17,9,2,1,16,10,1,1,15,11,1,10,13,13,2,1,16,13,3,1}
+Font['g']={15,13,3,1,14,14,1,1,18,14,1,9,13,15,1,5,17,19,1,1,14,20,3,1,17,23,1,1,13,24,4,1}
+Font['h']={13,9,1,12,15,13,3,1,14,14,1,1,18,14,1,7}
+Font['j']={16,10,1,1,16,13,1,11,12,22,1,2,13,24,3,1}
+Font['k']={13,9,1,12,18,14,1,1,17,15,1,1,15,16,2,1,14,17,2,1,17,17,1,1,18,18,1,2,19,20,1,1}
+Font['l']={16,9,1,12}
+Font['z']={13,13,6,1,17,14,1,2,16,16,1,1,15,17,1,1,14,18,1,3,13,20,1,1,15,20,4,1}
+Font['x']={12,13,1,1,19,13,1,1,13,14,1,1,18,14,1,1,14,15,1,1,17,15,1,1,15,16,2,1,15,17,2,1,14,18,1,1,17,18,1,1,13,19,1,1,18,19,1,1,12,20,1,1,19,20,1,1}
+Font['c']={15,13,3,1,14,14,1,1,18,14,1,1,13,15,1,5,18,19,1,1,14,20,4,1}
+Font['v']={12,13,1,2,18,13,1,2,13,15,1,3,17,15,1,3,14,18,1,2,16,18,1,2,15,20,1,1}
+Font['b']={13,9,1,12,15,13,3,1,14,14,1,1,18,14,1,1,19,15,1,4,18,19,1,1,14,20,4,1}
+Font['n']={13,13,1,8,16,13,2,1,15,14,1,1,18,14,1,7,14,15,1,1}
+Font['m']={12,13,1,8,14,13,3,1,18,13,2,1,13,14,1,1,16,14,1,7,17,14,1,1,20,14,1,7}
+Font['1']={16,10,1,11,15,11,1,1,15,20,1,1,17,20,1,1}
+Font['2']={13,10,4,1,12,11,1,1,17,11,1,1,18,12,1,3,17,15,1,1,15,16,2,1,13,17,2,1,12,18,1,3,13,20,6,1}
+Font['3']={13,10,4,1,12,11,1,1,17,11,1,9,14,15,3,1,12,19,1,1,13,20,4,1}
+Font['4']={17,10,1,11,16,11,1,1,15,12,1,2,14,14,1,1,13,15,1,1,12,16,1,2,13,17,4,1,18,17,2,1}
+Font['5']={12,10,7,1,12,11,1,5,14,13,3,1,13,14,1,2,17,14,1,1,18,15,1,4,12,19,1,1,17,19,1,1,13,20,4,1}
+Font['6']={16,10,1,1,15,11,1,1,14,12,1,1,13,13,1,2,12,14,1,5,14,14,4,1,18,15,1,4,13,19,1,1,17,19,1,1,14,20,3,1}
+Font['7']={11,10,8,1,17,11,1,1,16,12,1,2,15,14,1,2,14,16,1,3,13,19,1,2}
+Font['8']={13,10,5,1,12,11,1,4,18,11,1,4,13,15,5,1,12,16,1,4,18,16,1,4,13,20,5,1}
+Font['9']={13,10,4,1,12,11,1,1,17,11,1,1,11,12,1,3,18,12,1,4,12,15,1,1,17,15,1,3,13,16,4,1,16,18,1,1,14,19,2,1,12,20,2,1}
+Font['0']={13,10,4,1,12,11,1,1,17,11,1,1,11,12,1,7,18,12,1,7,12,19,1,1,17,19,1,1,13,20,4,1}
+Font['`']={13,9,1,1,14,10,1,2,15,12,1,1}
+Font['-']={13,17,5,1}
+Font['=']={13,14,6,1,13,18,6,1}
+Font['[']={15,9,1,15,16,9,2,1,16,23,2,1}
+Font[']']={15,9,3,1,17,10,1,14,15,23,2,1}
+Font[';']={15,13,2,1,15,14,2,1,16,20,1,2,15,21,1,2}
+Font['\'']={15,10,1,5}
+Font['\\']={13,10,1,2,14,12,1,1,15,13,1,3,16,16,1,2,17,18,1,2,18,20,1,2}
+Font['/']={18,9,1,1,17,10,1,3,16,13,1,2,15,15,1,2,14,16,1,2,13,18,1,2,12,20,1,2}
+Font['.']={16,19,1,2}
+Font[',']={16,20,1,2,15,22,1,2}
+Font['~']={12,15,2,1,17,15,1,3,18,15,1,2,11,16,2,1,14,16,1,1,11,17,1,1,15,17,2,1}
+Font['_']={11,22,9,1}
+Font['+']={15,14,1,5,13,16,2,1,16,16,2,1}
+Font['{']={15,9,3,1,14,10,1,12,13,16,1,2,15,22,1,2,16,23,2,1}
+Font['}']={13,9,3,1,16,10,1,6,17,16,1,2,16,18,1,4,15,22,1,2,13,23,2,1}
+Font[':']={15,13,2,1,15,14,2,1,15,18,2,1,15,19,2,1}
+Font['"']={14,10,1,5,17,10,1,5}
+Font['|']={15,9,1,15}
+Font['?']={12,11,5,1,17,12,1,1,18,13,1,2,17,15,1,1,16,16,1,1,14,17,2,1,14,21,1,1}
+Font['>']={13,13,1,1,14,14,1,1,15,15,1,1,16,16,2,1,16,17,1,1,14,18,2,1,13,19,1,1}
+Font['<']={16,14,1,1,15,15,1,1,14,16,1,2,13,17,1,1,15,18,1,1,16,19,1,1}
+Font['!']={16,9,1,10,15,20,2,1}
+Font['@']={13,9,6,1,12,10,1,1,19,10,1,1,11,11,1,2,20,11,1,1,14,12,3,1,21,12,1,5,10,13,1,5,13,13,2,1,12,14,1,3,17,14,1,3,16,16,1,1,13,17,3,1,18,17,3,1,11,18,1,2,12,20,2,1,19,20,1,1,14,21,5,1}
+Font['#']={14,9,1,4,19,9,1,4,11,12,3,1,15,12,4,1,20,12,2,1,13,13,1,2,18,13,1,3,12,15,1,4,17,16,1,3,10,17,2,1,13,17,4,1,18,17,3,1,11,19,1,2,16,19,1,2}
+Font['$']={14,8,1,16,13,10,1,1,15,10,2,1,12,11,1,4,13,15,1,1,15,15,1,1,16,16,1,1,17,17,1,2,12,19,1,2,16,19,1,1,13,20,1,1,15,20,1,1}
+Font['%']={18,9,1,2,11,10,3,1,17,10,1,3,10,11,1,3,14,11,1,3,16,12,1,3,11,14,3,1,15,15,1,2,18,16,3,1,14,17,1,2,17,17,1,3,21,17,1,3,13,19,1,2,18,20,3,1}
+Font['^']={15,9,2,1,14,10,4,1,14,11,1,1,17,11,1,1,13,12,1,1,18,12,1,1}
+Font['&']={16,10,2,1,15,11,1,4,17,11,1,2,16,13,1,4,14,15,1,1,19,15,1,3,13,16,1,1,17,16,1,2,12,17,1,3,18,17,1,3,17,19,1,1,13,20,4,1,19,20,1,1}
+Font['*']={15,9,1,4,12,10,3,1,16,10,1,4,17,10,2,1,13,11,2,1,17,11,2,1,14,12,1,2,13,13,1,2,17,13,1,2}
+Font['(']={17,9,1,1,16,10,1,1,15,11,1,2,14,13,1,8,15,21,1,1,16,22,1,1,17,23,1,1}
+Font[')']={14,9,1,1,15,10,1,1,16,11,1,2,17,13,1,7,16,20,1,2,15,22,1,1,14,23,1,1}
+Font[' ']={}
+
+
+(function()
+    local Base64 = {};
+
+    function Base64:constructor(value,bit)
+        self.charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
+        self.charmap = {};
+        for i = 1,#self.charlist do
+            self.charlist[self.charlist[i]] = i;
+        end
+    end
+
+    function Base64:toString(number,bit)
+        local list = {}; 
+        for i = #bit,1,-2 do
+            list[bit] = self.charlist[number % 64 + 1];
+            number = (number - number % 64) / 64;
+        end
+        return table.concat(list);
+    end
+
+    function Base64:toNumber(text)
+        local number = 0;
+        for i = 1,#text do
+            number = number * 64 + self.charmap[text[i]];
+        end
+    end
+
+    IKit.Class(Base64,"Base64");
+end)();
+
+
+(function()
+    local Font = {};
+    
+    IKit.Class(Font,"Font");
+end)();
+
+(function()
+    local Image = {};
+    
+    IKit.Class(Image,"Image");
+end)();
+
+(function()
+    local Box = {};
+    
+    IKit.Class(Box,"Box");
+end)();
+
+(function()
+    local Text = {};
+    function Text:constructor(x,y,size,letterspacing,text)
+        self.boxlist = {};
+        self.x = x;
+        self.y = y;
+        self.size = size;
+        self.letterspacing = letterspacing;
+        self.text = text;
+    end
+
+    function Text:Show()
+        for i=1,str.length do
+            local char = self.text:charAt(i)
+            if Font[char] == nil then
+                char = "?";
+            end
+            for j = 1,#Font[char],4 do
+                local _x = Font[char][j];
+                local _y = Font[char][j+1];
+                local width = Font[char][j+2];
+                local height = Font[char][j+3];
+
+                local box = UI.Box.Create();
+                if box == nil then
+                    print("无法绘制矩形:已超过最大限制");
+                    return;
+                end
+                if i == 1 then
+                    box:Set({x=x + _x*size,y=y + _y*size,width=width*size,height=height*size,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+                else
+                    box:Set({x=x + (i-1) * letterspacing + _x*size,y=y + _y*size,width=width*size,height=height*size,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+                end
+                self.boxlist[#self.boxlist+1] = box;
+                box:Show();
+            end
+        end
+    end
+
+    function Text:Hide()
+        self.boxlist = {};
+        collectgarbage("collect");
+    end
+
+    IKit.Class(Text,"Text");
+end)();
+
+(function()
+    local Bitmap = {};
+    
+    IKit.Class(Bitmap,"Bitmap");
+end)();
+
+(function()
+    local Graphics = {
+        id = 1,
+        root = {},
+        color = {255,255,255,255},
+    };
+
+    function Graphics:DrawRect(x,y,width,height)
+        local box = UI.Box.Create();
+        if box == nil then
+            print("无法绘制矩形:已超过最大限制");
+            return;
+        end
+        box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+        box:Show();
+        self.root[#self.root + 1] = {self.id,{box}};
+        self.id = self.id + 1;
+        return self.id - 1;
+    end
+
+    function Graphics:DrawText(x,y,size,letterspacing,text)
+        local str = {
+            array = {},
+            length = 0,
+            charAt = function(self,index)
+                if index > 0 and index <= self.length then
+                    return self.array[index];
+                end
+                print("数组下标越界");
+            end,
+        };
+        local currentIndex = 1;
+        while currentIndex <= #text do
+            local cs = 1;
+            local seperate = {0, 0xc0, 0xe0, 0xf0};
+            for i = #seperate, 1, -1 do
+                if string.byte(text, currentIndex) >= seperate[i] then
+                    cs = i;
+                    break;
+                end
+            end
+            str.array[#str.array+1] = string.sub(text,currentIndex,currentIndex+cs-1);
+            currentIndex = currentIndex + cs;
+            str.length = str.length + 1;
+        end
+        self.root[#self.root + 1] = {self.id,{}};
+        for i=1,str.length do
+            local char = str:charAt(i)
+            if Font[char] == nil then
+                char = "?";
+            end
+            for j = 1,#Font[char],4 do
+                local _x = Font[char][j];
+                local _y = Font[char][j+1];
+                local width = Font[char][j+2];
+                local height = Font[char][j+3];
+
+                local box = UI.Box.Create();
+                if box == nil then
+                    print("无法绘制矩形:已超过最大限制");
+                    return;
+                end
+                if i == 1 then
+                    box:Set({x=x + _x*size,y=y + _y*size,width=width*size,height=height*size,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+                else
+                    box:Set({x=x + (i-1) * letterspacing + _x*size,y=y + _y*size,width=width*size,height=height*size,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+                end
+                (self.root[#self.root][2])[#self.root[#self.root][2] + 1] = box;
+                box:Show();
+            end
+        end
+        self.id = self.id + 1;
+        return self.id - 1;
+    end
+
+    function Graphics:DrawImage(x,y,size,image)
+        self.root[#self.root + 1] = {self.id,{}};
+        for i = 1,#image,5 do
+            local _x = image[i];
+            local _y = image[i+1];
+            local width = image[i+2];
+            local height = image[i+3];
+
+            self.color[1] = 0xFF & image[i+4];
+            self.color[2] = (0xFF00 & image[i+4]) >> 8;
+            self.color[3] = (0xFF0000 & image[i+4]) >> 16;
+
+            local box = UI.Box.Create();
+            if box == nil then
+                print("无法绘制矩形:已超过最大限制");
+                return;
+            end
+            box:Set({x=x + _x*size,y=y + _y*size,width=width*size,height=height*size,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+            (self.root[#self.root][2])[#self.root[#self.root][2] + 1] = box;
+            box:Show();
+        end
+        self.id = self.id + 1;
+        return self.id - 1;
+    end
+
+    function Graphics:Remove(id)
+        for i = 1,#self.root do
+            if self.root[i][1] == id then
+                table.remove(self.root,i);
+                collectgarbage("collect");
+                return;
+            end
+        end
+    end
+
+    function Graphics:Show(id)
+        for i = 1,#self.root do
+            if self.root[i][1] == id then
+                for j = 1,#self.root[i][2] do
+                    self.root[i][2][j]:Show();
+                end
+                return;
+            end
+        end
+    end
+
+    function Graphics:Hide(id)
+        for i = 1,#self.root do
+            if self.root[i][1] == id then
+                for j = 1,#self.root[i][2] do
+                    self.root[i][2][j]:Hide();
+                end
+                return;
+            end
+        end
+    end
+    
+    function Graphics:Clean()
+        self.root = {};
+        collectgarbage("collect");
+    end
+
+    return Graphics;
+end)();
+
+
+
+
+
 
 Event = IKit.New("Event");
 
