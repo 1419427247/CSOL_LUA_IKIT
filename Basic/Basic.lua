@@ -693,33 +693,49 @@ Font[' ']={}
         self.charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
         self.charmap = {};
         for i = 1,#self.charlist do
-            self.charlist[self.charlist[i]] = i;
+            self.charmap[string.sub(self.charlist,i,i)] = i-1;
         end
     end
 
     function Base64:toString(number,bit)
         local list = {}; 
-        for i = #bit,1,-2 do
-            list[bit] = self.charlist[number % 64 + 1];
-            number = (number - number % 64) / 64;
+        for i = bit,1,-1 do
+            list[i] = string.sub(self.charlist,number % 64 + 1,number % 64 + 1);
+            number = (number - number % 64) >> 6;
         end
         return table.concat(list);
     end
 
     function Base64:toNumber(text)
+        local type = IKit.TypeOf(text);
         local number = 0;
-        for i = 1,#text do
-            number = number * 64 + self.charmap[text[i]];
+        if type == "string" then
+            for i = 1,#text do
+                number = (number << 6) + self.charmap[string.sub(text,i,i)];
+            end
+        elseif type == "String" then
+            for i = 1,text.length do
+                number = (number << 6) + self.charmap[text:charAt(i)];
+            end
         end
+        return number;
     end
 
     IKit.Class(Base64,"Base64");
 end)();
 
-
 (function()
     local Font = {};
-    
+    function Font:constructor()
+        self.map = {
+            [' '] = {},
+        };
+    end
+
+    function Font:getChar(c)
+        return self.map[c] or {};
+    end
+
     IKit.Class(Font,"Font");
 end)();
 
@@ -777,6 +793,11 @@ end)();
     function Text:Hide()
         self.boxlist = {};
         collectgarbage("collect");
+    end
+
+
+    function Text:getSize(text,font)
+        
     end
 
     IKit.Class(Text,"Text");
@@ -929,202 +950,202 @@ end)();
 end)();
 
 
+-- Game = {Rule = {}};
+-- UI = {Event = {}};
+
+-- Event = IKit.New("Event");
 
 
+-- if Game~=nil then
+--     Event = Event
+--     + "OnPlayerConnect"
+--     + "OnPlayerDisconnect"
+--     + "OnRoundStart"
+--     + "OnRoundStartFinished"
+--     + "OnPlayerSpawn"
+--     + "OnPlayerJoiningSpawn"
+--     + "OnPlayerKilled"
+--     + "OnKilled"
+--     + "OnPlayerSignal"
+--     + "OnUpdate"
+--     + "OnPlayerAttack"
+--     + "OnTakeDamage"
+--     + "CanBuyWeapon"
+--     + "CanHaveWeaponInHand"
+--     + "OnGetWeapon"
+--     + "OnReload"
+--     + "OnReloadFinished"
+--     + "OnSwitchWeapon"
+--     + "PostFireWeapon"
+--     + "OnGameSave"
+--     + "OnLoadGameSave"
+--     + "OnClearGameSave";
 
+--     function Game.Rule:OnPlayerConnect (player)
+--         Event:forEach("OnPlayerConnect",player);
+--     end
+    
+--     function Game.Rule:OnPlayerDisconnect (player)
+--         Event:forEach("OnPlayerDisconnect",player);
+--     end
+    
+--     function Game.Rule:OnRoundStart ()
+--         Event:forEach("OnRoundStart");
+--     end
+    
+--     function Game.Rule:OnRoundStartFinished ()
+--         Event:forEach("OnRoundStartFinished");
+--     end
+    
+--     function Game.Rule:OnPlayerSpawn (player)
+--         Event:forEach("OnPlayerSpawn",player);
+--     end
+    
+--     function Game.Rule:OnPlayerJoiningSpawn (player)
+--         Event:forEach("OnPlayerJoiningSpawn",player);
+--     end
+    
+--     function Game.Rule:OnPlayerKilled (victim, killer, weapontype, hitbox)
+--         Event:forEach("OnPlayerKilled",victim, killer, weapontype, hitbox);
+--     end
+    
+--     function Game.Rule:OnKilled (victim, killer)
+--         Event:forEach("OnKilled",victim,killer);
+--     end
+    
+--     function Game.Rule:OnPlayerSignal (player,signal)
+--         Event:forEach("OnPlayerSignal",player,signal);
+--     end
+    
+--     function Game.Rule:OnUpdate (time)
+--         Event:forEach("OnUpdate",time);
+--     end
+    
+--     function Game.Rule:OnPlayerAttack (victim, attacker, damage, weapontype, hitbox)
+--         Event:forEach("OnPlayerAttack",victim, attacker, damage, weapontype, hitbox);
+--     end
+    
+--     function Game.Rule:OnTakeDamage (victim, attacker, damage, weapontype, hitbox)	
+--         Event:forEach("OnTakeDamage",victim, attacker, damage, weapontype, hitbox);
+--     end
+    
+--     function Game.Rule:CanBuyWeapon (player, weaponid)
+--         Event:forEach("CanBuyWeapon",player,weaponid);
+--     end
+    
+--     function Game.Rule:CanHaveWeaponInHand (player, weaponid, weapon)
+--         Event:forEach("CanHaveWeaponInHand",player, weaponid, weapon);
+--     end
+    
+--     function Game.Rule:OnGetWeapon (player, weaponid, weapon)
+--         Event:forEach("OnGetWeapon",player, weaponid, weapon);
+--     end
+    
+--     function Game.Rule:OnReload (player, weapon, time)
+--         Event:forEach("OnPlayerConnect",player, weapon, time);
+--     end
+    
+--     function Game.Rule:OnReloadFinished (player, weapon)
+--         Event:forEach("OnPlayerConnect",player, weapon);
+--     end
+    
+--     function Game.Rule:OnSwitchWeapon (player)
+--         Event:forEach("OnPlayerConnect",player);
+--     end
+    
+--     function Game.Rule:PostFireWeapon (player, weapon, time)
+--         Event:forEach("OnPlayerConnect",player, weapon, time);
+--     end
+    
+--     function Game.Rule:OnGameSave (player)
+--         Event:forEach("OnPlayerConnect",player);
+--     end
+    
+--     function Game.Rule:OnLoadGameSave (player)
+--         Event:forEach("OnPlayerConnect",player);
+--     end
+    
+--     function Game.Rule:OnClearGameSave (player)
+--         Event:forEach("OnPlayerConnect",player);
+--     end
+-- end
 
-Event = IKit.New("Event");
+-- if UI~=nil then
+--     Event = Event
+--     + "OnRoundStart"
+--     + "OnSpawn"
+--     + "OnKilled"
+--     + "OnInput"
+--     + "OnUpdate"
+--     + "OnChat"
+--     + "OnSignal"
+--     + "OnKeyDown"
+--     + "OnKeyUp"
+    
+--     function UI.Event:OnRoundStart()
+--         Event:forEach("OnRoundStart");
+--     end
 
-if Game~=nil then
-    Event = Event
-    + "OnPlayerConnect"
-    + "OnPlayerDisconnect"
-    + "OnRoundStart"
-    + "OnRoundStartFinished"
-    + "OnPlayerSpawn"
-    + "OnPlayerJoiningSpawn"
-    + "OnPlayerKilled"
-    + "OnKilled"
-    + "OnPlayerSignal"
-    + "OnUpdate"
-    + "OnPlayerAttack"
-    + "OnTakeDamage"
-    + "CanBuyWeapon"
-    + "CanHaveWeaponInHand"
-    + "OnGetWeapon"
-    + "OnReload"
-    + "OnReloadFinished"
-    + "OnSwitchWeapon"
-    + "PostFireWeapon"
-    + "OnGameSave"
-    + "OnLoadGameSave"
-    + "OnClearGameSave";
+--     function UI.Event:OnSpawn()
+--         Event:forEach("OnSpawn");
+--     end
 
-    function Game.Rule:OnPlayerConnect (player)
-        Event:forEach("OnPlayerConnect",player);
-    end
-    
-    function Game.Rule:OnPlayerDisconnect (player)
-        Event:forEach("OnPlayerDisconnect",player);
-    end
-    
-    function Game.Rule:OnRoundStart ()
-        Event:forEach("OnRoundStart");
-    end
-    
-    function Game.Rule:OnRoundStartFinished ()
-        Event:forEach("OnRoundStartFinished");
-    end
-    
-    function Game.Rule:OnPlayerSpawn (player)
-        Event:forEach("OnPlayerSpawn",player);
-    end
-    
-    function Game.Rule:OnPlayerJoiningSpawn (player)
-        Event:forEach("OnPlayerJoiningSpawn",player);
-    end
-    
-    function Game.Rule:OnPlayerKilled (victim, killer, weapontype, hitbox)
-        Event:forEach("OnPlayerKilled",victim, killer, weapontype, hitbox);
-    end
-    
-    function Game.Rule:OnKilled (victim, killer)
-        Event:forEach("OnKilled",victim,killer);
-    end
-    
-    function Game.Rule:OnPlayerSignal (player,signal)
-        Event:forEach("OnPlayerSignal",player,signal);
-    end
-    
-    function Game.Rule:OnUpdate (time)
-        Event:forEach("OnUpdate",time);
-    end
-    
-    function Game.Rule:OnPlayerAttack (victim, attacker, damage, weapontype, hitbox)
-        Event:forEach("OnPlayerAttack",victim, attacker, damage, weapontype, hitbox);
-    end
-    
-    function Game.Rule:OnTakeDamage (victim, attacker, damage, weapontype, hitbox)	
-        Event:forEach("OnTakeDamage",victim, attacker, damage, weapontype, hitbox);
-    end
-    
-    function Game.Rule:CanBuyWeapon (player, weaponid)
-        Event:forEach("CanBuyWeapon",player,weaponid);
-    end
-    
-    function Game.Rule:CanHaveWeaponInHand (player, weaponid, weapon)
-        Event:forEach("CanHaveWeaponInHand",player, weaponid, weapon);
-    end
-    
-    function Game.Rule:OnGetWeapon (player, weaponid, weapon)
-        Event:forEach("OnGetWeapon",player, weaponid, weapon);
-    end
-    
-    function Game.Rule:OnReload (player, weapon, time)
-        Event:forEach("OnPlayerConnect",player, weapon, time);
-    end
-    
-    function Game.Rule:OnReloadFinished (player, weapon)
-        Event:forEach("OnPlayerConnect",player, weapon);
-    end
-    
-    function Game.Rule:OnSwitchWeapon (player)
-        Event:forEach("OnPlayerConnect",player);
-    end
-    
-    function Game.Rule:PostFireWeapon (player, weapon, time)
-        Event:forEach("OnPlayerConnect",player, weapon, time);
-    end
-    
-    function Game.Rule:OnGameSave (player)
-        Event:forEach("OnPlayerConnect",player);
-    end
-    
-    function Game.Rule:OnLoadGameSave (player)
-        Event:forEach("OnPlayerConnect",player);
-    end
-    
-    function Game.Rule:OnClearGameSave (player)
-        Event:forEach("OnPlayerConnect",player);
-    end
-end
+--     function UI.Event:OnKilled()
+--         Event:forEach("OnKilled");
+--     end
 
-if UI~=nil then
-    Event = Event
-    + "OnRoundStart"
-    + "OnSpawn"
-    + "OnKilled"
-    + "OnInput"
-    + "OnUpdate"
-    + "OnChat"
-    + "OnSignal"
-    + "OnKeyDown"
-    + "OnKeyUp"
+--     function UI.Event:OnInput (inputs)
+--         Event:forEach("OnInput",inputs);
+--     end
+
+--     function UI.Event:OnUpdate(time)
+--         Event:forEach("OnUpdate",time);
+--     end
+
+--     function UI.Event:OnChat (text)
+--         Event:forEach("OnChat",text);
+--     end
+
+--     function UI.Event:OnSignal(signal)
+--         Event:forEach("OnSignal",signal);
+--     end
+
+--     function UI.Event:OnKeyDown(inputs)
+--         Event:forEach("OnKeyDown",inputs);
+--     end
+
+--     function UI.Event:OnKeyUp (inputs)
+--         Event:forEach("OnKeyUp",inputs);
+--     end
+-- end
+
+-- Timer = IKit.New("Timer");
+
+-- if Game ~= nil then
+--     Command = IKit.New("ServerCommand");
+
+--     Command:register("killme",function(player,args)
+--         for i = 1, #args,1 do
+--             print(args[i]:toString());
+--         end
+--         player:Kill();
+--     end)
+
+--     Command:register("kill",function(player,args)
+--         IKit.Player:find(args[1]):Kill();
+--     end);
     
-    function UI.Event:OnRoundStart()
-        Event:forEach("OnRoundStart");
-    end
+--     Command:register("tp",function(player,args)
+--         player.position = IKit.Player:find(args[1]).position;
+--     end);
+-- end
 
-    function UI.Event:OnSpawn()
-        Event:forEach("OnSpawn");
-    end
+-- if UI ~= nil then
+--     Command = IKit.New("ClientCommand");
 
-    function UI.Event:OnKilled()
-        Event:forEach("OnKilled");
-    end
-
-    function UI.Event:OnInput (inputs)
-        Event:forEach("OnInput",inputs);
-    end
-
-    function UI.Event:OnUpdate(time)
-        Event:forEach("OnUpdate",time);
-    end
-
-    function UI.Event:OnChat (text)
-        Event:forEach("OnChat",text);
-    end
-
-    function UI.Event:OnSignal(signal)
-        Event:forEach("OnSignal",signal);
-    end
-
-    function UI.Event:OnKeyDown(inputs)
-        Event:forEach("OnKeyDown",inputs);
-    end
-
-    function UI.Event:OnKeyUp (inputs)
-        Event:forEach("OnKeyUp",inputs);
-    end
-end
-
-Timer = IKit.New("Timer");
-
-if Game ~= nil then
-    Command = IKit.New("ServerCommand");
-
-    Command:register("killme",function(player,args)
-        for i = 1, #args,1 do
-            print(args[i]:toString());
-        end
-        player:Kill();
-    end)
-
-    Command:register("kill",function(player,args)
-        IKit.Player:find(args[1]):Kill();
-    end);
-    
-    Command:register("tp",function(player,args)
-        player.position = IKit.Player:find(args[1]).position;
-    end);
-end
-
-if UI ~= nil then
-    Command = IKit.New("ClientCommand");
-
-    Command:register("kill",function(args)
-        for i = 1, #args,1 do
-            print(args[i]:toString());
-        end
-    end);
-end
+--     Command:register("kill",function(args)
+--         for i = 1, #args,1 do
+--             print(args[i]:toString());
+--         end
+--     end);
+-- end
