@@ -1,151 +1,4 @@
---基础工具库,包含了基础的面向对象,事件处理,字符串与计时器,写的太烂了,实在抱歉QWQ
-IKit = (function()
-    local CLASS = {};
-    local INTERFACES = {};
-
-    local Interface = function(_name,_method,_super)
-        if INTERFACES[_name] ~= nil then
-            error("接口'".. _name .."'重复定义");
-        end
-        if _super ~= nil then
-            if INTERFACES[_super] == nil then
-                error("未找到接口'".. _super .."'");
-            end
-            for i = 1, #INTERFACES[_super],1 do
-                _method[#_method + 1] = INTERFACES[_super][i];
-            end
-        end
-        INTERFACES[_name] = _method;
-    end
-
-    local Class = function(_table,_name,_super)
-        if CLASS[_name] ~= nil then
-            error("类'".. _name .."'重复定义");
-        end
-
-        _super = _super or {}
-        _super.extends = _super.extends or "Object";
-        _super.implements = _super.implements or {};
-
-        for i = 1, #_super.implements, 1 do
-            for j = 1, #INTERFACES[_super.implements[i]],1 do
-                if rawget(_table,INTERFACES[_super.implements[i]][j]) == nil then
-                    error("未实现接口'" .. _super.implements[i] .. "'中的方法:" .. INTERFACES[_super.implements[i]][j]);
-                end
-            end
-        end
-
-        CLASS[_name] = {
-            Table = _table,
-            Super = _super.extends,
-            Interface = _super.implements;
-        };
-    end
-
-    local function _CALL(table,...)
-        table:constructor(...);
-    end
-
-    local function _NEWINDEX(table,key,value)
-        if value == nil then
-            error("不可将字段设置为nil");
-        end
-        local temporary = table;
-        if key == "type" and temporary.type ~= "nil" then
-            error("type不可修改");
-        end
-        while table ~= nil do
-            for k in pairs(table) do
-                if key == k then
-                    rawset(table,key,value);
-                    return;
-                end
-            end
-            table = getmetatable(table);
-        end
-        if temporary.type == "nil" then
-            rawset(temporary,key,value);
-        else
-            error("没有找到字段'" .. key .. "'在'" .. temporary.type .."'内");
-        end
-    end
-
-    CLASS["Object"] = {
-        Table = {
-            memory = {};
-            type = "nil",
-            __call = _CALL,
-            __newindex = _NEWINDEX,
-        },
-        Super = "nil",
-        Interface = "nil",
-    }
-
-    local function Clone(_name)
-        if CLASS[_name] == nil then
-            error("没有找到类'" .. _name .. "'");
-        end
-        local object = {};
-        for key, value in pairs(CLASS[_name].Table) do
-            object[key] = value;
-        end
-        object.__index = object;
-        if CLASS[_name].Super ~= "nil" then
-            object.super = Clone(CLASS[_name].Super)
-            object.__newindex = object.super.__newindex;
-            object.__call = object.super.__call;
-            setmetatable(object,object.super);
-        end
-        return object;
-    end
-
-    local New = function(_name,...)
-        local object = Clone(_name);
-        object(...);
-        object.type = _name;
-        return setmetatable({},object);
-    end
-
-    local function Instanceof(_object,_name)
-        if type(_object) == "table" and  type(_name) == "string" and (CLASS[_name] ~= nil or INTERFACES[_name] ~= nil) then
-            if INTERFACES[_name] ~= nil then
-                local type = _object.type;
-                while type ~= nil do
-                    if type == _name then
-                        return true;
-                    end
-                    type = CLASS[type].Super;
-                end
-            end
-            if INTERFACES[_name] ~= nil then
-                for i = 1, INTERFACES[_name], 2 do
-                    if rawget(_object,INTERFACES[_name][i]) == nil then
-                        return false;
-                    end
-                end
-                return true;
-            end
-        end
-        return false;
-    end
-    local function TypeOf(value)
-        if type(value) == "table" then
-            if value.type ~= nil then
-                return value.type;
-            end
-        end
-        return type(value);
-    end
-    return{
-        Interface = Interface,
-        Class = Class,
-        New = New,
-        Instanceof = Instanceof,
-        TypeOf = TypeOf
-    };
-end)();
-
-CLASS = (function()
+Class,InstanceOf,Type = (function()
     NULL = {};
     local CLASS = {};
     CLASS["Object"] = {
@@ -231,12 +84,34 @@ CLASS = (function()
         };
 
     end
-    return CREATECLASS;
+
+    local function INSTANCEOF(_object,_class)
+        local table = CLASS[_object.type];
+        while table ~= NULL do
+            if table.TYPE == _class.Name then
+                return true;
+            end
+            table = table.SUPER;
+        end
+        return false;
+    end
+
+    local function TYPE()
+        if type(value) == "table" then
+            if value.type ~= nil then
+                return value.type;
+            end
+        end
+        return type(value);
+    end
+    
+
+    return CREATECLASS,INSTANCEOF,TYPE;
 end)();
 
 
 
-CLASS("String",function(String)
+Class("String",function(String)
 
     local function charSize(curByte)
         local seperate = {0, 0xc0, 0xe0, 0xf0}
@@ -393,220 +268,218 @@ CLASS("String",function(String)
     end
 end);
 
+Class("Event",function(Event)
+    local instance = NULL;
+    local id = 0;
+    function Event:constructor()
+        if instance ~= NULL then
+            error("只能有一个实例化对象");
+        end
+        instance = self;
+    end
 
--- (function()
---     local Event = {};
+    function Event:__add(name)
+        if not self[name] then
+            self[name] = {};
+            return self;
+        end
+        error("事件:''" ..name.. "'已经存在,请勿重复添加");
+    end
 
---     function Event:constructor()
---         self.array = {};
---         self.id = 1;
---     end
+    function Event:__sub(name)
+        if self[name] then
+            self[name] = nil;
+            return self;
+        end
+        error("事件:'" ..name.."'不存在");
+    end
 
---     function Event:__add(name)
---         if not self.array[name] then
---             self.array[name] = {};
---             return self;
---         end
---         error("事件:''" ..name.. "'已经存在,请勿重复添加");
---     end
+    function Event:addEventListener(event,listener)
+        if type(event) == "string" then
+            event = self[event];
+        end
+        if type(listener) == "function" then
+            event[#event + 1] = {id,listener};
+            id = id + 1;
+            return id - 1;
+        else
+            error("它应该是一个函数");
+        end
+    end
 
---     function Event:__sub(name)
---         if self.array[name] then
---             self.array[name] = nil;
---             return self;
---         end
---         error("事件:'" ..name.."'不存在");
---     end
+    function Event:detachEventListener(event,id)
+        if type(event) == "string" then
+            event = self[event];
+        end
+        for i = 1, #event,1 do
+            if event[i][1] == id then
+                table.remove(event,i);
+                return;
+            end
+        end
+        error("未找到'" .. id .. "'在Event[" .. name .."]内");
+    end
 
---     function Event:addEventListener(name,event)
---         if self.array[name] == nil then
---             error("未找到事件'" .. name .. "'");
---         end
---         if type(event) == "function" then
---             self.array[name][#self.array[name] + 1] = {self.id,event};
---             self.id = self.id + 1;
---             return self.id - 1;
---         else
---             error("它应该是一个函数");
---         end
---     end
+    function Event:forEach(event,...)
+        if type(event) == "string" then
+            event = self[event];
+        end
 
---     function Event:detachEventListener(name,id)
---         if self.array[name] == nil then
---             error("未找到'" .. name .. "'");
---         end
---         for i = 1, #self.array[name],1 do
---             if self.array[name][i][1] == id then
---                 table.remove(self.array[name],i);
---                 return;
---             end
---         end
---         error("未找到'" .. id .. "'在Event[" .. name .."]内");
---     end
+        for i = #event,1,-1 do
+            event[i][2](...);
+        end
+    end
+end);
 
---     function Event:forEach(name,...)
---         for i = #self.array[name],1,-1 do
---             self.array[name][i][2](...);
---         end
---     end
+Class("Timer",function(Timer)
+    local instance = NULL;
+    local id = 0;
+    local task = {};
+    local count = 0;
+    function Timer:constructor()
+        Event:addEventListener(Event.OnUpdate,function()
+            for i = 1,#task do
+                if task[i].value <= count then
+                    local success,result = pcall(task[i].call)
+                    if not success then
+                        table.remove(task,i);
+                        print("计时器中ID为:[" .. key .. "]的函数发生了异常");
+                        print(result);
+                    elseif task[i].period == nil then
+                        table.remove(task,i);
+                    end
+                    task[i].value = count + task[i].period;
+                end
+            end
+            count = count + 1;
+        end);
+        if instance ~= NULL then
+            error("只能有一个实例化对象");
+        end
+        instance = self;
+    end
 
---     IKit.Class(Event,"Event");
--- end)();
+    function Timer:schedule(call,delay,period)
+        task[#task+1] = {call = call,value = count + delay,period = period,id = id};
+        id = id + 1;
+        return id - 1;
+    end
 
--- (function()
---     local Timer = {};
+    function Timer:find(id)
+        for i = 1, #task,1 do
+            if task[i].id == id then
+                return task[i];
+            end
+        end
+        return nil;
+    end
 
---     function Timer:constructor()
---         self.id = 1;
---         self.task = {};
---         Event:addEventListener("OnUpdate",function(time)
---             self:OnUpdate(time);
---         end);
---     end
-
---     function Timer:OnUpdate(time)
---         for key, value in pairs(self.task) do
---             if value.time < time then
---                 if not pcall(value.func) then
---                     self.task[key] = nil;
---                     print("Timer:ID为:[" .. key .. "]的函数发生了异常");
---                 elseif value.period == nil then
---                     self.task[key] = nil;
---                 else
---                     value.time = time + value.period;
---                 end
---             end
---         end
---     end
-
---     function Timer:schedule(fun,delay,period)
---         if Game ~= nil then
---             self.task[self.id] = {func = fun,time = Game.GetTime() + delay,period = period};
---         end
---         if UI ~= nil then
---             self.task[self.id] = {func = fun,time = UI.GetTime() + delay,period = period};
---         end
---         self.id = self.id + 1;
---         return self.id - 1;
---     end
-
---     function Timer:find(id)
---         for i = 1, #self.task, 1 do
---             if self.task[i].id == id then
---                 return self.task[i];
---             end
---         end
---         return nil;
---     end
-
---     function Timer:cancel(id)
---         for key, value in pairs(self.task) do
---             if id == key then
---                 self.task[key] = nil;
---                 return;
---             end
---         end
---     end
+    function Timer:cancel(id)
+        for i = 1, #task,1 do
+            if task[i].id == id then
+                table.remove(task,i);
+                return;
+            end
+        end
+    end
     
---     function Timer:purge()
---         self.task = {}
---     end
+    function Timer:purge()
+        task = {}
+    end
+end);
 
---     IKit.Class(Timer,"Timer");
--- end)();
+-- Event = Event:New();
 
--- (function()
---     local Command = {};
---     function Command:constructor()
---         self.sendbuffer = {};
---         self.receivbBuffer = {};
---         self.methods = {};
+-- Event = Event + "OnUpdate";
 
---     end
+-- Timer = Timer:New();
 
---     function Command:register(name,fun)
---         self.methods[name] = fun;
---     end
+Class("Command",function(Command)
 
---     IKit.Class(Command,"Command");
--- end)();
+    function Command:constructor()
+        self.sendbuffer = {};
+        self.receivbBuffer = {};
+        self.methods = {};
+    end
 
--- (function()
---     local ServerCommand = {};
+    function Command:register(name,fun)
+        self.methods[name] = fun;
+    end
+
+end);
+
+(function()
+    local ServerCommand = {};
     
---     function ServerCommand:constructor()
---         self.super();
---         self.syncValue = Game.SyncValue:Create("SCValue");
---         Event:addEventListener("OnUpdate",function()
---             self:OnUpdate();
---         end);
---         Event:addEventListener("OnPlayerSignal",function(player,signal)
---             self:OnPlayerSignal(player,signal);
---         end);
---     end
+    function ServerCommand:constructor()
+        self.super();
+        self.syncValue = Game.SyncValue:Create("SCValue");
+        Event:addEventListener("OnUpdate",self.OnUpdate);
+        Event:addEventListener("OnPlayerSignal",self.OnPlayerSignal);
+    end
 
---     function ServerCommand:OnUpdate()
---         local k = 0;
---         while #self.sendbuffer > 0 do
---             while #self.sendbuffer[1][2] > 0 do
---                 self.sendbuffer[1][1]:Signal(self.sendbuffer[1][2][1]);
---                 table.remove(self.sendbuffer[1][2],1);
---                 k = k + 1;
---                 if k == 1024 then
---                     return;
---                 end
---             end
---             if #self.sendbuffer[1][2] == 0 then
---                 table.remove(self.sendbuffer,1);
---             end
---         end
---     end
+    function ServerCommand:OnUpdate()
+        local k = 0;
+        while #self.sendbuffer > 0 do
+            while #self.sendbuffer[1][2] > 0 do
+                self.sendbuffer[1][1]:Signal(self.sendbuffer[1][2][1]);
+                table.remove(self.sendbuffer[1][2],1);
+                k = k + 1;
+                if k == 1024 then
+                    return;
+                end
+            end
+            if #self.sendbuffer[1][2] == 0 then
+                table.remove(self.sendbuffer,1);
+            end
+        end
+    end
 
---     function ServerCommand:OnPlayerSignal(player,signal)
---         if signal == 4 then
---             local command = IKit.New("String",self.receivbBuffer[player.name]);
---             self:execute(player,command);
---             self.receivbBuffer[player.name] = {};
---         else
---             if self.receivbBuffer[player.name] == nil then
---                 self.receivbBuffer[player.name] = {};
---             end
---             table.insert(self.receivbBuffer[player.name],signal);
---         end
---     end
+    function ServerCommand:OnPlayerSignal(player,signal)
+        if signal == 4 then
+            local command = IKit.New("String",self.receivbBuffer[player.name]);
+            self:execute(player,command);
+            self.receivbBuffer[player.name] = {};
+        else
+            if self.receivbBuffer[player.name] == nil then
+                self.receivbBuffer[player.name] = {};
+            end
+            table.insert(self.receivbBuffer[player.name],signal);
+        end
+    end
 
---     function ServerCommand:sendMessage(message,player)
---         if player ~= nil then
---             local bytes = IKit.New("String",message):toBytes();
---             bytes[#bytes+1] = 4;
---             table.insert(self.sendbuffer,{player,bytes});
---         else
---             syncValue.value = message;
---         end
---     end
+    function ServerCommand:sendMessage(message,player)
+        if player ~= nil then
+            local bytes = IKit.New("String",message):toBytes();
+            bytes[#bytes+1] = 4;
+            table.insert(self.sendbuffer,{player,bytes});
+        else
+            syncValue.value = message;
+        end
+    end
 
---     function ServerCommand:execute(player,command)
---         local args = {IKit.New("String")};
---         for i = 1, command.length, 1 do
---             if command:charAt(i) == ' ' then
---                 if args[#args].length > 0 then
---                     table.insert(args,IKit.New("String"));
---                 end
---             else
---                 args[#args]:insert(command:charAt(i));
---             end
---         end
---         if args[#args].length == 0 then
---             table.remove(args,#args);
---         end
---         local name = args[1];
---         table.remove(args,1);
---         if pcall(self.methods[name:toString()],player,args) == false then
---             print("在执行'" .. name:toString() .. "'命令时发生异常");
---         end
---     end
---     IKit.Class(ServerCommand,"ServerCommand",{extends="Command"});
--- end)();
+    function ServerCommand:execute(player,command)
+        local args = {IKit.New("String")};
+        for i = 1, command.length, 1 do
+            if command:charAt(i) == ' ' then
+                if args[#args].length > 0 then
+                    table.insert(args,IKit.New("String"));
+                end
+            else
+                args[#args]:insert(command:charAt(i));
+            end
+        end
+        if args[#args].length == 0 then
+            table.remove(args,#args);
+        end
+        local name = args[1];
+        table.remove(args,1);
+        if pcall(self.methods[name:toString()],player,args) == false then
+            print("在执行'" .. name:toString() .. "'命令时发生异常");
+        end
+    end
+    IKit.Class(ServerCommand,"ServerCommand",{extends="Command"});
+end)();
 
 -- (function()
 --     local  ClientCommand = {};
