@@ -665,7 +665,7 @@ Class("Base64",function(Base64)
     function Base64:toString(number,bit)
         local list = {};
         for i = bit,1,-1 do
-            list[#list+i] = string.sub(self.charlist,number % 64 + 1,number % 64 + 1);
+            list[i] = string.sub(self.charlist,number % 64 + 1,number % 64 + 1);
             number = (number - number % 64) >> 6;
         end
         return table.concat(list);
