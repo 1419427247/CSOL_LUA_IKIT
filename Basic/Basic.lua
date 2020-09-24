@@ -96,7 +96,7 @@ Class,InstanceOf,Type = (function()
         return false;
     end
 
-    local function TYPE()
+    local function TYPE(value)
         if type(value) == "table" then
             if value.type ~= nil then
                 return value.type;
@@ -394,92 +394,92 @@ end);
 
 -- Timer = Timer:New();
 
-Class("Command",function(Command)
+-- Class("Command",function(Command)
 
-    function Command:constructor()
-        self.sendbuffer = {};
-        self.receivbBuffer = {};
-        self.methods = {};
-    end
+--     function Command:constructor()
+--         self.sendbuffer = {};
+--         self.receivbBuffer = {};
+--         self.methods = {};
+--     end
 
-    function Command:register(name,fun)
-        self.methods[name] = fun;
-    end
+--     function Command:register(name,fun)
+--         self.methods[name] = fun;
+--     end
 
-end);
+-- end);
 
-(function()
-    local ServerCommand = {};
+-- (function()
+--     local ServerCommand = {};
     
-    function ServerCommand:constructor()
-        self.super();
-        self.syncValue = Game.SyncValue:Create("SCValue");
-        Event:addEventListener("OnUpdate",self.OnUpdate);
-        Event:addEventListener("OnPlayerSignal",self.OnPlayerSignal);
-    end
+--     function ServerCommand:constructor()
+--         self.super();
+--         self.syncValue = Game.SyncValue:Create("SCValue");
+--         Event:addEventListener("OnUpdate",self.OnUpdate);
+--         Event:addEventListener("OnPlayerSignal",self.OnPlayerSignal);
+--     end
 
-    function ServerCommand:OnUpdate()
-        local k = 0;
-        while #self.sendbuffer > 0 do
-            while #self.sendbuffer[1][2] > 0 do
-                self.sendbuffer[1][1]:Signal(self.sendbuffer[1][2][1]);
-                table.remove(self.sendbuffer[1][2],1);
-                k = k + 1;
-                if k == 1024 then
-                    return;
-                end
-            end
-            if #self.sendbuffer[1][2] == 0 then
-                table.remove(self.sendbuffer,1);
-            end
-        end
-    end
+--     function ServerCommand:OnUpdate()
+--         local k = 0;
+--         while #self.sendbuffer > 0 do
+--             while #self.sendbuffer[1][2] > 0 do
+--                 self.sendbuffer[1][1]:Signal(self.sendbuffer[1][2][1]);
+--                 table.remove(self.sendbuffer[1][2],1);
+--                 k = k + 1;
+--                 if k == 1024 then
+--                     return;
+--                 end
+--             end
+--             if #self.sendbuffer[1][2] == 0 then
+--                 table.remove(self.sendbuffer,1);
+--             end
+--         end
+--     end
 
-    function ServerCommand:OnPlayerSignal(player,signal)
-        if signal == 4 then
-            local command = IKit.New("String",self.receivbBuffer[player.name]);
-            self:execute(player,command);
-            self.receivbBuffer[player.name] = {};
-        else
-            if self.receivbBuffer[player.name] == nil then
-                self.receivbBuffer[player.name] = {};
-            end
-            table.insert(self.receivbBuffer[player.name],signal);
-        end
-    end
+--     function ServerCommand:OnPlayerSignal(player,signal)
+--         if signal == 4 then
+--             local command = IKit.New("String",self.receivbBuffer[player.name]);
+--             self:execute(player,command);
+--             self.receivbBuffer[player.name] = {};
+--         else
+--             if self.receivbBuffer[player.name] == nil then
+--                 self.receivbBuffer[player.name] = {};
+--             end
+--             table.insert(self.receivbBuffer[player.name],signal);
+--         end
+--     end
 
-    function ServerCommand:sendMessage(message,player)
-        if player ~= nil then
-            local bytes = IKit.New("String",message):toBytes();
-            bytes[#bytes+1] = 4;
-            table.insert(self.sendbuffer,{player,bytes});
-        else
-            syncValue.value = message;
-        end
-    end
+--     function ServerCommand:sendMessage(message,player)
+--         if player ~= nil then
+--             local bytes = IKit.New("String",message):toBytes();
+--             bytes[#bytes+1] = 4;
+--             table.insert(self.sendbuffer,{player,bytes});
+--         else
+--             syncValue.value = message;
+--         end
+--     end
 
-    function ServerCommand:execute(player,command)
-        local args = {IKit.New("String")};
-        for i = 1, command.length, 1 do
-            if command:charAt(i) == ' ' then
-                if args[#args].length > 0 then
-                    table.insert(args,IKit.New("String"));
-                end
-            else
-                args[#args]:insert(command:charAt(i));
-            end
-        end
-        if args[#args].length == 0 then
-            table.remove(args,#args);
-        end
-        local name = args[1];
-        table.remove(args,1);
-        if pcall(self.methods[name:toString()],player,args) == false then
-            print("在执行'" .. name:toString() .. "'命令时发生异常");
-        end
-    end
-    IKit.Class(ServerCommand,"ServerCommand",{extends="Command"});
-end)();
+--     function ServerCommand:execute(player,command)
+--         local args = {IKit.New("String")};
+--         for i = 1, command.length, 1 do
+--             if command:charAt(i) == ' ' then
+--                 if args[#args].length > 0 then
+--                     table.insert(args,IKit.New("String"));
+--                 end
+--             else
+--                 args[#args]:insert(command:charAt(i));
+--             end
+--         end
+--         if args[#args].length == 0 then
+--             table.remove(args,#args);
+--         end
+--         local name = args[1];
+--         table.remove(args,1);
+--         if pcall(self.methods[name:toString()],player,args) == false then
+--             print("在执行'" .. name:toString() .. "'命令时发生异常");
+--         end
+--     end
+--     IKit.Class(ServerCommand,"ServerCommand",{extends="Command"});
+-- end)();
 
 -- (function()
 --     local  ClientCommand = {};
@@ -653,43 +653,42 @@ end)();
 -- Font[' ']={}
 
 
--- (function()
---     local Base64 = {};
+Class("Base64",function(Base64)
+    function Base64:constructor(value,bit)
+        self.charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
+        self.charmap = {};
+        for i = 1,#self.charlist do
+            self.charmap[string.sub(self.charlist,i,i)] = i-1;
+        end
+    end
 
---     function Base64:constructor(value,bit)
---         self.charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
---         self.charmap = {};
---         for i = 1,#self.charlist do
---             self.charmap[string.sub(self.charlist,i,i)] = i-1;
---         end
---     end
+    function Base64:toString(number,bit)
+        local list = {};
+        for i = bit,1,-1 do
+            list[#list+i] = string.sub(self.charlist,number % 64 + 1,number % 64 + 1);
+            number = (number - number % 64) >> 6;
+        end
+        return table.concat(list);
+    end
 
---     function Base64:toString(number,bit)
---         local list = {}; 
---         for i = bit,1,-1 do
---             list[i] = string.sub(self.charlist,number % 64 + 1,number % 64 + 1);
---             number = (number - number % 64) >> 6;
---         end
---         return table.concat(list);
---     end
+    function Base64:toNumber(text)
+        local type = Type(text);
+        local number = 0;
+        if type == "string" then
+            for i = 1,#text do
+                number = (number << 6) + self.charmap[string.sub(text,i,i)];
+            end
+        elseif type == "String" then
+            for i = 1,text.length do
+                number = (number << 6) + self.charmap[text:charAt(i)];
+            end
+        end
+        return number;
+    end
+end);
 
---     function Base64:toNumber(text)
---         local type = IKit.TypeOf(text);
---         local number = 0;
---         if type == "string" then
---             for i = 1,#text do
---                 number = (number << 6) + self.charmap[string.sub(text,i,i)];
---             end
---         elseif type == "String" then
---             for i = 1,text.length do
---                 number = (number << 6) + self.charmap[text:charAt(i)];
---             end
---         end
---         return number;
---     end
+Base64 = Base64:New();
 
---     IKit.Class(Base64,"Base64");
--- end)();
 
 -- (function()
 --     local Font = {};
