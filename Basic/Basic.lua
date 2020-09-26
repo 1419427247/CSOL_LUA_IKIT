@@ -134,12 +134,12 @@ Class("String",function(String)
         error("数组下标越界");
     end
 
-    function String:substring(beginindex,endindex)
-        local text = IKit.New("String");
-        for i = beginindex, endindex, 1 do
-            text:insert(self.array[i]);
+    function String:subString(beginindex,length)
+        local builder = {};
+        for i = beginindex, beginindex + length - 1, 1 do
+            builder[#builder + 1] = self.array[i];
         end
-        return text;
+        return table.concat(builder);
     end
 
     function String:isEmpty()
@@ -690,20 +690,33 @@ end);
 Base64 = Base64:New();
 
 
--- (function()
---     local Font = {};
---     function Font:constructor()
---         self.map = {
---             [' '] = {},
---         };
---     end
+Class("Font",function(Font)
+    function Font:constructor()
+        self.map = {
+            [' '] = {},
+        };
+    end
 
---     function Font:getChar(c)
---         return self.map[c] or {};
---     end
+    function Font:getChar(c)
+        return self.map[c] or {};
+    end
 
---     IKit.Class(Font,"Font");
--- end)();
+    function Font:load(str)
+        local i = 1;
+        while i < #str do
+            local list = {};
+            while i < #str do
+                i = i + 1;
+                if str:charAt(i) == ' ' then
+                    i = i + 1;
+                    break;
+                end
+                list[#list+1] = Base64:toNumber(str:subString(i,1));
+            end
+            Font[str:charAt(i - #list - 2)] = list;
+        end
+    end
+end);
 
 -- (function()
 --     local Image = {};
