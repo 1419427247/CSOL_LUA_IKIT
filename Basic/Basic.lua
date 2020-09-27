@@ -296,9 +296,6 @@ Class("Event",function(Event)
     end
 
     function Event:addEventListener(event,listener)
-        if type(event) == "string" then
-            event = self[event];
-        end
         if type(listener) == "function" then
             event[#event + 1] = {id,listener};
             id = id + 1;
@@ -321,11 +318,7 @@ Class("Event",function(Event)
         error("未找到'" .. id .. "'在Event[" .. name .."]内");
     end
 
-    function Event:forEach(event,...)
-        if type(event) == "string" then
-            event = self[event];
-        end
-
+    function Event:run(event,...)
         for i = #event,1,-1 do
             event[i][2](...);
         end
@@ -906,176 +899,32 @@ end,Component);
 
 Event = Event:New();
 
-
 if Game~=nil then
-    Event = Event
-    + "OnPlayerConnect"
-    + "OnPlayerDisconnect"
-    + "OnRoundStart"
-    + "OnRoundStartFinished"
-    + "OnPlayerSpawn"
-    + "OnPlayerJoiningSpawn"
-    + "OnPlayerKilled"
-    + "OnKilled"
-    + "OnPlayerSignal"
-    + "OnUpdate"
-    + "OnPlayerAttack"
-    + "OnTakeDamage"
-    + "CanBuyWeapon"
-    + "CanHaveWeaponInHand"
-    + "OnGetWeapon"
-    + "OnReload"
-    + "OnReloadFinished"
-    + "OnSwitchWeapon"
-    + "PostFireWeapon"
-    + "OnGameSave"
-    + "OnLoadGameSave"
-    + "OnClearGameSave";
+    Event = Event + "OnPlayerConnect" + "OnPlayerDisconnect" + "OnRoundStart" + "OnRoundStartFinished" + "OnPlayerSpawn" + "OnPlayerJoiningSpawn" + "OnPlayerKilled" + "OnKilled" + "OnPlayerSignal" + "OnUpdate" + "OnPlayerAttack" + "OnTakeDamage" + "CanBuyWeapon" + "CanHaveWeaponInHand" + "OnGetWeapon" + "OnReload" + "OnReloadFinished" + "OnSwitchWeapon" + "PostFireWeapon" + "OnGameSave" + "OnLoadGameSave" + "OnClearGameSave";
 
-    function Game.Rule:OnPlayerConnect (player)
-        Event:forEach("OnPlayerConnect",player);
+    for key, value in pairs(Event) do
+        Game.Rule[key] = function(self,...)
+            Event:run(value,...);
+        end;
     end
 
-    function Game.Rule:OnPlayerDisconnect (player)
-        Event:forEach("OnPlayerDisconnect",player);
-    end
-
-    function Game.Rule:OnRoundStart ()
-        Event:forEach("OnRoundStart");
-    end
-
-    function Game.Rule:OnRoundStartFinished ()
-        Event:forEach("OnRoundStartFinished");
-    end
-
-    function Game.Rule:OnPlayerSpawn (player)
-        Event:forEach("OnPlayerSpawn",player);
-    end
-
-    function Game.Rule:OnPlayerJoiningSpawn (player)
-        Event:forEach("OnPlayerJoiningSpawn",player);
-    end
-
-    function Game.Rule:OnPlayerKilled (victim, killer, weapontype, hitbox)
-        Event:forEach("OnPlayerKilled",victim, killer, weapontype, hitbox);
-    end
-
-    function Game.Rule:OnKilled (victim, killer)
-        Event:forEach("OnKilled",victim,killer);
-    end
-
-    function Game.Rule:OnPlayerSignal (player,signal)
-        Event:forEach("OnPlayerSignal",player,signal);
-    end
-
-    function Game.Rule:OnUpdate (time)
-        Event:forEach("OnUpdate",time);
-    end
-
-    function Game.Rule:OnPlayerAttack (victim, attacker, damage, weapontype, hitbox)
-        Event:forEach("OnPlayerAttack",victim, attacker, damage, weapontype, hitbox);
-    end
-
-    function Game.Rule:OnTakeDamage (victim, attacker, damage, weapontype, hitbox)
-        Event:forEach("OnTakeDamage",victim, attacker, damage, weapontype, hitbox);
-    end
-
-    function Game.Rule:CanBuyWeapon (player, weaponid)
-        Event:forEach("CanBuyWeapon",player,weaponid);
-    end
-
-    function Game.Rule:CanHaveWeaponInHand (player, weaponid, weapon)
-        Event:forEach("CanHaveWeaponInHand",player, weaponid, weapon);
-    end
-
-    function Game.Rule:OnGetWeapon (player, weaponid, weapon)
-        Event:forEach("OnGetWeapon",player, weaponid, weapon);
-    end
-
-    function Game.Rule:OnReload (player, weapon, time)
-        Event:forEach("OnPlayerConnect",player, weapon, time);
-    end
-
-    function Game.Rule:OnReloadFinished (player, weapon)
-        Event:forEach("OnPlayerConnect",player, weapon);
-    end
-
-    function Game.Rule:OnSwitchWeapon (player)
-        Event:forEach("OnPlayerConnect",player);
-    end
-
-    function Game.Rule:PostFireWeapon (player, weapon, time)
-        Event:forEach("OnPlayerConnect",player, weapon, time);
-    end
-
-    function Game.Rule:OnGameSave (player)
-        Event:forEach("OnPlayerConnect",player);
-    end
-
-    function Game.Rule:OnLoadGameSave (player)
-        Event:forEach("OnPlayerConnect",player);
-    end
-
-    function Game.Rule:OnClearGameSave (player)
-        Event:forEach("OnPlayerConnect",player);
-    end
 end
 
 if UI~=nil then
-    Event = Event
-    + "OnRoundStart"
-    + "OnSpawn"
-    + "OnKilled"
-    + "OnInput"
-    + "OnUpdate"
-    + "OnChat"
-    + "OnSignal"
-    + "OnKeyDown"
-    + "OnKeyUp"
-
-    function UI.Event:OnRoundStart()
-        Event:forEach("OnRoundStart");
-    end
-
-    function UI.Event:OnSpawn()
-        Event:forEach("OnSpawn");
-    end
-
-    function UI.Event:OnKilled()
-        Event:forEach("OnKilled");
-    end
-
-    function UI.Event:OnInput (inputs)
-        Event:forEach("OnInput",inputs);
-    end
-
-    function UI.Event:OnUpdate(time)
-        Event:forEach("OnUpdate",time);
-    end
-
-    function UI.Event:OnChat (text)
-        Event:forEach("OnChat",text);
-    end
-
-    function UI.Event:OnSignal(signal)
-        Event:forEach("OnSignal",signal);
-    end
-
-    function UI.Event:OnKeyDown(inputs)
-        Event:forEach("OnKeyDown",inputs);
-    end
-
-    function UI.Event:OnKeyUp (inputs)
-        Event:forEach("OnKeyUp",inputs);
+    Event = Event + "OnRoundStart" + "OnSpawn" + "OnKilled" + "OnInput" + "OnUpdate" + "OnChat" + "OnSignal" + "OnKeyDown" + "OnKeyUp";
+    
+    for key, value in pairs(Event) do
+        UI.Event[key] = function(self,...)
+            Event:run(value,...);
+        end;
     end
 
     Base64 = Base64:New();
-
     Song = Font:New();
-
     Graphics = Graphics:New();
 end
 
+Timer = Timer:New();
 
 
 -- -- if Game ~= nil then
