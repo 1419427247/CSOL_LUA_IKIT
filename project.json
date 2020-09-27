@@ -1,11 +1,15 @@
 {
   "common":[
-    "COMMON.lua"
+    
    ],
   "game": [
     "Basic/Basic.lua"
   ],
   "ui": [
-
+    "Basic/Basic.lua",
+    "Basic/Song_1.lua",
+    "Basic/Song_2.lua",
+    "Basic/Song_3.lua",
+    "ui.lua"
   ]
 }

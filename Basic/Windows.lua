@@ -119,7 +119,6 @@ end)();
         self.onkeydown = function() end;
         self.onkeyup = function() end;
         self.onupdate = function() end;
-
     end
 
     function Component:onClick()
