@@ -588,8 +588,9 @@ Class("Font",function(Font)
         self.map = {
             [' '] = {},
         };
-        self.size = size or 3;
-        self.letterspacing = 50;
+        self.sizeMap = {};
+        self.size = size or 5;
+        self.letterspacing = 0;
     end
 
     function Font:getChar(c)
@@ -633,15 +634,43 @@ Class("Font",function(Font)
             s = i + 1;
         end
     end
+
+    function Font:getCharSize(c)
+        if self.sizeMap[c] == nil then
+            local charArray = self:getChar(c);
+            local width = 0;
+            local height = 0;
+            
+            for j = 1,#charArray,4 do
+                local _x = charArray[j];
+                local _y = charArray[j+1];
+                local _width = charArray[j+2];
+                local _height = charArray[j+3];
+                if _x + _width > width then
+                    width = _x + _width;
+                end
+                if _y + _height > height then
+                    height = _y + _height;
+                end
+            end
+            self.sizeMap[c] = {width,height};
+        end
+        return self.sizeMap[c][1] * self.size,self.sizeMap[c][2] * self.size;
+    end
+
 end);
 
 Class("Bitmap",function(Bitmap)
     function Bitmap:constructor(data)
-        local i = 1;
+        local i = 5;
         local s = i;
         self.data = {};
         self.size = 1;
         self.map = NULL;
+
+        self.width = Base64:toNumber(string.sub(data,1,2));
+        self.height = Base64:toNumber(string.sub(data,3,4));
+
         while i < #data do
             local c;
             local color = string.sub(data,s,s+3);
@@ -668,45 +697,84 @@ Class("Bitmap",function(Bitmap)
         end
         return self.map;
     end
-end);
 
+    function Bitmap:getSize()
+
+    end
+
+end);
 
 Class("Graphics",function(Graphics)
     function Graphics:constructor()
         self.color = {255,255,255,255};
     end
 
-    function Graphics:drawText(x,y,font,text)
+    function Graphics:drawRect(x,y,width,height,rect)
+        local box = UI.Box.Create();
+        if box == nil then
+            error("无法绘制矩形:已超过最大限制");
+        end
+        if rect~=nil then
+            if x > rect.x + rect.width then
+                return;
+            end
+            if y > rect.y + rect.height then
+                return;
+            end
+            if x + width < rect.x or y + height < rect.y then
+                return;
+            end
+            if x < rect.x then
+                 x = rect.x;
+            end
+            if y < rect.y then
+                 y = rect.y;
+            end
+            if x + width > rect.x + rect.width then
+                width = rect.x + rect.width - x;
+            end
+            if y + height > rect.y + rect.height then
+                height = rect.y + rect.height - y;
+            end
+            box:Set({x=x,y=y,width=width,height=height,r=self.color.red,g=self.color.green,b=self.color.blue,a=self.color.alpha * self.opacity});
+        else
+            box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+        end
+        box:Show();
+        return box;
+    end;
+
+    function Graphics:drawText(x,y,font,text,rect)
         local array = {};
+        local letterspacing = 0;
+        local maxHeight = 0;
         for i=1,text.length do
             local c = text:charAt(i)
             local charArray = font:getChar(c);
             if #charArray == 0 then
                 print("未找到字符:"..c);
             end
+            local charWidth = 0;
             for j = 1,#charArray,4 do
                 local _x = charArray[j];
                 local _y = charArray[j+1];
                 local _width = charArray[j+2];
                 local _height = charArray[j+3];
-                local box = UI.Box.Create();
-                if box == nil then
-                    print("无法绘制矩形:已超过最大限制");
-                    return array;
-                end
+                local box;
                 if i == 1 then
-                    box:Set({x=x + _x*font.size,y=y + _y*font.size,width=_width*font.size,height=_height*font.size,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+                    box = self:drawRect(x + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
                 else
-                    box:Set({x=x + (i-1) * font.letterspacing + _x*font.size,y=y + _y*font.size,width=_width*font.size,height=_height*font.size,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+                    box = self:drawRect(x + letterspacing + font.letterspacing + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
                 end
                 array[#array+1] = box;
-                box:Show();
             end
+            local charWidth = font:getCharSize(c);
+            letterspacing = letterspacing + charWidth + font.letterspacing;
         end
         return array;
     end
 
-    function Graphics:drawBitmap(x,y,bitmap)
+    function Graphics:drawBitmap(x,y,bitmap,rect)
         local array = {};
         local map = bitmap:getTable();
         for key, value in pairs(map) do
@@ -718,12 +786,7 @@ Class("Graphics",function(Graphics)
                 local _y = value[i+1];
                 local _width = value[i+2];
                 local _height = value[i+3];
-                local box = UI.Box.Create();
-                if box == nil then
-                    print("无法绘制矩形:已超过最大限制");
-                    return;
-                end
-                box:Set({x=x + _x*bitmap.size,y=y + _y*bitmap.size,width=_width*bitmap.size,height=_height*bitmap.size,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+                local box = self:drawRect(x + _x*bitmap.size,y + _y*bitmap.size,_width*bitmap.size,_height*bitmap.size,rect);
                 array[#array+1] = box;
                 box:Show();
             end
@@ -734,14 +797,14 @@ Class("Graphics",function(Graphics)
 end);
 
 Class("Component",function(Component)
-    function Component:constructor()
+    function Component:constructor(x,y,width,height)
         self.root = {};
 
         self.id = NULL;
-        self.x = 0;
-        self.y = 0;
-        self.width = 0;
-        self.height = 0;
+        self.x = x;
+        self.y = y;
+        self.width = width;
+        self.height = height;
         self.style = {
             left = 0,
             top = 0,
@@ -782,36 +845,33 @@ Class("Component",function(Component)
 end);
 
 Class("Lable",function(Lable)
-    function Lable:constructor(x,y,font,text)
-        self.super();
-        self.x = x;
-        self.y = y;
+    function Lable:constructor(x,y,width,height,font,text)
+        self.super(x,y,width,height);
         self.font = font;
         self.text = String:New(text);
         self:paint();
     end
 
     function Lable:paint()
-            self.root = Graphics:drawText(self.x,self.y,self.font,self.text);
+        self.super:paint();
+        self.root = Graphics:drawText(self.x,self.y,self.font,self.text);
     end
 
 end,Component);
 
 Class("PictureBox",function(PictureBox)
-    function PictureBox:constructor(x,y,bitmap)
-        self.super();
-        self.x = x;
-        self.y = y;
+    function PictureBox:constructor(x,y,width,height,bitmap)
+        self.super(x,y,width,height);
         self.bitmap = bitmap;
         self:paint();
     end
 
     function PictureBox:paint()
-            self.root = Graphics:drawBitmap(self.x,self.y,self.bitmap);
+        self.super:paint();
+        self.root = Graphics:drawBitmap(self.x,self.y,self.bitmap);
     end
 
 end,Component);
-
 
 
 -- (function()
