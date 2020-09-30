@@ -163,7 +163,6 @@ end);
 
 String = String:New();
 
-
 Class("Event",function(Event)
     local instance = NULL;
     local id = 0;
@@ -220,7 +219,7 @@ Class("Event",function(Event)
     end
 end);
 
--- Event = Event:New();
+Event = Event:New();
 
 if Game~=nil then
     Event = Event + "OnPlayerConnect" + "OnPlayerDisconnect" + "OnRoundStart" + "OnRoundStartFinished" + "OnPlayerSpawn" + "OnPlayerJoiningSpawn" + "OnPlayerKilled" + "OnKilled" + "OnPlayerSignal" + "OnUpdate" + "OnPlayerAttack" + "OnTakeDamage" + "CanBuyWeapon" + "CanHaveWeaponInHand" + "OnGetWeapon" + "OnReload" + "OnReloadFinished" + "OnSwitchWeapon" + "PostFireWeapon" + "OnGameSave" + "OnLoadGameSave" + "OnClearGameSave";
@@ -301,14 +300,9 @@ Class("Timer",function(Timer)
     end
 end);
 
--- Timer = Timer:New();
+Timer = Timer:New();
 
 
--- Event = Event:New();
-
--- Event = Event + "OnUpdate";
-
--- Timer = Timer:New();
 
 -- Class("Command",function(Command)
 
@@ -482,409 +476,478 @@ end);
 --     end
 -- end);
 
+Class("NetServer",function(NetServer)
+    function NetServer:constructor()
+        self.cursor = 1;
+        self.receivbBuffer = {};
+        self.sendbuffer = {};
+        self.syncValue = {};
+        self.players = {};
 
-function Net:constructor()
-    self.sendbuffer = {};
-    self.receivbBuffer = {};
-    self.syncValue = {};
-    self.id = 1;
+        Event:addEventListener(Event.OnUpdate,function()
+            for i = #self.sendbuffer,1,-1 do
+                while self.cursor <= #self.sendbuffer[i].bytes do
+                    self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].bytes[self.cursor]);
+                    self.cursor = self.cursor + 1;
+                end
+                self.sendbuffer[#self.sendbuffer] = nil;
+                self.cursor = 1;
+            end
+        end);
+
+        Event:addEventListener(Event.OnPlayerSignal,function(player,signal)
+            -- if signal == 4 then
+            --     self:execute(IKit.New("String",self.receivbBuffer));
+            --     self.receivbBuffer = {};
+            -- else
+            --     table.insert(self.receivbBuffer,signal);
+            -- end
+        end);
+        Event:addEventListener(Event.OnPlayerConnect,function(player)
+            self.players[player.name] = player;
+            self.syncValue[player.name] = Game.SyncValue:Create(player.name);
+            self:sendMessageBySignal(player.name,player);
+        end);
+        Event:addEventListener(Event.OnPlayerDisconnect,function(player)
+            self.syncValue[player.name] = nil;
+        end);
+    end
+    
+    function NetServer:sendMessage(message,player)
+        self.syncValue[player.name].value = message;
+    end
+
+    function NetServer:sendMessageBySignal(message,player)
+        local package = String:toBytes(message);
+        package[#package+1] = 0;
+        self.sendbuffer[#self.sendbuffer + 1] = {receiver = player,bytes = package};
+    end
+end);
+
+Class("NetClient",function(NetClient)
+    function NetClient:constructor()
+        self.cursor = 1;
+        self.sendbuffer = {};
+        self.receivbBuffer = {};
+        self.syncValue = NULL;
+        Event:addEventListener(Event.OnUpdate,function(time)
+            for i = #self.sendbuffer,1,-1 do
+                while self.cursor <= #self.sendbuffer[i].bytes do
+                    UI.Signal(self.sendbuffer[i].bytes[self.cursor]);
+                    self.cursor = self.cursor + 1;
+                end
+                self.sendbuffer[#self.sendbuffer] = nil;
+                self.cursor = 1;
+            end
+        end);
+        Event:addEventListener(Event.OnSignal,function(signal)
+            if signal == 0 then
+                print(String:toString(self.receivbBuffer))
+                self.syncValue = UI.SyncValue:Create(String:toString(self.receivbBuffer));
+                self.receivbBuffer = {};
+
+                self.syncValue.OnSync = function(self)
+                    print(self.value);
+                end
+                
+            else
+                self.receivbBuffer[#self.receivbBuffer+1] = signal;
+            end
+        end);
+    end
+    
+    function NetClient:sendMessage(message)
+        message = String:toBytes(message);
+        message[#message+1] = 0;
+        self.sendbuffer[#self.sendbuffer + 1] = message;
+    end
+
+
+end);
+
+
+if Game~=nil then
+    NetServer = NetServer:New();
     Event:addEventListener(Event.OnUpdate,function()
 
-    end);
-    Event:addEventListener(Event.OnSignal,function(signal)
-        
+        NetServer:sendMessage("AAAAAAASDASDA阿斯法防 asds",Game.Player:Create(1));
     end);
 end
 
-function Net:sendMessageBySyncValue(message,player)
-    message = String:New(message);
+if UI~=nil then
+    NetClient = NetClient:New();
+    -- function UI.Event:OnSignal(signal)
+    --     arr[#arr+1] = signal;
+    --     print(String:toString(arr));
+    -- end
+
+    -- function i:OnSync()
+    --     print(#self.value)
+    -- end
 end
 
-function Net:sendMessageBySignal(message,player)
+if UI ~= nil then
+    Class("Base64",function(Base64)
+        function Base64:constructor(value,bit)
+            self.charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
+            self.charmap = {};
+            for i = 1,#self.charlist do
+                self.charmap[string.sub(self.charlist,i,i)] = i-1;
+            end
+        end
     
-end
+        function Base64:toString(number,bit)
+            local list = {};
+            for i = bit,1,-1 do
+                list[i] = string.sub(self.charlist,number % 64 + 1,number % 64 + 1);
+                number = (number - number % 64) >> 6;
+            end
+            return table.concat(list);
+        end
+    
+        function Base64:toNumber(text)
+            local type = Type(text);
+            local number = 0;
+            if type == "string" then
+                for i = 1,#text do
+                    number = (number << 6) + self.charmap[string.sub(text,i,i)];
+                end
+            elseif type == "String" then
+                for i = 1,text.length do
+                    number = (number << 6) + self.charmap[text:charAt(i)];
+                end
+            end
+            return number;
+        end
+    end);
+    Base64 = Base64:New();
 
-function Net:connect(player)
-    self.syncValue[self.id] = Game.SyncValue:Create(self.id);
-end
-
-
--- if UI ~= nil then
---     Class("Base64",function(Base64)
---         function Base64:constructor(value,bit)
---             self.charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
---             self.charmap = {};
---             for i = 1,#self.charlist do
---                 self.charmap[string.sub(self.charlist,i,i)] = i-1;
---             end
---         end
+    Class("Font",function(Font)
+        function Font:constructor(size)
+            self.data = {};
+            self.map = {
+                [' '] = {},
+            };
+            self.sizeMap = {};
+            self.size = size or 5;
+            self.letterspacing = 0;
+        end
     
---         function Base64:toString(number,bit)
---             local list = {};
---             for i = bit,1,-1 do
---                 list[i] = string.sub(self.charlist,number % 64 + 1,number % 64 + 1);
---                 number = (number - number % 64) >> 6;
---             end
---             return table.concat(list);
---         end
+        function Font:getChar(c)
+            if self.map[c] == nil then
+                if self.data[c] == nil then
+                   return {};
+                else
+                    local array = {};
+                    for i = 1,#self.data[c] do
+                        array[#array+1] = Base64:toNumber(string.sub(self.data[c],i,i));
+                    end
+                    self.data[c] = nil;
+                    self.map[c] = array;
+                    return self.map[c];
+                end
+            end
+            return self.map[c];
+        end
     
---         function Base64:toNumber(text)
---             local type = Type(text);
---             local number = 0;
---             if type == "string" then
---                 for i = 1,#text do
---                     number = (number << 6) + self.charmap[string.sub(text,i,i)];
---                 end
---             elseif type == "String" then
---                 for i = 1,text.length do
---                     number = (number << 6) + self.charmap[text:charAt(i)];
---                 end
---             end
---             return number;
---         end
---     end);
---     Base64 = Base64:New();
-
---     Class("Font",function(Font)
---         function Font:constructor(size)
---             self.data = {};
---             self.map = {
---                 [' '] = {},
---             };
---             self.sizeMap = {};
---             self.size = size or 5;
---             self.letterspacing = 0;
---         end
+        local seperate = {0, 0xc0, 0xe0, 0xf0}
+        function Font:load(data)
+            local s = 1;
+            local i = 1;
     
---         function Font:getChar(c)
---             if self.map[c] == nil then
---                 if self.data[c] == nil then
---                    return {};
---                 else
---                     local array = {};
---                     for i = 1,#self.data[c] do
---                         array[#array+1] = Base64:toNumber(string.sub(self.data[c],i,i));
---                     end
---                     self.data[c] = nil;
---                     self.map[c] = array;
---                     return self.map[c];
---                 end
---             end
---             return self.map[c];
---         end
+            while i < #data do
+                local c;
+                local length = 1;
+                for j = #seperate, 1, -1 do
+                    if string.byte(data,s) >= seperate[j] then 
+                        length = j;
+                        break;
+                    end
+                end
+                c = string.sub(data,s,s+length-1);
+                i = i + length;
     
---         local seperate = {0, 0xc0, 0xe0, 0xf0}
---         function Font:load(data)
---             local s = 1;
---             local i = 1;
+                while string.sub(data,i,i) ~= ' ' do
+                    i = i + 1;
+                end
+                self.data[c] = string.sub(data,s+length,i-1);
+                s = i + 1;
+            end
+        end
     
---             while i < #data do
---                 local c;
---                 local length = 1;
---                 for j = #seperate, 1, -1 do
---                     if string.byte(data,s) >= seperate[j] then 
---                         length = j;
---                         break;
---                     end
---                 end
---                 c = string.sub(data,s,s+length-1);
---                 i = i + length;
-    
---                 while string.sub(data,i,i) ~= ' ' do
---                     i = i + 1;
---                 end
---                 self.data[c] = string.sub(data,s+length,i-1);
---                 s = i + 1;
---             end
---         end
-    
---         function Font:getCharSize(c)
---             if self.sizeMap[c] == nil then
---                 local charArray = self:getChar(c);
---                 local width = 0;
---                 local height = 0;
+        function Font:getCharSize(c)
+            if self.sizeMap[c] == nil then
+                local charArray = self:getChar(c);
+                local width = 0;
+                local height = 0;
                 
---                 for j = 1,#charArray,4 do
---                     local _x = charArray[j];
---                     local _y = charArray[j+1];
---                     local _width = charArray[j+2];
---                     local _height = charArray[j+3];
---                     if _x + _width > width then
---                         width = _x + _width;
---                     end
---                     if _y + _height > height then
---                         height = _y + _height;
---                     end
---                 end
---                 self.sizeMap[c] = {width,height};
---             end
---             return self.sizeMap[c][1] * self.size,self.sizeMap[c][2] * self.size;
---         end
---     end);
+                for j = 1,#charArray,4 do
+                    local _x = charArray[j];
+                    local _y = charArray[j+1];
+                    local _width = charArray[j+2];
+                    local _height = charArray[j+3];
+                    if _x + _width > width then
+                        width = _x + _width;
+                    end
+                    if _y + _height > height then
+                        height = _y + _height;
+                    end
+                end
+                self.sizeMap[c] = {width,height};
+            end
+            return self.sizeMap[c][1] * self.size,self.sizeMap[c][2] * self.size;
+        end
+    end);
 
---     Song = Font:New();
+    Song = Font:New();
 
---     Class("Bitmap",function(Bitmap)
---         function Bitmap:constructor(data)
---             local i = 5;
---             local s = i;
---             self.data = {};
---             self.size = 1;
---             self.map = NULL;
+    Class("Bitmap",function(Bitmap)
+        function Bitmap:constructor(data)
+            local i = 5;
+            local s = i;
+            self.data = {};
+            self.size = 1;
+            self.map = NULL;
     
---             self.width = Base64:toNumber(string.sub(data,1,2));
---             self.height = Base64:toNumber(string.sub(data,3,4));
+            self.width = Base64:toNumber(string.sub(data,1,2));
+            self.height = Base64:toNumber(string.sub(data,3,4));
     
---             while i < #data do
---                 local c;
---                 local color = string.sub(data,s,s+3);
---                 i = i + 4;
---                 while string.sub(data,i,i) ~= ' ' do
---                     i = i + 1;
---                 end
---                 self.data[color] = string.sub(data,s+4,i-1);
---                 s = i + 1;
---             end
---         end
+            while i < #data do
+                local c;
+                local color = string.sub(data,s,s+3);
+                i = i + 4;
+                while string.sub(data,i,i) ~= ' ' do
+                    i = i + 1;
+                end
+                self.data[color] = string.sub(data,s+4,i-1);
+                s = i + 1;
+            end
+        end
     
---         function Bitmap:getTable()
---             if self.map == NULL then
---                 self.map = {};
---                 for key, value in pairs(self.data) do
---                     local color = Base64:toNumber(key);
---                     local array = {};
---                     for i = 1,#value,2 do
---                         array[#array+1] = Base64:toNumber(string.sub(value,i,i+1));
---                     end
---                     self.map[color] = array;
---                 end
---                 self.data = NULL;
---             end
---             return self.map;
---         end
+        function Bitmap:getTable()
+            if self.map == NULL then
+                self.map = {};
+                for key, value in pairs(self.data) do
+                    local color = Base64:toNumber(key);
+                    local array = {};
+                    for i = 1,#value,2 do
+                        array[#array+1] = Base64:toNumber(string.sub(value,i,i+1));
+                    end
+                    self.map[color] = array;
+                end
+                self.data = NULL;
+            end
+            return self.map;
+        end
     
---         function Bitmap:getSize()
---             return self.width*self.size,self.height*self.size;
---         end
+        function Bitmap:getSize()
+            return self.width*self.size,self.height*self.size;
+        end
     
---     end);
+    end);
     
---     Class("Graphics",function(Graphics)
---         function Graphics:constructor()
---             self.color = {255,255,255,255};
---         end
+    Class("Graphics",function(Graphics)
+        function Graphics:constructor()
+            self.color = {255,255,255,255};
+        end
     
---         function Graphics:drawRect(x,y,width,height,rect)
---             local box;
---             if rect~=nil then
---                 if x > rect[1] + rect[3] then
---                     return;
---                 end
---                 if y > rect[2] + rect[4] then
---                     return;
---                 end
---                 if x + width < rect[1] or y + height < rect[2] then
---                     return;
---                 end
---                 if x < rect[1] then
---                      x = rect[1];
---                 end
---                 if y < rect[2] then
---                      y = rect[2];
---                 end
---                 if x + width > rect[1] + rect[3] then
---                     width = rect[1] + rect[3] - x;
---                 end
---                 if y + height > rect[2] + rect[4] then
---                     height = rect[2] + rect[4] - y;
---                 end
---                 box = UI.Box.Create();
---                 box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
---             else
---                 box = UI.Box.Create();
---                 if box == nil then
---                     print("无法绘制矩形:已超过最大限制");
---                     return;
---                 end
---                 box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
---             end
---             box:Show();
---             print(x,y,width,height);
---             return box;
---         end;
+        function Graphics:drawRect(x,y,width,height,rect)
+            local box;
+            if rect~=nil then
+                if x > rect[1] + rect[3] then
+                    return;
+                end
+                if y > rect[2] + rect[4] then
+                    return;
+                end
+                if x + width < rect[1] or y + height < rect[2] then
+                    return;
+                end
+                if x < rect[1] then
+                     x = rect[1];
+                end
+                if y < rect[2] then
+                     y = rect[2];
+                end
+                if x + width > rect[1] + rect[3] then
+                    width = rect[1] + rect[3] - x;
+                end
+                if y + height > rect[2] + rect[4] then
+                    height = rect[2] + rect[4] - y;
+                end
+                box = UI.Box.Create();
+                box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+            else
+                box = UI.Box.Create();
+                if box == nil then
+                    print("无法绘制矩形:已超过最大限制");
+                    return;
+                end
+                box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+            end
+            box:Show();
+            print(x,y,width,height);
+            return box;
+        end;
     
---         function Graphics:drawText(x,y,font,text,rect)
---             local array = {};
---             local letterspacing = 0;
---             local maxHeight = 0;
---             for i=1,text.length do
---                 local c = text:charAt(i)
---                 local charArray = font:getChar(c);
---                 if #charArray == 0 then
---                     print("未找到字符:"..c);
---                 end
---                 local charWidth = 0;
---                 for j = 1,#charArray,4 do
---                     local _x = charArray[j];
---                     local _y = charArray[j+1];
---                     local _width = charArray[j+2];
---                     local _height = charArray[j+3];
---                     local box;
---                     if i == 1 then
---                         box = self:drawRect(x + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
---                     else
---                         box = self:drawRect(x + letterspacing + font.letterspacing + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
---                     end
---                     if box ~= nil then
---                         array[#array+1] = box;
---                     end
---                 end
---                 local charWidth = font:getCharSize(c);
---                 letterspacing = letterspacing + charWidth + font.letterspacing;
---             end
---             return array;
---         end
+        function Graphics:drawText(x,y,font,text,rect)
+            local array = {};
+            local letterspacing = 0;
+            for i=1,#text do
+                local c = text[i]
+                local boxArray = font:getChar(c);
+                if #boxArray == 0 then
+                    print("未找到字符:"..c);
+                end
+                local charWidth = 0;
+                for j = 1,#boxArray,4 do
+                    local _x = boxArray[j];
+                    local _y = boxArray[j+1];
+                    local _width = boxArray[j+2];
+                    local _height = boxArray[j+3];
+                    local box;
+                    if i == 1 then
+                        box = self:drawRect(x + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
+                    else
+                        box = self:drawRect(x + letterspacing + font.letterspacing + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
+                    end
+                    if box ~= nil then
+                        array[#array+1] = box;
+                    end
+                end
+                local charWidth = font:getCharSize(c);
+                letterspacing = letterspacing + charWidth + font.letterspacing;
+            end
+            return array;
+        end
     
---         function Graphics:drawBitmap(x,y,bitmap,rect)
---             local array = {};
---             local map = bitmap:getTable();
---             for key, value in pairs(map) do
---                 self.color[1] = 0xFF & key;
---                 self.color[2] = (0xFF00 & key) >> 8;
---                 self.color[3] = (0xFF0000 & key) >> 16;
---                 for i = 1,#value,4 do
---                     local _x = value[i];
---                     local _y = value[i+1];
---                     local _width = value[i+2];
---                     local _height = value[i+3];
---                     local box = self:drawRect(x + _x*bitmap.size,y + _y*bitmap.size,_width*bitmap.size,_height*bitmap.size,rect);
---                     if box ~= nil then
---                         array[#array+1] = box;
---                     end
---                 end
---             end
---             return array;
---         end
+        function Graphics:drawBitmap(x,y,bitmap,rect)
+            local array = {};
+            local map = bitmap:getTable();
+            for key, value in pairs(map) do
+                self.color[1] = 0xFF & key;
+                self.color[2] = (0xFF00 & key) >> 8;
+                self.color[3] = (0xFF0000 & key) >> 16;
+                for i = 1,#value,4 do
+                    local _x = value[i];
+                    local _y = value[i+1];
+                    local _width = value[i+2];
+                    local _height = value[i+3];
+                    local box = self:drawRect(x + _x*bitmap.size,y + _y*bitmap.size,_width*bitmap.size,_height*bitmap.size,rect);
+                    if box ~= nil then
+                        array[#array+1] = box;
+                    end
+                end
+            end
+            return array;
+        end
     
---     end);
+    end);
     
---     Graphics = Graphics:New();
+    Graphics = Graphics:New();
 
---     Class("Component",function(Component)
---         function Component:constructor(x,y,width,height)
---             self.root = {};
+    Class("Component",function(Component)
+        function Component:constructor(x,y,width,height)
+            self.root = {};
     
---             self.id = NULL;
---             self.x = x;
---             self.y = y;
---             self.width = width;
---             self.height = height;
---             self.style = {
---                 left = 0,
---                 top = 0,
---                 width = 0,
---                 height = 0,
---                 opacity = 1,
---                 isvisible = false;
---                 position = "relative",
---                 backgroundcolor = {red = 255,green = 255,blue=255,alpha=255},
---                 border = {top = 1,left = 1,right = 1,bottom = 1},
---                 bordercolor = {red = 0,green = 0,blue=0,alpha=255},
---             };
---             self.onclick = NULL;
---             self.onfouce = NULL;
---             self.onblur = NULL;
---             self.onkeydown = NULL;
---             self.onkeyup = NULL;
---             self.onupdate = NULL;
---         end
+            self.id = NULL;
+            self.x = x;
+            self.y = y;
+            self.width = width;
+            self.height = height;
+            self.style = {
+                left = 0,
+                top = 0,
+                width = 0,
+                height = 0,
+                opacity = 1,
+                isvisible = false;
+                position = "relative",
+                backgroundcolor = {red = 255,green = 255,blue=255,alpha=255},
+                border = {top = 1,left = 1,right = 1,bottom = 1},
+                bordercolor = {red = 0,green = 0,blue=0,alpha=255},
+            };
+            self.onclick = NULL;
+            self.onfouce = NULL;
+            self.onblur = NULL;
+            self.onkeydown = NULL;
+            self.onkeyup = NULL;
+            self.onupdate = NULL;
+        end
     
---         function Component:paint()
+        function Component:paint()
             
---         end
+        end
     
---         function Component:show()
---             if not self.style.isvisible then
---                 self.style.isvisible = true;
---                 self:paint();
---             end
---         end
+        function Component:show()
+            if not self.style.isvisible then
+                self.style.isvisible = true;
+                self:paint();
+            end
+        end
     
---         function Component:hide()
---             self.style.isvisible = false;
---             self.root = {};
---             collectgarbage("collect");
---         end
+        function Component:hide()
+            self.style.isvisible = false;
+            self.root = {};
+            collectgarbage("collect");
+        end
     
---     end);
+    end);
     
---     Class("Container",function(Container)
---         function Container:constructor()
---             self.super();
---             self.children = {};
---             self.index = 0;
---         end
+    Class("Container",function(Container)
+        function Container:constructor()
+            self.super();
+            self.children = {};
+            self.index = 0;
+        end
     
---         function Container:add(...)
---             local components = {...};
---             for i = 1, #components, 1 do
---                 components[i].father = self;
---                 self.children[#self.children+1] = components[i];
---             end
---             if #self.children == 0 or #self.children == 1 then
---                 self.index = #self.children;
---             end
---             return self;
---         end
+        function Container:add(...)
+            local components = {...};
+            for i = 1, #components, 1 do
+                components[i].father = self;
+                self.children[#self.children+1] = components[i];
+            end
+            if #self.children == 0 or #self.children == 1 then
+                self.index = #self.children;
+            end
+            return self;
+        end
     
---         function Container:remove(index)
---             return table.remove(self.children,index);
---         end
---     end,Component);
+        function Container:remove(index)
+            return table.remove(self.children,index);
+        end
+    end,Component);
     
---     Class("Lable",function(Lable)
---         function Lable:constructor(x,y,width,height,font,text)
---             self.super(x,y,width,height);
---             self.font = font;
---             self.text = String:New(text);
---             self:paint();
---         end
+    Class("Lable",function(Lable)
+        function Lable:constructor(x,y,width,height,font,text)
+            self.super(x,y,width,height);
+            self.font = font;
+            self.charArray = String:toTable(text);
+            self:paint();
+        end
     
---         function Lable:paint()
---             self.super:paint();
---             self.root = Graphics:drawText(self.x,self.y,self.font,self.text,{self.x,self.y,self.width,self.height});
---         end
+        function Lable:paint()
+            self.super:paint();
+            self.root = Graphics:drawText(self.x,self.y,self.font,self.text,{self.x,self.y,self.width,self.height});
+        end
     
---     end,Component);
+    end,Component);
     
---     Class("PictureBox",function(PictureBox)
---         function PictureBox:constructor(x,y,width,height,bitmap)
---             self.super(x,y,width,height);
---             self.bitmap = bitmap;
---             self:paint();
---         end
+    Class("PictureBox",function(PictureBox)
+        function PictureBox:constructor(x,y,width,height,bitmap)
+            self.super(x,y,width,height);
+            self.bitmap = bitmap;
+            self:paint();
+        end
     
---         function PictureBox:paint()
---             self.super:paint();
---             self.root = Graphics:drawBitmap(self.x,self.y,self.bitmap,{self.x,self.y,self.width,self.height});
---         end
+        function PictureBox:paint()
+            self.super:paint();
+            self.root = Graphics:drawBitmap(self.x,self.y,self.bitmap,{self.x,self.y,self.width,self.height});
+        end
     
---     end,Component);
--- end
+    end,Component);
+end
 
-
-
--- (function()
---     local Image = {};
-
---     IKit.Class(Image,"Image");
--- end)();
-
--- (function()
---     local Box = {};
-
---     IKit.Class(Box,"Box");
--- end)();
 
 -- (function()
 --     local Text = {};
