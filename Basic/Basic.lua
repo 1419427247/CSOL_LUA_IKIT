@@ -1,4 +1,47 @@
 Class,InstanceOf,Type = (function()
+    String = {
+        charSize = function(char)
+            local seperate = {0, 0xc0, 0xe0, 0xf0}
+            for i = #seperate, 1, -1 do
+                if char >= seperate[i] then 
+                    return i;
+                end
+            end
+            return 1;
+        end,
+        toString = function(value)
+            local array = {};
+            local currentIndex = 1;
+            while currentIndex <= #value do
+                local cs = self:charSize(value[currentIndex]);
+                array[#array+1] = string.char(table.unpack(value,currentIndex,currentIndex + cs - 1));
+                currentIndex = currentIndex + cs;
+            end
+            return table.concat(array);
+        end,
+        toBytes = function(value)
+            local bytes = {};
+            if type(value) == "string" then
+                value = self:toTable(value);
+            end
+            for i = 1, #value do
+                for j = 1, #value[i], 1 do
+                    table.insert(bytes,string.byte(value[i],j));
+                end
+            end
+            return bytes;
+        end,
+        toTable = function(value)
+            local currentIndex = 1;
+            local array = {};
+            while currentIndex <= #value do
+                local cs = self:charSize(string.byte(value, currentIndex));
+                array[#array+1] = string.sub(value,currentIndex,currentIndex+cs-1);
+                currentIndex = currentIndex + cs;
+            end
+            return array;
+        end
+    };
     NULL = {};
     local CLASS = {};
     CLASS["Object"] = {
@@ -109,60 +152,6 @@ Class,InstanceOf,Type = (function()
     return CREATECLASS,INSTANCEOF,TYPE;
 end)();
 
-Class("String",function(String)
-
-    function String:constructor()
-        self.map = {};
-    end
-
-    function String:charSize(char)
-        local seperate = {0, 0xc0, 0xe0, 0xf0}
-        for i = #seperate, 1, -1 do
-            if char >= seperate[i] then 
-                return i;
-            end
-        end
-        return 1;
-    end
-
-    function String:toString(value)
-        local array = {};
-        local currentIndex = 1;
-        while currentIndex <= #value do
-            local cs = self:charSize(value[currentIndex]);
-            array[#array+1] = string.char(table.unpack(value,currentIndex,currentIndex + cs - 1));
-            currentIndex = currentIndex + cs;
-        end
-        return table.concat(array);
-    end
-
-    function String:toBytes(value)
-        local bytes = {};
-        if type(value) == "string" then
-            value = self:toTable(value);
-        end
-        for i = 1, #value do
-            for j = 1, #value[i], 1 do
-                table.insert(bytes,string.byte(value[i],j));
-            end
-        end
-        return bytes;
-    end
-
-    function String:toTable(value)
-        local currentIndex = 1;
-        local array = {};
-        while currentIndex <= #value do
-            local cs = self:charSize(string.byte(value, currentIndex));
-            array[#array+1] = string.sub(value,currentIndex,currentIndex+cs-1);
-            currentIndex = currentIndex + cs;
-        end
-        return array;
-    end
-end);
-
-String = String:New();
-
 Class("Event",function(Event)
     local instance = NULL;
     local id = 0;
@@ -218,29 +207,6 @@ Class("Event",function(Event)
         end
     end
 end);
-
-Event = Event:New();
-
-if Game~=nil then
-    Event = Event + "OnPlayerConnect" + "OnPlayerDisconnect" + "OnRoundStart" + "OnRoundStartFinished" + "OnPlayerSpawn" + "OnPlayerJoiningSpawn" + "OnPlayerKilled" + "OnKilled" + "OnPlayerSignal" + "OnUpdate" + "OnPlayerAttack" + "OnTakeDamage" + "CanBuyWeapon" + "CanHaveWeaponInHand" + "OnGetWeapon" + "OnReload" + "OnReloadFinished" + "OnSwitchWeapon" + "PostFireWeapon" + "OnGameSave" + "OnLoadGameSave" + "OnClearGameSave";
-
-    for key, value in pairs(Event) do
-        Game.Rule[key] = function(self,...)
-            Event:run(value,...);
-        end;
-    end
-
-end
-
-if UI~=nil then
-    Event = Event + "OnRoundStart" + "OnSpawn" + "OnKilled" + "OnInput" + "OnUpdate" + "OnChat" + "OnSignal" + "OnKeyDown" + "OnKeyUp";
-    
-    for key, value in pairs(Event) do
-        UI.Event[key] = function(self,...)
-            Event:run(value,...);
-        end;
-    end
-end
 
 Class("Timer",function(Timer)
     local instance = NULL;
@@ -300,169 +266,6 @@ Class("Timer",function(Timer)
     end
 end);
 
-Timer = Timer:New();
-
-
-
--- Class("Command",function(Command)
-
---     function Command:constructor()
---         self.sendbuffer = {};
---         self.receivbBuffer = {};
---         self.methods = {};
---     end
-
---     function Command:register(name,fun)
---         self.methods[name] = fun;
---     end
-
--- end);
-
--- (function()
---     local ServerCommand = {};
-
---     function ServerCommand:constructor()
---         self.super();
---         self.syncValue = Game.SyncValue:Create("SCValue");
---         Event:addEventListener("OnUpdate",self.OnUpdate);
---         Event:addEventListener("OnPlayerSignal",self.OnPlayerSignal);
---     end
-
---     function ServerCommand:OnUpdate()
---         local k = 0;
---         while #self.sendbuffer > 0 do
---             while #self.sendbuffer[1][2] > 0 do
---                 self.sendbuffer[1][1]:Signal(self.sendbuffer[1][2][1]);
---                 table.remove(self.sendbuffer[1][2],1);
---                 k = k + 1;
---                 if k == 1024 then
---                     return;
---                 end
---             end
---             if #self.sendbuffer[1][2] == 0 then
---                 table.remove(self.sendbuffer,1);
---             end
---         end
---     end
-
---     function ServerCommand:OnPlayerSignal(player,signal)
---         if signal == 4 then
---             local command = IKit.New("String",self.receivbBuffer[player.name]);
---             self:execute(player,command);
---             self.receivbBuffer[player.name] = {};
---         else
---             if self.receivbBuffer[player.name] == nil then
---                 self.receivbBuffer[player.name] = {};
---             end
---             table.insert(self.receivbBuffer[player.name],signal);
---         end
---     end
-
---     function ServerCommand:sendMessage(message,player)
---         if player ~= nil then
---             local bytes = IKit.New("String",message):toBytes();
---             bytes[#bytes+1] = 4;
---             table.insert(self.sendbuffer,{player,bytes});
---         else
---             syncValue.value = message;
---         end
---     end
-
---     function ServerCommand:execute(player,command)
---         local args = {IKit.New("String")};
---         for i = 1, command.length, 1 do
---             if command:charAt(i) == ' ' then
---                 if args[#args].length > 0 then
---                     table.insert(args,IKit.New("String"));
---                 end
---             else
---                 args[#args]:insert(command:charAt(i));
---             end
---         end
---         if args[#args].length == 0 then
---             table.remove(args,#args);
---         end
---         local name = args[1];
---         table.remove(args,1);
---         if pcall(self.methods[name:toString()],player,args) == false then
---             print("在执行'" .. name:toString() .. "'命令时发生异常");
---         end
---     end
---     IKit.Class(ServerCommand,"ServerCommand",{extends="Command"});
--- end)();
-
--- (function()
---     local  ClientCommand = {};
-
---     function ClientCommand:constructor()
---         self.super();
---         self.syncValue = UI.SyncValue:Create("SCValue");
---         self.syncValue.OnSync = self.OnSync;
---         Event:addEventListener("OnSignal",function(signal)
---             self:OnSignal(signal);
---         end);
-
---         Event:addEventListener("OnUpdate",function()
---             self:OnUpdate();
---         end);
---     end
-
---     function ClientCommand:OnSync()
---         local command = IKit.New("String",self.syncValue.message);
---         self:execute(command);
---     end
-
---     function ClientCommand:OnUpdate()
---         local i = 0;
---         while #self.sendbuffer > 0 do
---             UI.Signal(self.sendbuffer[1]);
---             table.remove(self.sendbuffer,1);
---             i = i + 1;
---             if i == 30 then
---                 return;
---             end
---         end
---     end
-
---     function ClientCommand:OnSignal(signal)
---         if signal == 4 then
---             self:execute(IKit.New("String",self.receivbBuffer));
---             self.receivbBuffer = {};
---         else
---             table.insert(self.receivbBuffer,signal);
---         end
---     end
-
---     function ClientCommand:sendMessage(message)
---         local bytes = IKit.New("String",message):toBytes();
---         bytes[#bytes+1] = 4;
---         table.insert(self.sendbuffer,bytes);
---     end
-
---     function ClientCommand:execute(command)
---         local args = {IKit.New("String")};
---         for i = 1, command.length, 1 do
---             if command:charAt(i) == ' ' then
---                 if args[#args].length > 0 then
---                     table.insert(args,IKit.New("String"));
---                 end
---             else
---                 args[#args]:insert(command:charAt(i));
---             end
---         end
---         if args[#args].length == 0 then
---             table.remove(args,#args);
---         end
---         local name = args[1];
---         table.remove(args,1);
---         if pcall(self.methods[name:toString()],args) == false then
---             print("在执行'" .. name:toString() .. "'命令时发生异常");
---         end
---     end
-
---     IKit.Class(ClientCommand,"ClientCommand",{extends="Command"});
--- end)();
-
 Class("Method",function(Method)
     local key = 1;
     function Method:constructor(func)
@@ -475,24 +278,6 @@ Class("Method",function(Method)
         self.func(...);
     end
 end);
-
-METHODTABLE = {
-    GAME = {
-
-    },
-    UI = {
-        GETNAME = Method:New(function(self,bytes)
-            self.name = String:toString(bytes);
-            self.syncValue = {};
-            print(self.name);
-        end),
-        CREATSYNCVALUE = Method:New(function(self,bytes)
-            local key = String:toString(bytes);
-            self.syncValue[key] = UI.SyncValue:Create(self.name .. key);
-            print("成功创建同步变量:"..String:toString(bytes));
-        end),
-    }
-};
 
 Class("NetServer",function(NetServer)
     function NetServer:constructor()
@@ -631,23 +416,136 @@ Class("NetClient",function(NetClient)
 end);
 
 
+Event = Event:New();
+
 if Game~=nil then
-    NetServer = NetServer:New();
-    local a123 = NetServer:createSyncValue(Game.Player:Create(1),"a123");
-    a123.value = 23;
+    Event = Event + "OnPlayerConnect" + "OnPlayerDisconnect" + "OnRoundStart" + "OnRoundStartFinished" + "OnPlayerSpawn" + "OnPlayerJoiningSpawn" + "OnPlayerKilled" + "OnKilled" + "OnPlayerSignal" + "OnUpdate" + "OnPlayerAttack" + "OnTakeDamage" + "CanBuyWeapon" + "CanHaveWeaponInHand" + "OnGetWeapon" + "OnReload" + "OnReloadFinished" + "OnSwitchWeapon" + "PostFireWeapon" + "OnGameSave" + "OnLoadGameSave" + "OnClearGameSave";
+
+    for key, value in pairs(Event) do
+        Game.Rule[key] = function(self,...)
+            Event:run(value,...);
+        end;
+    end
 
 end
 
 if UI~=nil then
-    NetClient = NetClient:New();
+    Event = Event + "OnRoundStart" + "OnSpawn" + "OnKilled" + "OnInput" + "OnUpdate" + "OnChat" + "OnSignal" + "OnKeyDown" + "OnKeyUp";
+    
+    for key, value in pairs(Event) do
+        UI.Event[key] = function(self,...)
+            Event:run(value,...);
+        end;
+    end
+end
 
-Event:addEventListener(Event.OnUpdate,function()
-    for key, value in pairs(NetClient.syncValue) do
-        print(value.value)
+Timer = Timer:New();
+
+METHODTABLE = {
+    GAME = {
+
+    },
+    UI = {
+        GETNAME = Method:New(function(self,bytes)
+            self.name = String:toString(bytes);
+            self.syncValue = {};
+            print(self.name);
+        end),
+        CREATSYNCVALUE = Method:New(function(self,bytes)
+            local key = String:toString(bytes);
+            self.syncValue[key] = UI.SyncValue:Create(self.name .. key);
+            print("成功创建同步变量:"..String:toString(bytes));
+        end),
+    }
+};
+
+
+
+Class("ZombieEscape",function(ZombieEscape)
+    function ZombieEscape:constructor()
+        self.recordPointsNumber = 0;
+        Event:addEventListener(Event.OnPlayerConnect,function(player)
+            player.user.ZombieEscape = {};
+        end);
+
+        Event:addEventListener(Event.OnPlayerSpawn,function(player)
+            if player.user.ZombieEscape.archivePoint ~= nil then
+                player.position = player.user.ZombieEscape.archivePoint;
+            end
+        end);
+
+        Event:addEventListener(Event.OnPlayerAttack,function(victim,attacker,damage,weapontype,hitbox)
+            if attacker == nil then
+                return;
+            end
+            if attacker:IsPlayer() and victim:IsPlayer() then
+                attacker = attacker:ToPlayer();
+                victim = attacker:ToPlayer();
+            else
+                return;
+            end
+            if attacker.team == Game.TEAM.T and victim.team == Game.Team.CT then
+                victim.team = Game.TEAM.T;
+                victim.model = Game.MODEL.NORMAL_ZOMBIE;
+            end
+        end);
+    end
+
+    function ZombieEscape:CreateRecordPoint(x,y,z,index)
+        if self.ecordPointsNumber < index then
+            self.recordPointsNumber = index;
+        end
+        Game.EntityBlock:Create({x = x,y = y,z = z}).OnTouch = function(self,player)
+            player.user.ZombieEscape.index = index;
+            player.user.ZombieEscape.archivePoint = {x=x,y=y,z=z};
+        end
+    end
+
+    function ZombieEscape:newRound()
+
     end
 end);
 
+
+if Game~=nil then
+    ZombieEscape = ZombieEscape:New();
+
+    function CreateRecordPoint(__,args)
+        local iterator = string.gmatch(args,"-*%d+");
+        local x,y,z,index = tonumber(iterator()),tonumber(iterator()),tonumber(iterator()),tonumber(iterator());
+        ZombieEscape:CreateRecordPoint(x,y,z,index);
+    end
+
+
+    Event:addEventListener(Event.OnPlayerAttack,function(victim,attacker,damage,weapontype,hitbox)
+        if attacker == nil then
+            return;
+        end
+        if victim:IsPlayer() then
+            victim = victim:ToPlayer();
+        end
+        victim.maxspeed = 0.0000000000000000001;
+        Timer:schedule(function()
+            victim.maxspeed = 1;
+        end,5);
+        print(victim.name);
+    end);
+    
+    -- NetServer = NetServer:New();
+    -- local a123 = NetServer:createSyncValue(Game.Player:Create(1),"a123");
+    -- a123.value = 23;
+
 end
+
+-- if UI~=nil then
+--     NetClient = NetClient:New();
+
+--     Event:addEventListener(Event.OnUpdate,function()
+--         for key, value in pairs(NetClient.syncValue) do
+--             print(value.value)
+--         end
+--     end);
+-- end
 
 if UI ~= nil then
     Class("Base64",function(Base64)
