@@ -462,18 +462,23 @@ METHODTABLE = {
 
 
 Class("ZombieEscape",function(ZombieEscape)
+    local Status = {
+        Ready = 0,
+        Run = 1,
+        End = 2,
+    };
     function ZombieEscape:constructor()
-        self.recordPointsNumber = 0;
+        self.maxIndex = 0;
+        self.maxIndexEntityBlocks = NULL;
+        self.status = Status.Ready;
         Event:addEventListener(Event.OnPlayerConnect,function(player)
             player.user.ZombieEscape = {};
         end);
-
         Event:addEventListener(Event.OnPlayerSpawn,function(player)
             if player.user.ZombieEscape.archivePoint ~= nil then
                 player.position = player.user.ZombieEscape.archivePoint;
             end
         end);
-
         Event:addEventListener(Event.OnPlayerAttack,function(victim,attacker,damage,weapontype,hitbox)
             if attacker == nil then
                 return;
@@ -492,16 +497,25 @@ Class("ZombieEscape",function(ZombieEscape)
     end
 
     function ZombieEscape:CreateRecordPoint(x,y,z,index)
-        if self.ecordPointsNumber < index then
-            self.recordPointsNumber = index;
+        local entityBlock = Game.EntityBlock:Create({x = x,y = y,z = z});
+        if self.maxIndex < index then
+            self.maxIndex = index;
+            self.maxIndexEntityBlocks = entityBlock;
         end
-        Game.EntityBlock:Create({x = x,y = y,z = z}).OnTouch = function(self,player)
+        entityBlock.OnTouch = function(self,player)
             player.user.ZombieEscape.index = index;
             player.user.ZombieEscape.archivePoint = {x=x,y=y,z=z};
+            print(player.user.ZombieEscape.index)
         end
+        -- self.recordEntityBlocks[#self.recordEntityBlocks+1] = entityBlock;
     end
 
-    function ZombieEscape:newRound()
+    function ZombieEscape:startNewGame()
+        self.maxIndexEntityBlocks.OnTouch = function(self,player)
+            player.user.ZombieEscape.index = index;
+            player.user.ZombieEscape.archivePoint = {x=x,y=y,z=z};
+            print("Game结束")
+        end
 
     end
 end);
@@ -516,21 +530,12 @@ if Game~=nil then
         ZombieEscape:CreateRecordPoint(x,y,z,index);
     end
 
+    function ZombieEscapeStart()
+        ZombieEscape:startNewGame();
+    end
 
-    Event:addEventListener(Event.OnPlayerAttack,function(victim,attacker,damage,weapontype,hitbox)
-        if attacker == nil then
-            return;
-        end
-        if victim:IsPlayer() then
-            victim = victim:ToPlayer();
-        end
-        victim.maxspeed = 0.0000000000000000001;
-        Timer:schedule(function()
-            victim.maxspeed = 1;
-        end,5);
-        print(victim.name);
-    end);
-    
+
+
     -- NetServer = NetServer:New();
     -- local a123 = NetServer:createSyncValue(Game.Player:Create(1),"a123");
     -- a123.value = 23;
