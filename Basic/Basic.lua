@@ -463,29 +463,55 @@ Timer = Timer:New();
 --     IKit.Class(ClientCommand,"ClientCommand",{extends="Command"});
 -- end)();
 
--- Class("Method",function(Method)
---     local key = 16;
---     INT = {};
---     BOOL = {};
---     STRING = {};
---     function Method:constructor(name,call,...)
---         key = key + 1;
---         self.key = key;
---         self.fields = {...};
---         self.call = call or NULL;
---     end
--- end);
+Class("Method",function(Method)
+    local key = 1;
+    function Method:constructor(func)
+        self.key = key;
+        self.func = func or function() end;
+        key = key + 1;
+    end
+
+    function Method:call(...)
+        self.func(...);
+    end
+end);
+
+METHODTABLE = {
+    GAME = {
+
+    },
+    UI = {
+        GETNAME = Method:New(function(self,bytes)
+            self.name = String:toString(bytes);
+            self.syncValue = {};
+            print(self.name);
+        end),
+        CREATSYNCVALUE = Method:New(function(self,bytes)
+            local key = String:toString(bytes);
+            self.syncValue[key] = UI.SyncValue:Create(self.name .. key);
+            print("成功创建同步变量:"..String:toString(bytes));
+        end),
+    }
+};
 
 Class("NetServer",function(NetServer)
     function NetServer:constructor()
         self.cursor = 1;
-        self.receivbBuffer = {};
+        self.receivbBuffer = {
+            key = 0,
+            length = -1,
+            bytes = {},
+        };
         self.sendbuffer = {};
         self.syncValue = {};
         self.players = {};
 
+        self.methods = {};
+
         Event:addEventListener(Event.OnUpdate,function()
             for i = #self.sendbuffer,1,-1 do
+                self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].key);
+                self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].length);
                 while self.cursor <= #self.sendbuffer[i].bytes do
                     self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].bytes[self.cursor]);
                     self.cursor = self.cursor + 1;
@@ -496,42 +522,77 @@ Class("NetServer",function(NetServer)
         end);
 
         Event:addEventListener(Event.OnPlayerSignal,function(player,signal)
-            -- if signal == 4 then
-            --     self:execute(IKit.New("String",self.receivbBuffer));
-            --     self.receivbBuffer = {};
-            -- else
-            --     table.insert(self.receivbBuffer,signal);
-            -- end
+            if self.receivbBuffer.key == 0 then
+                self.receivbBuffer.key = signal;
+            elseif self.receivbBuffer.length == -1 then
+                self.receivbBuffer.length = signal;
+            else
+                self.receivbBuffer.length = self.receivbBuffer.length - 1;
+                self.receivbBuffer.bytes[#self.receivbBuffer.bytes+1] = signal;
+                if self.receivbBuffer.length == 0 then
+                    self.methods[self.receivbBuffer.key]:call(self,player,self.receivbBuffer.bytes);
+                    self.receivbBuffer.key = 0;
+                    self.receivbBuffer.length = -1;
+                    self.receivbBuffer.bytes = {};
+                end
+            end
         end);
+
         Event:addEventListener(Event.OnPlayerConnect,function(player)
             self.players[player.name] = player;
-            self.syncValue[player.name] = Game.SyncValue:Create(player.name);
-            self:sendMessageBySignal(player.name,player);
+            self.syncValue[player.name] = {};
+            self:sendMessageBySignal(player,METHODTABLE.UI.GETNAME.key,String:toBytes(player.name));
         end);
+
         Event:addEventListener(Event.OnPlayerDisconnect,function(player)
             self.syncValue[player.name] = nil;
         end);
     end
     
-    function NetServer:sendMessage(message,player)
-        self.syncValue[player.name].value = message;
+    function NetServer:createSyncValue(player,key)
+        self:sendMessageBySignal(player,METHODTABLE.UI.CREATSYNCVALUE.key,String:toBytes(key));
+        self.syncValue[player.name] = self.syncValue[player.name] or {};
+        local syncValue = Game.SyncValue:Create(player.name .. key);
+        self.syncValue[player.name][player.name .. key] = syncValue;
+        return syncValue;
+
     end
 
-    function NetServer:sendMessageBySignal(message,player)
-        local package = String:toBytes(message);
-        package[#package+1] = 0;
-        self.sendbuffer[#self.sendbuffer + 1] = {receiver = player,bytes = package};
+    function NetServer:setSyncValue(player,key,value)
+        self.syncValue[player.name .. key].value = value;
+    end
+
+    function NetServer:sendMessageBySignal(player,key,bytes)
+        self.sendbuffer[#self.sendbuffer + 1] = {receiver = player,key = key,length = #bytes,bytes = bytes};
+    end
+
+    function NetServer:register(method)
+        self.methods[method.key] = method;
     end
 end);
 
 Class("NetClient",function(NetClient)
     function NetClient:constructor()
+        self.name = NULL;
         self.cursor = 1;
         self.sendbuffer = {};
-        self.receivbBuffer = {};
+        self.receivbBuffer = {
+            key = 0,
+            length = -1,
+            bytes = {},
+        };
+
         self.syncValue = NULL;
-        Event:addEventListener(Event.OnUpdate,function(time)
+        
+        self.methods = {
+            [METHODTABLE.UI.GETNAME.key] = METHODTABLE.UI.GETNAME,
+            [METHODTABLE.UI.CREATSYNCVALUE.key] = METHODTABLE.UI.CREATSYNCVALUE,
+        };
+
+        Event:addEventListener(Event.OnUpdate,function()
             for i = #self.sendbuffer,1,-1 do
+                UI.Signal(self.sendbuffer[i].key);
+                UI.Signal(self.sendbuffer[i].length);
                 while self.cursor <= #self.sendbuffer[i].bytes do
                     UI.Signal(self.sendbuffer[i].bytes[self.cursor]);
                     self.cursor = self.cursor + 1;
@@ -540,50 +601,52 @@ Class("NetClient",function(NetClient)
                 self.cursor = 1;
             end
         end);
-        Event:addEventListener(Event.OnSignal,function(signal)
-            if signal == 0 then
-                print(String:toString(self.receivbBuffer))
-                self.syncValue = UI.SyncValue:Create(String:toString(self.receivbBuffer));
-                self.receivbBuffer = {};
 
-                self.syncValue.OnSync = function(self)
-                    print(self.value);
-                end
-                
+        Event:addEventListener(Event.OnSignal,function(signal)
+            if self.receivbBuffer.key == 0 then
+                self.receivbBuffer.key = signal;
+            elseif self.receivbBuffer.length == -1 then
+                self.receivbBuffer.length = signal;
             else
-                self.receivbBuffer[#self.receivbBuffer+1] = signal;
+                self.receivbBuffer.length = self.receivbBuffer.length - 1;
+                self.receivbBuffer.bytes[#self.receivbBuffer.bytes+1] = signal;
+                if self.receivbBuffer.length == 0 then
+                    self.methods[self.receivbBuffer.key]:call(self,self.receivbBuffer.bytes);
+                    self.receivbBuffer.key = 0;
+                    self.receivbBuffer.length = -1;
+                    self.receivbBuffer.bytes = {};
+                end
             end
         end);
     end
     
-    function NetClient:sendMessage(message)
-        message = String:toBytes(message);
-        message[#message+1] = 0;
-        self.sendbuffer[#self.sendbuffer + 1] = message;
+    function NetClient:sendMessageBySignal(key,bytes)
+        self.sendbuffer[#self.sendbuffer + 1] = {key = key,length = #bytes,bytes = bytes};
     end
 
+    function NetServer:register(method)
+        self.methods[method.key] = method;
+    end
 
 end);
 
 
 if Game~=nil then
     NetServer = NetServer:New();
-    Event:addEventListener(Event.OnUpdate,function()
+    local a123 = NetServer:createSyncValue(Game.Player:Create(1),"a123");
+    a123.value = 23;
 
-        NetServer:sendMessage("AAAAAAASDASDA阿斯法防 asds",Game.Player:Create(1));
-    end);
 end
 
 if UI~=nil then
     NetClient = NetClient:New();
-    -- function UI.Event:OnSignal(signal)
-    --     arr[#arr+1] = signal;
-    --     print(String:toString(arr));
-    -- end
 
-    -- function i:OnSync()
-    --     print(#self.value)
-    -- end
+Event:addEventListener(Event.OnUpdate,function()
+    for key, value in pairs(NetClient.syncValue) do
+        print(value.value)
+    end
+end);
+
 end
 
 if UI ~= nil then
