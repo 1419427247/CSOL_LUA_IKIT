@@ -33,8 +33,8 @@ if Game~=nil then
                 else
                     return;
                 end
-                if attacker.team == Game.TEAM.T and victim.team == Game.Team.CT then
-                    victim.team = Game.TEAM.T;
+                if attacker.team == Game.TEAM.TR and victim.team == Game.Team.CT then
+                    victim.team = Game.TEAM.TR;
                     victim.model = Game.MODEL.NORMAL_ZOMBIE;
                 end
             end);
@@ -52,7 +52,7 @@ if Game~=nil then
                 end
                 self.allCTPositions.value = table.concat(ct," ");
                 self.allTRPositions.value = table.concat(tr," ");
-            end,0,50);
+            end,0,5);
         end
     
         function ZombieEscape:CreateRecordPoint(entityBlock)
@@ -69,7 +69,6 @@ if Game~=nil then
                 entityBlock.OnTouch = function(self,player)
                     player.user.ZombieEscape.index = index;
                     player.user.ZombieEscape.archivePoint = entityBlock.position;
-                    print(player.name.."到了" .. index);
                 end
             end
         end
@@ -113,7 +112,7 @@ if UI ~= nil then
 
     Class("Scoreboard",function(Scoreboard)
         function Scoreboard:constructor()
-            self.super(0,0,400,200);
+            self.super(0,0,400,140);
             self.style.backgroundcolor = {255,255,255,160};
             self.style.border = {1,1,1,1};
 
@@ -125,6 +124,7 @@ if UI ~= nil then
 
             Timer:schedule(function()
                 Timer:cancel(id);
+                self:clear();
             end,800);
         end
 
