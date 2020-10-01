@@ -113,19 +113,11 @@ if UI ~= nil then
     Class("Scoreboard",function(Scoreboard)
         function Scoreboard:constructor()
             self.super(0,0,400,140);
-            self.style.backgroundcolor = {255,255,255,160};
-            self.style.border = {1,1,1,1};
+            self.backgroundcolor = {255,255,255,160};
+            self.border = {1,1,1,1};
 
-
-            self:repaint();
-            local id = Timer:schedule(function()
-                self:repaint();
-            end,300,5);
-
-            Timer:schedule(function()
-                Timer:cancel(id);
-                self:clear();
-            end,800);
+            self:animate({"opacity",0},300);
+            self:animate({"width",0},800);
         end
 
         function Scoreboard:paint()
@@ -137,7 +129,6 @@ if UI ~= nil then
         end
 
         function Scoreboard:repaint()
-            self.width = self.width - 5;
             self:clear();
             self:paint();
         end
@@ -147,15 +138,16 @@ if UI ~= nil then
     Class("PoisitionBar",function(PoisitionBar)
         function PoisitionBar:constructor(positionPoints)
             self.super(Graphics.width*0.1,Graphics.height*0.2,Graphics.width * 0.8,Graphics.height*0.01);
-            self.style.border = {1,1,1,1};
-
+            self.border = {1,1,1,1};
+            self.opacity = 0;
             self.recordPoints = 20;
             self.ctPositionPoints = {};
             self.trPositionPoints = {};
+
+            self:animate({"opacity",1},600);
         end
 
         function PoisitionBar:paint()
-            self:clear();
             self.super:paint();
 
             local space = self.width / self.recordPoints;
@@ -180,9 +172,9 @@ if UI ~= nil then
         end
 
         function PoisitionBar:repaint(recordPoints,ctPositionPoints,trPositionPoints)
-            self.recordPoints = recordPoints;
-            self.ctPositionPoints = ctPositionPoints;
-            self.trPositionPoints = trPositionPoints;
+            self.recordPoints = recordPoints or self.recordPoints;
+            self.ctPositionPoints = ctPositionPoints or self.ctPositionPoints;
+            self.trPositionPoints = trPositionPoints or self.trPositionPoints;
             self:clear();
             self:paint();
         end
@@ -202,6 +194,9 @@ if UI ~= nil then
             self.allTRPositions = UI.SyncValue:Create("ZombieEscape_allTRPositions");
             
             self.poisitionBar = PoisitionBar:New();
+            -- self.poisitionBar:animate({"width",1},120,function() end)
+
+
             self.scoreboard = Scoreboard:New();
 
             
@@ -227,4 +222,6 @@ if UI ~= nil then
     NetClient = NetClient:New();
     ZombieEscape = ZombieEscape:New();
 end
+
+
 

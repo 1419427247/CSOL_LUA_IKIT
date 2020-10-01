@@ -222,7 +222,7 @@ Class("Timer",function(Timer)
                         print("计时器中ID为:[" .. task[i].id .. "]的函数发生了异常");
                         print(result);
                         table.remove(task,i);
-                    elseif task[i].period == nil then
+                    elseif task[i].period == nil or result == true then
                         table.remove(task,i);
                     else
                         task[i].value = count + task[i].period;
@@ -309,7 +309,6 @@ METHODTABLE = {
         GETNAME = Method:New(function(self,bytes)
             self.name = String:toString(bytes);
             self.syncValue = {};
-            print(self.name);
         end),
         CREATSYNCVALUE = Method:New(function(self,bytes)
             local key = String:toString(bytes);
@@ -651,14 +650,14 @@ if UI ~= nil then
                     height = rect[2] + rect[4] - y;
                 end
                 box = UI.Box.Create();
-                box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+                box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]*self.opacity});
             else
                 box = UI.Box.Create();
                 if box == nil then
                     print("无法绘制矩形:已超过最大限制");
                     return;
                 end
-                box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
+                box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]*self.opacity});
             end
             box:Show();
             component.root[#component.root+1] = box;
@@ -669,7 +668,6 @@ if UI ~= nil then
                 text = String.toTable(text);
             end
             local letterspacing = 0;
-            print(#text)
             for i=1,#text do
                 local c = text[i]
                 local boxArray = font:getChar(c);
@@ -716,76 +714,108 @@ if UI ~= nil then
     Class("Component",function(Component)
         function Component:constructor(x,y,width,height)
             self.root = {};
-    
-            self.id = NULL;
             self.x = x;
             self.y = y;
             self.width = width;
             self.height = height;
-            self.style = {
-                opacity = 1,
-                backgroundcolor = {255,255,255,255},
-                border = {0,0,0,0},
-                bordercolor = {0,0,0,255},
-            };
-            self.onclick = NULL;
-            self.onfouce = NULL;
-            self.onblur = NULL;
-            self.onkeydown = NULL;
-            self.onkeyup = NULL;
-            self.onupdate = NULL;
+            self.opacity = 1;
+            self.backgroundcolor = {255,255,255,255};
+            self.border = {0,0,0,0};
+            self.bordercolor = {0,0,0,255};
         end
     
         function Component:paint()
-            Graphics.color = self.style.backgroundcolor;
-            Graphics.opacity = self.style.opacity;
+            Graphics.color = self.backgroundcolor;
+            Graphics.opacity = self.opacity;
             Graphics:drawRect(self,self.x,self.y,self.width,self.height);
     
-            Graphics.color = self.style.bordercolor;
-            if self.style.border[1] > 0 then
-                Graphics:drawRect(self,self.x,self.y,self.width,self.style.border[1]);
+            Graphics.color = self.bordercolor;
+            if self.border[1] > 0 then
+                Graphics:drawRect(self,self.x,self.y,self.width,self.border[1]);
             end
-            if self.style.border[2] > 0 then
-                Graphics:drawRect(self,self.x + self.width - self.style.border[2],self.y,self.style.border[2],self.height);
+            if self.border[2] > 0 then
+                Graphics:drawRect(self,self.x + self.width - self.border[2],self.y,self.border[2],self.height);
             end
-            if self.style.border[3] > 0 then
-                Graphics:drawRect(self,self.x,self.y + self.height - self.style.border[3],self.width,self.style.border[3]);
+            if self.border[3] > 0 then
+                Graphics:drawRect(self,self.x,self.y + self.height - self.border[3],self.width,self.border[3]);
             end
-            if self.style.border[4] > 0 then
-                Graphics:drawRect(self,self.x,self.y,self.style.border[4],self.height);
+            if self.border[4] > 0 then
+                Graphics:drawRect(self,self.x,self.y,self.border[4],self.height);
             end
         end
 
+        function Component:repaint()
+            self:clear();
+            self:paint();
+        end
+
         function Component:clear()
-            self.style.isvisible = false;
             self.root = {};
             collectgarbage("collect");
         end
     
+        function Component:animate(params,step,callback)
+            local style = {};
+            for i = 1, #params, 2 do
+                style[#style+1] = {
+                    params[i],
+                    (params[i+1] - self[params[i]]) / step,
+                    params[i+1],
+                };
+            end
+
+            Timer:schedule(function()
+                if step == 0 then
+                    for i = 1, #style, 1 do
+                        self[style[i][1]] = style[i][3];
+                    end
+                    if callback ~= nil then
+                        callback(self);
+                    end
+                    return true;
+                end
+                for i = 1, #style, 1 do
+                    self[style[i][1]] = self[style[i][1]] + style[i][2];
+                end
+                step = step - 1;
+                self:repaint();
+                return false;
+            end,0,1);
+        end
+
     end);
     
-    Class("Container",function(Container)
-        function Container:constructor()
+
+    {name = "xxx" ,call = function() end ,children = {
+        {name = "aaa"},
+        {name = "aaa"},
+        {name = "aaa"},
+    }}
+
+    Class("ItemMenu",function(ItemMenu)
+        function ItemMenu:constructor(itemTree)
             self.super();
-            self.children = {};
-            self.index = 0;
+            self.root = itemTree;
+        
+            Event:addEventListener(Event.OnKeyDown,function(input)
+                if input[UI.KEY.O] == true then
+                    self:repaint();
+                end
+            end);
         end
-    
-        function Container:add(...)
-            local components = {...};
-            for i = 1, #components, 1 do
-                components[i].father = self;
-                self.children[#self.children+1] = components[i];
-            end
-            if #self.children == 0 or #self.children == 1 then
-                self.index = #self.children;
-            end
-            return self;
+
+        function ItemMenu:show()
+
         end
-    
-        function Container:remove(index)
-            return table.remove(self.children,index);
+
+        function ItemMenu:hide()
+
         end
+
+        function ItemMenu:paint()
+            self.super:paint();
+        end
+
     end,Component);
     
     Class("Lable",function(Lable)
@@ -823,11 +853,6 @@ end
 ----------------------------------------------------
 ----------------------------------------------------
 ----------------------------------------------------
-
-
-
-
-
 
 
 -- (function()
