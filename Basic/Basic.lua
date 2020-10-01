@@ -35,7 +35,7 @@ Class,InstanceOf,Type = (function()
             local currentIndex = 1;
             local array = {};
             while currentIndex <= #value do
-                local cs = self:charSize(string.byte(value, currentIndex));
+                local cs = String.charSize(string.byte(value, currentIndex));
                 array[#array+1] = string.sub(value,currentIndex,currentIndex+cs-1);
                 currentIndex = currentIndex + cs;
             end
@@ -215,7 +215,7 @@ Class("Timer",function(Timer)
     local count = 0;
     function Timer:constructor()
         Event:addEventListener(Event.OnUpdate,function()
-            for i = 1,#task do
+            for i = #task,1,-1 do
                 if task[i].value <= count then
                     local success,result = pcall(task[i].call)
                     if not success then
@@ -621,11 +621,12 @@ if UI ~= nil then
     Class("Graphics",function(Graphics)
         function Graphics:constructor()
             self.color = {255,255,255,255};
+            self.opacity = 1;
             self.width = UI.ScreenSize().width; 
             self.height = UI.ScreenSize().height;
         end
     
-        function Graphics:drawRect(x,y,width,height,rect)
+        function Graphics:drawRect(component,x,y,width,height,rect)
             local box;
             if rect~=nil then
                 if x > rect[1] + rect[3] then
@@ -660,20 +661,21 @@ if UI ~= nil then
                 box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
             end
             box:Show();
-            print(x,y,width,height);
-            return box;
+            component.root[#component.root+1] = box;
         end;
     
-        function Graphics:drawText(x,y,font,text,rect)
-            local array = {};
+        function Graphics:drawText(component,x,y,font,text,rect)
+            if type(text) == "string" then
+                text = String.toTable(text);
+            end
             local letterspacing = 0;
+            print(#text)
             for i=1,#text do
                 local c = text[i]
                 local boxArray = font:getChar(c);
                 if #boxArray == 0 then
                     print("未找到字符:"..c);
                 end
-                local charWidth = 0;
                 for j = 1,#boxArray,4 do
                     local _x = boxArray[j];
                     local _y = boxArray[j+1];
@@ -681,22 +683,17 @@ if UI ~= nil then
                     local _height = boxArray[j+3];
                     local box;
                     if i == 1 then
-                        box = self:drawRect(x + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
+                        self:drawRect(component,x + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
                     else
-                        box = self:drawRect(x + letterspacing + font.letterspacing + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
-                    end
-                    if box ~= nil then
-                        array[#array+1] = box;
+                        self:drawRect(component,x + letterspacing + font.letterspacing + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
                     end
                 end
                 local charWidth = font:getCharSize(c);
                 letterspacing = letterspacing + charWidth + font.letterspacing;
             end
-            return array;
         end
     
-        function Graphics:drawBitmap(x,y,bitmap,rect)
-            local array = {};
+        function Graphics:drawBitmap(component,x,y,bitmap,rect)
             local map = bitmap:getTable();
             for key, value in pairs(map) do
                 self.color[1] = 0xFF & key;
@@ -707,13 +704,9 @@ if UI ~= nil then
                     local _y = value[i+1];
                     local _width = value[i+2];
                     local _height = value[i+3];
-                    local box = self:drawRect(x + _x*bitmap.size,y + _y*bitmap.size,_width*bitmap.size,_height*bitmap.size,rect);
-                    if box ~= nil then
-                        array[#array+1] = box;
-                    end
+                    self:drawRect(component,x + _x*bitmap.size,y + _y*bitmap.size,_width*bitmap.size,_height*bitmap.size,rect);
                 end
             end
-            return array;
         end
     
     end);
@@ -730,16 +723,10 @@ if UI ~= nil then
             self.width = width;
             self.height = height;
             self.style = {
-                left = 0,
-                top = 0,
-                width = 0,
-                height = 0,
                 opacity = 1,
-                isvisible = false;
-                position = "relative",
-                backgroundcolor = {red = 255,green = 255,blue=255,alpha=255},
-                border = {top = 1,left = 1,right = 1,bottom = 1},
-                bordercolor = {red = 0,green = 0,blue=0,alpha=255},
+                backgroundcolor = {255,255,255,255},
+                border = {0,0,0,0},
+                bordercolor = {0,0,0,255},
             };
             self.onclick = NULL;
             self.onfouce = NULL;
@@ -750,17 +737,26 @@ if UI ~= nil then
         end
     
         function Component:paint()
-            
-        end
+            Graphics.color = self.style.backgroundcolor;
+            Graphics.opacity = self.style.opacity;
+            Graphics:drawRect(self,self.x,self.y,self.width,self.height);
     
-        function Component:show()
-            if not self.style.isvisible then
-                self.style.isvisible = true;
-                self:paint();
+            Graphics.color = self.style.bordercolor;
+            if self.style.border[1] > 0 then
+                Graphics:drawRect(self,self.x,self.y,self.width,self.style.border[1]);
+            end
+            if self.style.border[2] > 0 then
+                Graphics:drawRect(self,self.x + self.width - self.style.border[2],self.y,self.style.border[2],self.height);
+            end
+            if self.style.border[3] > 0 then
+                Graphics:drawRect(self,self.x,self.y + self.height - self.style.border[3],self.width,self.style.border[3]);
+            end
+            if self.style.border[4] > 0 then
+                Graphics:drawRect(self,self.x,self.y,self.style.border[4],self.height);
             end
         end
-    
-        function Component:hide()
+
+        function Component:clear()
             self.style.isvisible = false;
             self.root = {};
             collectgarbage("collect");
@@ -827,155 +823,6 @@ end
 ----------------------------------------------------
 ----------------------------------------------------
 ----------------------------------------------------
-
-if Game~=nil then
-    Class("ZombieEscape",function(ZombieEscape)
-        local Status = {
-            Ready = 0,
-            Run = 1,
-            End = 2,
-        };
-        function ZombieEscape:constructor(recordPointNumber)
-            self.index = 0;
-            self.recordPointNumber = recordPointNumber;
-            self.destinationEntityBlocks = NULL;
-            self.status = Status.Ready;
-
-            self.recordPoints = Game.SyncValue:Create("ZombieEscape_recordPoints");
-            self.allCTPositions = Game.SyncValue:Create("ZombieEscape_allCTPositions");
-            self.allTPositions = Game.SyncValue:Create("ZombieEscape_allTPositions");
-
-            self.recordPoints.value = recordPointNumber;
-            
-            Event:addEventListener(Event.OnPlayerConnect,function(player)
-                player.user.ZombieEscape = {};
-                player.team = Game.TEAM.CT;
-            end);
-            Event:addEventListener(Event.OnPlayerSpawn,function(player)
-                player.position = player.user.ZombieEscape.archivePoint or player.position;
-            end);
-            Event:addEventListener(Event.OnPlayerAttack,function(victim,attacker,damage,weapontype,hitbox)
-                if attacker == nil then
-                    return;
-                end
-                if attacker:IsPlayer() and victim:IsPlayer() then
-                    attacker = attacker:ToPlayer();
-                    victim = attacker:ToPlayer();
-                else
-                    return;
-                end
-                if attacker.team == Game.TEAM.T and victim.team == Game.Team.CT then
-                    victim.team = Game.TEAM.T;
-                    victim.model = Game.MODEL.NORMAL_ZOMBIE;
-                end
-            end);
-
-            Timer:schedule(function()
-                local ct = {};
-                local t = {};
-
-                for __,player in pairs(NetServer.players) do
-                    if player.team == Game.TEAM.CT then
-                        ct[#ct+1] = player.user.ZombieEscape.index or 0;
-                    else
-                        t[#t+1] = player.user.ZombieEscape.index or 0;
-                    end
-                end
-                self.allCTPositions.value = table.concat(ct," ");
-                self.allTPositions.value = table.concat(t," ");
-            end,0,10);
-        end
-    
-        function ZombieEscape:CreateRecordPoint(entityBlock)
-            self.index = self.index + 1;
-            local index = self.index;
-            if self.index == self.recordPointNumber then
-                self.destinationEntityBlocks = entityBlock;
-                self.destinationEntityBlocks.OnTouch = function(self,player)
-                    player.user.ZombieEscape.index = index;
-                    player.user.ZombieEscape.archivePoint = entityBlock.position;
-                    Game.SetTrigger("GameOver",true);
-                end
-            else
-                entityBlock.OnTouch = function(self,player)
-                    player.user.ZombieEscape.index = index;
-                    player.user.ZombieEscape.archivePoint = entityBlock.position;
-                    print(player.name.."到了" .. index);
-                end
-            end
-        end
-    
-
-
-
-        function ZombieEscape:startNewGame()
-    
-        end
-    end);
-
-
-    NetServer = NetServer:New();
-
-    ZombieEscape = ZombieEscape:New(3);
-
-    function CreateRecordPoint(__,args)
-        if args == nil then
-            local entity =  Game.GetScriptCaller();
-
-            local entityBlock;
-            for i = -1,1 do
-                if i ~= 0 then 
-                    entityBlock = entityBlock or Game.EntityBlock:Create({x = entity.position.x + i,y = entity.position.y,z = entity.position.z});
-                    entityBlock = entityBlock or Game.EntityBlock:Create({x = entity.position.x,y = entity.position.y + i,z = entity.position.z});
-                    entityBlock = entityBlock or Game.EntityBlock:Create({x = entity.position.x,y = entity.position.y,z = entity.position.z + i});
-                end
-            end
-            ZombieEscape:CreateRecordPoint(entityBlock);
-        else
-            local iterator = string.gmatch(args,"-*%d+");
-            local x,y,z = tonumber(iterator()),tonumber(iterator()),tonumber(iterator());
-            local entityBlock = Game.EntityBlock:Create({x = x,y = y,z = z})
-            ZombieEscape:CreateRecordPoint(entityBlock);
-        end
-    end
-end
-
-if UI ~= nil then
-    Class("ZombieEscape",function(ZombieEscape)
-        local Status = {
-            Ready = 0,
-            Run = 1,
-            End = 2,
-        };
-        function ZombieEscape:constructor(maxIndex)
-            self.recordPoints = UI.SyncValue:Create("ZombieEscape_recordPoints");
-            self.allCTPositions = UI.SyncValue:Create("ZombieEscape_allCTPositions");
-            self.allTPositions = UI.SyncValue:Create("ZombieEscape_allTPositions");
-            
-            Timer:schedule(function()
-                print(self.allCTPositions.value or "")
-
-                local iterator = string.gmatch(self.allCTPositions.value or "0","%d+");
-                for value in iterator do
-                    print(value);
-                end
-
-                iterator = string.gmatch(self.allTPositions.value or "0","%d+");
-                for value in iterator do
-                    print(value);
-                end
-                
-            end,0,1);
-        end
-    end);
-
-    NetClient = NetClient:New();
-    ZombieEscape = ZombieEscape:New();
-
-
-end
-
-
 
 
 
