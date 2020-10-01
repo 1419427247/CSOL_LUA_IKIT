@@ -467,8 +467,9 @@ Class("ZombieEscape",function(ZombieEscape)
         Run = 1,
         End = 2,
     };
-    function ZombieEscape:constructor()
-        self.maxIndex = 0;
+    function ZombieEscape:constructor(maxIndex)
+        self.index = 0;
+        self.maxIndex = maxIndex;
         self.maxIndexEntityBlocks = NULL;
         self.status = Status.Ready;
         Event:addEventListener(Event.OnPlayerConnect,function(player)
@@ -496,43 +497,52 @@ Class("ZombieEscape",function(ZombieEscape)
         end);
     end
 
-    function ZombieEscape:CreateRecordPoint(x,y,z,index)
-        local entityBlock = Game.EntityBlock:Create({x = x,y = y,z = z});
-        if self.maxIndex < index then
-            self.maxIndex = index;
-            self.maxIndexEntityBlocks = entityBlock;
-        end
-        entityBlock.OnTouch = function(self,player)
+    function ZombieEscape:CreateRecordPoint(player,index)
+        if index == self.maxIndex then
             player.user.ZombieEscape.index = index;
-            player.user.ZombieEscape.archivePoint = {x=x,y=y,z=z};
-            print(player.user.ZombieEscape.index)
+            player.user.ZombieEscape.archivePoint = player.position;
+            Game.SetTrigger("GameOver",true);
+            print("Over")
+        else
+
+                player.user.ZombieEscape.index = index;
+                player.user.ZombieEscape.archivePoint = player.position;
+                print(player.name.."到了" .. index);
         end
         -- self.recordEntityBlocks[#self.recordEntityBlocks+1] = entityBlock;
     end
 
     function ZombieEscape:startNewGame()
-        self.maxIndexEntityBlocks.OnTouch = function(self,player)
-            player.user.ZombieEscape.index = index;
-            player.user.ZombieEscape.archivePoint = {x=x,y=y,z=z};
-            print("Game结束")
-        end
 
     end
 end);
 
 
 if Game~=nil then
-    ZombieEscape = ZombieEscape:New();
+    ZombieEscape = ZombieEscape:New(3);
 
-    function CreateRecordPoint(__,args)
-        local iterator = string.gmatch(args,"-*%d+");
-        local x,y,z,index = tonumber(iterator()),tonumber(iterator()),tonumber(iterator()),tonumber(iterator());
-        ZombieEscape:CreateRecordPoint(x,y,z,index);
+    function CreateRecordPoint(signal,index)
+        local player = Game.GetTriggerEntity();
+        if signal == false or player == nil then
+            return;
+        end
+        if player:IsPlayer() then
+            player = player:ToPlayer();
+        end
+        ZombieEscape:CreateRecordPoint(player,tonumber(index));
+        -- if args == nil then
+        --     local entity =  Game.GetTriggerEntity();
+
+        -- else
+        --     local iterator = string.gmatch(args,"-*%d+");
+        --     local x,y,z = tonumber(iterator()),tonumber(iterator()),tonumber(iterator());
+        --     ZombieEscape:CreateRecordPoint(x,y,z);
+        -- end
     end
 
-    function ZombieEscapeStart()
-        ZombieEscape:startNewGame();
-    end
+    -- function ZombieEscapeStart()
+    --     ZombieEscape:startNewGame();
+    -- end
 
 
 
