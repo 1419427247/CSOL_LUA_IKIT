@@ -219,9 +219,9 @@ Class("Timer",function(Timer)
                 if task[i].value <= count then
                     local success,result = pcall(task[i].call)
                     if not success then
-                        table.remove(task,i);
-                        print("计时器中ID为:[" .. key .. "]的函数发生了异常");
+                        print("计时器中ID为:[" .. task[i].id .. "]的函数发生了异常");
                         print(result);
+                        table.remove(task,i);
                     elseif task[i].period == nil then
                         table.remove(task,i);
                     else
@@ -279,145 +279,7 @@ Class("Method",function(Method)
     end
 end);
 
-Class("NetServer",function(NetServer)
-    function NetServer:constructor()
-        self.cursor = 1;
-        self.receivbBuffer = {
-            key = 0,
-            length = -1,
-            bytes = {},
-        };
-        self.sendbuffer = {};
-        self.syncValue = {};
-        self.players = {};
-
-        self.methods = {};
-
-        Event:addEventListener(Event.OnUpdate,function()
-            for i = #self.sendbuffer,1,-1 do
-                self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].key);
-                self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].length);
-                while self.cursor <= #self.sendbuffer[i].bytes do
-                    self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].bytes[self.cursor]);
-                    self.cursor = self.cursor + 1;
-                end
-                self.sendbuffer[#self.sendbuffer] = nil;
-                self.cursor = 1;
-            end
-        end);
-
-        Event:addEventListener(Event.OnPlayerSignal,function(player,signal)
-            if self.receivbBuffer.key == 0 then
-                self.receivbBuffer.key = signal;
-            elseif self.receivbBuffer.length == -1 then
-                self.receivbBuffer.length = signal;
-            else
-                self.receivbBuffer.length = self.receivbBuffer.length - 1;
-                self.receivbBuffer.bytes[#self.receivbBuffer.bytes+1] = signal;
-                if self.receivbBuffer.length == 0 then
-                    self.methods[self.receivbBuffer.key]:call(self,player,self.receivbBuffer.bytes);
-                    self.receivbBuffer.key = 0;
-                    self.receivbBuffer.length = -1;
-                    self.receivbBuffer.bytes = {};
-                end
-            end
-        end);
-
-        Event:addEventListener(Event.OnPlayerConnect,function(player)
-            self.players[player.name] = player;
-            self.syncValue[player.name] = {};
-            self:sendMessageBySignal(player,METHODTABLE.UI.GETNAME.key,String:toBytes(player.name));
-        end);
-
-        Event:addEventListener(Event.OnPlayerDisconnect,function(player)
-            self.syncValue[player.name] = nil;
-        end);
-    end
-    
-    function NetServer:createSyncValue(player,key)
-        self:sendMessageBySignal(player,METHODTABLE.UI.CREATSYNCVALUE.key,String:toBytes(key));
-        self.syncValue[player.name] = self.syncValue[player.name] or {};
-        local syncValue = Game.SyncValue:Create(player.name .. key);
-        self.syncValue[player.name][player.name .. key] = syncValue;
-        return syncValue;
-
-    end
-
-    function NetServer:setSyncValue(player,key,value)
-        self.syncValue[player.name .. key].value = value;
-    end
-
-    function NetServer:sendMessageBySignal(player,key,bytes)
-        self.sendbuffer[#self.sendbuffer + 1] = {receiver = player,key = key,length = #bytes,bytes = bytes};
-    end
-
-    function NetServer:register(method)
-        self.methods[method.key] = method;
-    end
-end);
-
-Class("NetClient",function(NetClient)
-    function NetClient:constructor()
-        self.name = NULL;
-        self.cursor = 1;
-        self.sendbuffer = {};
-        self.receivbBuffer = {
-            key = 0,
-            length = -1,
-            bytes = {},
-        };
-
-        self.syncValue = NULL;
-        
-        self.methods = {
-            [METHODTABLE.UI.GETNAME.key] = METHODTABLE.UI.GETNAME,
-            [METHODTABLE.UI.CREATSYNCVALUE.key] = METHODTABLE.UI.CREATSYNCVALUE,
-        };
-
-        Event:addEventListener(Event.OnUpdate,function()
-            for i = #self.sendbuffer,1,-1 do
-                UI.Signal(self.sendbuffer[i].key);
-                UI.Signal(self.sendbuffer[i].length);
-                while self.cursor <= #self.sendbuffer[i].bytes do
-                    UI.Signal(self.sendbuffer[i].bytes[self.cursor]);
-                    self.cursor = self.cursor + 1;
-                end
-                self.sendbuffer[#self.sendbuffer] = nil;
-                self.cursor = 1;
-            end
-        end);
-
-        Event:addEventListener(Event.OnSignal,function(signal)
-            if self.receivbBuffer.key == 0 then
-                self.receivbBuffer.key = signal;
-            elseif self.receivbBuffer.length == -1 then
-                self.receivbBuffer.length = signal;
-            else
-                self.receivbBuffer.length = self.receivbBuffer.length - 1;
-                self.receivbBuffer.bytes[#self.receivbBuffer.bytes+1] = signal;
-                if self.receivbBuffer.length == 0 then
-                    self.methods[self.receivbBuffer.key]:call(self,self.receivbBuffer.bytes);
-                    self.receivbBuffer.key = 0;
-                    self.receivbBuffer.length = -1;
-                    self.receivbBuffer.bytes = {};
-                end
-            end
-        end);
-    end
-    
-    function NetClient:sendMessageBySignal(key,bytes)
-        self.sendbuffer[#self.sendbuffer + 1] = {key = key,length = #bytes,bytes = bytes};
-    end
-
-    function NetServer:register(method)
-        self.methods[method.key] = method;
-    end
-
-end);
-
-
 Event = Event:New();
-
 if Game~=nil then
     Event = Event + "OnPlayerConnect" + "OnPlayerDisconnect" + "OnRoundStart" + "OnRoundStartFinished" + "OnPlayerSpawn" + "OnPlayerJoiningSpawn" + "OnPlayerKilled" + "OnKilled" + "OnPlayerSignal" + "OnUpdate" + "OnPlayerAttack" + "OnTakeDamage" + "CanBuyWeapon" + "CanHaveWeaponInHand" + "OnGetWeapon" + "OnReload" + "OnReloadFinished" + "OnSwitchWeapon" + "PostFireWeapon" + "OnGameSave" + "OnLoadGameSave" + "OnClearGameSave";
 
@@ -428,7 +290,6 @@ if Game~=nil then
     end
 
 end
-
 if UI~=nil then
     Event = Event + "OnRoundStart" + "OnSpawn" + "OnKilled" + "OnInput" + "OnUpdate" + "OnChat" + "OnSignal" + "OnKeyDown" + "OnKeyUp";
     
@@ -440,7 +301,6 @@ if UI~=nil then
 end
 
 Timer = Timer:New();
-
 METHODTABLE = {
     GAME = {
 
@@ -459,110 +319,146 @@ METHODTABLE = {
     }
 };
 
+if Game ~= nil then
+    Class("NetServer",function(NetServer)
+        function NetServer:constructor()
+            self.cursor = 1;
+            self.receivbBuffer = {
+                key = 0,
+                length = -1,
+                bytes = {},
+            };
+            self.sendbuffer = {};
+            self.syncValue = {};
 
-
-Class("ZombieEscape",function(ZombieEscape)
-    local Status = {
-        Ready = 0,
-        Run = 1,
-        End = 2,
-    };
-    function ZombieEscape:constructor(maxIndex)
-        self.index = 0;
-        self.maxIndex = maxIndex;
-        self.maxIndexEntityBlocks = NULL;
-        self.status = Status.Ready;
-        Event:addEventListener(Event.OnPlayerConnect,function(player)
-            player.user.ZombieEscape = {};
-        end);
-        Event:addEventListener(Event.OnPlayerSpawn,function(player)
-            if player.user.ZombieEscape.archivePoint ~= nil then
-                player.position = player.user.ZombieEscape.archivePoint;
-            end
-        end);
-        Event:addEventListener(Event.OnPlayerAttack,function(victim,attacker,damage,weapontype,hitbox)
-            if attacker == nil then
-                return;
-            end
-            if attacker:IsPlayer() and victim:IsPlayer() then
-                attacker = attacker:ToPlayer();
-                victim = attacker:ToPlayer();
-            else
-                return;
-            end
-            if attacker.team == Game.TEAM.T and victim.team == Game.Team.CT then
-                victim.team = Game.TEAM.T;
-                victim.model = Game.MODEL.NORMAL_ZOMBIE;
-            end
-        end);
-    end
-
-    function ZombieEscape:CreateRecordPoint(player,index)
-        if index == self.maxIndex then
-            player.user.ZombieEscape.index = index;
-            player.user.ZombieEscape.archivePoint = player.position;
-            Game.SetTrigger("GameOver",true);
-            print("Over")
-        else
-
-                player.user.ZombieEscape.index = index;
-                player.user.ZombieEscape.archivePoint = player.position;
-                print(player.name.."到了" .. index);
+            self.players = {};
+    
+            self.methods = {};
+    
+            Event:addEventListener(Event.OnUpdate,function()
+                for i = #self.sendbuffer,1,-1 do
+                    self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].key);
+                    self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].length);
+                    while self.cursor <= #self.sendbuffer[i].bytes do
+                        self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].bytes[self.cursor]);
+                        self.cursor = self.cursor + 1;
+                    end
+                    self.sendbuffer[#self.sendbuffer] = nil;
+                    self.cursor = 1;
+                end
+            end);
+    
+            Event:addEventListener(Event.OnPlayerSignal,function(player,signal)
+                if self.receivbBuffer.key == 0 then
+                    self.receivbBuffer.key = signal;
+                elseif self.receivbBuffer.length == -1 then
+                    self.receivbBuffer.length = signal;
+                else
+                    self.receivbBuffer.length = self.receivbBuffer.length - 1;
+                    self.receivbBuffer.bytes[#self.receivbBuffer.bytes+1] = signal;
+                    if self.receivbBuffer.length == 0 then
+                        self.methods[self.receivbBuffer.key]:call(self,player,self.receivbBuffer.bytes);
+                        self.receivbBuffer.key = 0;
+                        self.receivbBuffer.length = -1;
+                        self.receivbBuffer.bytes = {};
+                    end
+                end
+            end);
+    
+            Event:addEventListener(Event.OnPlayerConnect,function(player)
+                self.players[player.name] = player;
+                self.syncValue[player.name] = {};
+                self:sendMessageBySignal(player,METHODTABLE.UI.GETNAME.key,String:toBytes(player.name));
+            end);
+    
+            Event:addEventListener(Event.OnPlayerDisconnect,function(player)
+                self.syncValue[player.name] = nil;
+            end);
         end
-        -- self.recordEntityBlocks[#self.recordEntityBlocks+1] = entityBlock;
-    end
-
-    function ZombieEscape:startNewGame()
-
-    end
-end);
-
-
-if Game~=nil then
-    ZombieEscape = ZombieEscape:New(3);
-
-    function CreateRecordPoint(signal,index)
-        local player = Game.GetTriggerEntity();
-        if signal == false or player == nil then
-            return;
+        
+        function NetServer:createSyncValue(player,key,value)
+            self:sendMessageBySignal(player,METHODTABLE.UI.CREATSYNCVALUE.key,String:toBytes(key));
+            self.syncValue[player.name] = self.syncValue[player.name] or {};
+            local syncValue = Game.SyncValue:Create(player.name .. key);
+            syncValue.value = value;
+            self.syncValue[player.name][player.name .. key] = syncValue;
+            return syncValue;
         end
-        if player:IsPlayer() then
-            player = player:ToPlayer();
+
+        function NetServer:setSyncValue(player,key,value)
+            self.syncValue[player.name .. key].value = value;
         end
-        ZombieEscape:CreateRecordPoint(player,tonumber(index));
-        -- if args == nil then
-        --     local entity =  Game.GetTriggerEntity();
-
-        -- else
-        --     local iterator = string.gmatch(args,"-*%d+");
-        --     local x,y,z = tonumber(iterator()),tonumber(iterator()),tonumber(iterator());
-        --     ZombieEscape:CreateRecordPoint(x,y,z);
-        -- end
-    end
-
-    -- function ZombieEscapeStart()
-    --     ZombieEscape:startNewGame();
-    -- end
-
-
-
-    -- NetServer = NetServer:New();
-    -- local a123 = NetServer:createSyncValue(Game.Player:Create(1),"a123");
-    -- a123.value = 23;
-
+    
+        function NetServer:sendMessageBySignal(player,key,bytes)
+            self.sendbuffer[#self.sendbuffer + 1] = {receiver = player,key = key,length = #bytes,bytes = bytes};
+        end
+    
+        function NetServer:register(method)
+            self.methods[method.key] = method;
+        end
+    end);
 end
 
--- if UI~=nil then
---     NetClient = NetClient:New();
-
---     Event:addEventListener(Event.OnUpdate,function()
---         for key, value in pairs(NetClient.syncValue) do
---             print(value.value)
---         end
---     end);
--- end
-
 if UI ~= nil then
+    Class("NetClient",function(NetClient)
+        function NetClient:constructor()
+            self.name = NULL;
+            self.cursor = 1;
+            self.sendbuffer = {};
+            self.receivbBuffer = {
+                key = 0,
+                length = -1,
+                bytes = {},
+            };
+    
+            self.syncValue = NULL;
+
+            self.methods = {
+                [METHODTABLE.UI.GETNAME.key] = METHODTABLE.UI.GETNAME,
+                [METHODTABLE.UI.CREATSYNCVALUE.key] = METHODTABLE.UI.CREATSYNCVALUE,
+            };
+    
+            Event:addEventListener(Event.OnUpdate,function()
+                for i = #self.sendbuffer,1,-1 do
+                    UI.Signal(self.sendbuffer[i].key);
+                    UI.Signal(self.sendbuffer[i].length);
+                    while self.cursor <= #self.sendbuffer[i].bytes do
+                        UI.Signal(self.sendbuffer[i].bytes[self.cursor]);
+                        self.cursor = self.cursor + 1;
+                    end
+                    self.sendbuffer[#self.sendbuffer] = nil;
+                    self.cursor = 1;
+                end
+            end);
+    
+            Event:addEventListener(Event.OnSignal,function(signal)
+                if self.receivbBuffer.key == 0 then
+                    self.receivbBuffer.key = signal;
+                elseif self.receivbBuffer.length == -1 then
+                    self.receivbBuffer.length = signal;
+                else
+                    self.receivbBuffer.length = self.receivbBuffer.length - 1;
+                    self.receivbBuffer.bytes[#self.receivbBuffer.bytes+1] = signal;
+                    if self.receivbBuffer.length == 0 then
+                        self.methods[self.receivbBuffer.key]:call(self,self.receivbBuffer.bytes);
+                        self.receivbBuffer.key = 0;
+                        self.receivbBuffer.length = -1;
+                        self.receivbBuffer.bytes = {};
+                    end
+                end
+            end);
+        end
+        
+        function NetClient:sendMessageBySignal(key,bytes)
+            self.sendbuffer[#self.sendbuffer + 1] = {key = key,length = #bytes,bytes = bytes};
+        end
+    
+        function NetClient:register(method)
+            self.methods[method.key] = method;
+        end
+    
+    end);
+
     Class("Base64",function(Base64)
         function Base64:constructor(value,bit)
             self.charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
@@ -725,6 +621,8 @@ if UI ~= nil then
     Class("Graphics",function(Graphics)
         function Graphics:constructor()
             self.color = {255,255,255,255};
+            self.width = UI.ScreenSize().width; 
+            self.height = UI.ScreenSize().height;
         end
     
         function Graphics:drawRect(x,y,width,height,rect)
@@ -923,6 +821,166 @@ if UI ~= nil then
     
     end,Component);
 end
+
+
+----------------------------------------------------
+----------------------------------------------------
+----------------------------------------------------
+----------------------------------------------------
+
+if Game~=nil then
+    Class("ZombieEscape",function(ZombieEscape)
+        local Status = {
+            Ready = 0,
+            Run = 1,
+            End = 2,
+        };
+        function ZombieEscape:constructor(recordPointNumber)
+            self.index = 0;
+            self.recordPointNumber = recordPointNumber;
+            self.destinationEntityBlocks = NULL;
+            self.status = Status.Ready;
+
+            self.recordPoints = Game.SyncValue:Create("ZombieEscape_recordPoints");
+            self.allCTPositions = Game.SyncValue:Create("ZombieEscape_allCTPositions");
+            self.allTPositions = Game.SyncValue:Create("ZombieEscape_allTPositions");
+
+            self.recordPoints.value = recordPointNumber;
+            
+            Event:addEventListener(Event.OnPlayerConnect,function(player)
+                player.user.ZombieEscape = {};
+                player.team = Game.TEAM.CT;
+            end);
+            Event:addEventListener(Event.OnPlayerSpawn,function(player)
+                player.position = player.user.ZombieEscape.archivePoint or player.position;
+            end);
+            Event:addEventListener(Event.OnPlayerAttack,function(victim,attacker,damage,weapontype,hitbox)
+                if attacker == nil then
+                    return;
+                end
+                if attacker:IsPlayer() and victim:IsPlayer() then
+                    attacker = attacker:ToPlayer();
+                    victim = attacker:ToPlayer();
+                else
+                    return;
+                end
+                if attacker.team == Game.TEAM.T and victim.team == Game.Team.CT then
+                    victim.team = Game.TEAM.T;
+                    victim.model = Game.MODEL.NORMAL_ZOMBIE;
+                end
+            end);
+
+            Timer:schedule(function()
+                local ct = {};
+                local t = {};
+
+                for __,player in pairs(NetServer.players) do
+                    if player.team == Game.TEAM.CT then
+                        ct[#ct+1] = player.user.ZombieEscape.index or 0;
+                    else
+                        t[#t+1] = player.user.ZombieEscape.index or 0;
+                    end
+                end
+                self.allCTPositions.value = table.concat(ct," ");
+                self.allTPositions.value = table.concat(t," ");
+            end,0,10);
+        end
+    
+        function ZombieEscape:CreateRecordPoint(entityBlock)
+            self.index = self.index + 1;
+            local index = self.index;
+            if self.index == self.recordPointNumber then
+                self.destinationEntityBlocks = entityBlock;
+                self.destinationEntityBlocks.OnTouch = function(self,player)
+                    player.user.ZombieEscape.index = index;
+                    player.user.ZombieEscape.archivePoint = entityBlock.position;
+                    Game.SetTrigger("GameOver",true);
+                end
+            else
+                entityBlock.OnTouch = function(self,player)
+                    player.user.ZombieEscape.index = index;
+                    player.user.ZombieEscape.archivePoint = entityBlock.position;
+                    print(player.name.."到了" .. index);
+                end
+            end
+        end
+    
+
+
+
+        function ZombieEscape:startNewGame()
+    
+        end
+    end);
+
+
+    NetServer = NetServer:New();
+
+    ZombieEscape = ZombieEscape:New(3);
+
+    function CreateRecordPoint(__,args)
+        if args == nil then
+            local entity =  Game.GetScriptCaller();
+
+            local entityBlock;
+            for i = -1,1 do
+                if i ~= 0 then 
+                    entityBlock = entityBlock or Game.EntityBlock:Create({x = entity.position.x + i,y = entity.position.y,z = entity.position.z});
+                    entityBlock = entityBlock or Game.EntityBlock:Create({x = entity.position.x,y = entity.position.y + i,z = entity.position.z});
+                    entityBlock = entityBlock or Game.EntityBlock:Create({x = entity.position.x,y = entity.position.y,z = entity.position.z + i});
+                end
+            end
+            ZombieEscape:CreateRecordPoint(entityBlock);
+        else
+            local iterator = string.gmatch(args,"-*%d+");
+            local x,y,z = tonumber(iterator()),tonumber(iterator()),tonumber(iterator());
+            local entityBlock = Game.EntityBlock:Create({x = x,y = y,z = z})
+            ZombieEscape:CreateRecordPoint(entityBlock);
+        end
+    end
+end
+
+if UI ~= nil then
+    Class("ZombieEscape",function(ZombieEscape)
+        local Status = {
+            Ready = 0,
+            Run = 1,
+            End = 2,
+        };
+        function ZombieEscape:constructor(maxIndex)
+            self.recordPoints = UI.SyncValue:Create("ZombieEscape_recordPoints");
+            self.allCTPositions = UI.SyncValue:Create("ZombieEscape_allCTPositions");
+            self.allTPositions = UI.SyncValue:Create("ZombieEscape_allTPositions");
+            
+            Timer:schedule(function()
+                print(self.allCTPositions.value or "")
+
+                local iterator = string.gmatch(self.allCTPositions.value or "0","%d+");
+                for value in iterator do
+                    print(value);
+                end
+
+                iterator = string.gmatch(self.allTPositions.value or "0","%d+");
+                for value in iterator do
+                    print(value);
+                end
+                
+            end,0,1);
+        end
+    end);
+
+    NetClient = NetClient:New();
+    ZombieEscape = ZombieEscape:New();
+
+
+end
+
+
+
+
+
+
+
 
 
 -- (function()
