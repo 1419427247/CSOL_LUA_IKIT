@@ -123,9 +123,9 @@ if UI ~= nil then
         function Scoreboard:paint()
             self.super:paint();
             Song.size = 3;
-            Graphics:drawText(self,self.x,self.y,Song,"总回合:"..45,{0,0,self.width,self.height});
-            Graphics:drawText(self,self.x,self.y + 40,Song,"僵尸胜利:"..123,{0,0,self.width,self.height});
-            Graphics:drawText(self,self.x,self.y + 80,Song,"人类胜利:"..44,{0,0,self.width,self.height});
+            Graphics:drawText(self,self.x,self.y,self.fontsize,self.letterspacing,Song,"总回合:"..45,{0,0,self.width,self.height});
+            Graphics:drawText(self,self.x,self.y + 40,self.fontsize,self.letterspacing,Song,"僵尸胜利:"..123,{0,0,self.width,self.height});
+            Graphics:drawText(self,self.x,self.y + 80,self.fontsize,self.letterspacing,Song,"人类胜利:"..44,{0,0,self.width,self.height});
         end
 
         function Scoreboard:repaint()

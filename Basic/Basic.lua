@@ -13,7 +13,7 @@ Class,InstanceOf,Type = (function()
             local array = {};
             local currentIndex = 1;
             while currentIndex <= #value do
-                local cs = self:charSize(value[currentIndex]);
+                local cs = String.charSize(value[currentIndex]);
                 array[#array+1] = string.char(table.unpack(value,currentIndex,currentIndex + cs - 1));
                 currentIndex = currentIndex + cs;
             end
@@ -22,7 +22,7 @@ Class,InstanceOf,Type = (function()
         toBytes = function(value)
             local bytes = {};
             if type(value) == "string" then
-                value = self:toTable(value);
+                value = String.toTable(value);
             end
             for i = 1, #value do
                 for j = 1, #value[i], 1 do
@@ -307,13 +307,13 @@ METHODTABLE = {
     },
     UI = {
         GETNAME = Method:New(function(self,bytes)
-            self.name = String:toString(bytes);
+            self.name = String.toString(bytes);
             self.syncValue = {};
         end),
         CREATSYNCVALUE = Method:New(function(self,bytes)
-            local key = String:toString(bytes);
+            local key = String.toString(bytes);
             self.syncValue[key] = UI.SyncValue:Create(self.name .. key);
-            print("成功创建同步变量:"..String:toString(bytes));
+            print("成功创建同步变量:"..String.toString(bytes));
         end),
     }
 };
@@ -367,7 +367,7 @@ if Game ~= nil then
             Event:addEventListener(Event.OnPlayerConnect,function(player)
                 self.players[player.name] = player;
                 self.syncValue[player.name] = {};
-                self:sendMessageBySignal(player,METHODTABLE.UI.GETNAME.key,String:toBytes(player.name));
+                self:sendMessageBySignal(player,METHODTABLE.UI.GETNAME.key,String.toBytes(player.name));
             end);
     
             Event:addEventListener(Event.OnPlayerDisconnect,function(player)
@@ -376,7 +376,7 @@ if Game ~= nil then
         end
         
         function NetServer:createSyncValue(player,key,value)
-            self:sendMessageBySignal(player,METHODTABLE.UI.CREATSYNCVALUE.key,String:toBytes(key));
+            self:sendMessageBySignal(player,METHODTABLE.UI.CREATSYNCVALUE.key,String.toBytes(key));
             self.syncValue[player.name] = self.syncValue[player.name] or {};
             local syncValue = Game.SyncValue:Create(player.name .. key);
             syncValue.value = value;
@@ -568,6 +568,21 @@ if UI ~= nil then
             end
             return self.sizeMap[c][1] * self.size,self.sizeMap[c][2] * self.size;
         end
+
+        function Font:getTextSize(text,letterspacing)
+            text = String.toTable();
+            space = space or 0;
+            local height = 0;
+            local width = 0;
+            for i = 1,#text do
+                local w,h = self:getCharSize(text[i]);
+                width = width + h + letterspacing;
+                if h > height  then
+                    height = h;
+                end
+            end
+            return width,height;
+        end
     end);
 
     Song = Font:New();
@@ -627,6 +642,9 @@ if UI ~= nil then
     
         function Graphics:drawRect(component,x,y,width,height,rect)
             local box;
+            if self.color[4] == 0 or self.opacity == 0 then
+                return;
+            end
             if rect~=nil then
                 if x > rect[1] + rect[3] then
                     return;
@@ -663,11 +681,11 @@ if UI ~= nil then
             component.root[#component.root+1] = box;
         end;
     
-        function Graphics:drawText(component,x,y,font,text,rect)
+        function Graphics:drawText(component,x,y,size,letterspacing,font,text,rect)
             if type(text) == "string" then
                 text = String.toTable(text);
             end
-            local letterspacing = 0;
+            local ls = 0;
             for i=1,#text do
                 local c = text[i]
                 local boxArray = font:getChar(c);
@@ -681,13 +699,13 @@ if UI ~= nil then
                     local _height = boxArray[j+3];
                     local box;
                     if i == 1 then
-                        self:drawRect(component,x + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
+                        self:drawRect(component,x + _x*size,y + _y*size,_width*size,_height*size,rect);
                     else
-                        self:drawRect(component,x + letterspacing + font.letterspacing + _x*font.size,y + _y*font.size,_width*font.size,_height*font.size,rect);
+                        self:drawRect(component,x + ls + letterspacing + _x*size,y + _y*size,_width*size,_height*size,rect);
                     end
                 end
                 local charWidth = font:getCharSize(c);
-                letterspacing = letterspacing + charWidth + font.letterspacing;
+                ls = ls + charWidth + letterspacing;
             end
         end
     
@@ -714,39 +732,54 @@ if UI ~= nil then
     Class("Component",function(Component)
         function Component:constructor(x,y,width,height)
             self.root = {};
-            self.x = x;
-            self.y = y;
-            self.width = width;
-            self.height = height;
+            self.x = x or 0;
+            self.y = y or 0;
+            self.width = width or 0;
+            self.height = height or 0;
+            
+            self.isVisible = false;
+            self.rect = NULL;
             self.opacity = 1;
             self.backgroundcolor = {255,255,255,255};
             self.border = {0,0,0,0};
             self.bordercolor = {0,0,0,255};
+
+            self.fontsize = 2;
+            self.fontcolor = {0,0,0,255};
         end
     
+        function Component:show()
+            if self.isVisible == false then
+                self:paint();
+                self.isVisible = true;
+            end
+        end
+
+        function Component:hide()
+            if self.isVisible == true then
+                self:clear();
+                self.isVisible = false;
+            end
+        end
+
         function Component:paint()
             Graphics.color = self.backgroundcolor;
             Graphics.opacity = self.opacity;
             Graphics:drawRect(self,self.x,self.y,self.width,self.height);
     
             Graphics.color = self.bordercolor;
-            if self.border[1] > 0 then
-                Graphics:drawRect(self,self.x,self.y,self.width,self.border[1]);
-            end
-            if self.border[2] > 0 then
-                Graphics:drawRect(self,self.x + self.width - self.border[2],self.y,self.border[2],self.height);
-            end
-            if self.border[3] > 0 then
-                Graphics:drawRect(self,self.x,self.y + self.height - self.border[3],self.width,self.border[3]);
-            end
-            if self.border[4] > 0 then
-                Graphics:drawRect(self,self.x,self.y,self.border[4],self.height);
-            end
+
+            Graphics:drawRect(self,self.x,self.y,self.width,self.border[1]);
+            Graphics:drawRect(self,self.x + self.width - self.border[2],self.y,self.border[2],self.height);
+            Graphics:drawRect(self,self.x,self.y + self.height - self.border[3],self.width,self.border[3]);
+            Graphics:drawRect(self,self.x,self.y,self.border[4],self.height);
         end
 
         function Component:repaint()
-            self:clear();
-            self:paint();
+            if self.isVisible == true then
+                self:clear();
+                self:paint();
+            end
         end
 
         function Component:clear()
@@ -782,57 +815,205 @@ if UI ~= nil then
                 return false;
             end,0,1);
         end
-
     end);
     
+    Class("Toast",function()
+        
+    end);
 
-    {name = "xxx" ,call = function() end ,children = {
-        {name = "aaa"},
-        {name = "aaa"},
-        {name = "aaa"},
-    }}
+    Class("Item",function(Item)
+        function Item:constructor(name,value)
+            self.super();
+
+            self.parent = NULL;
+            self.children = {};
+            self.call = NULL;
+            self.name = name;
+            
+            self:add(value);
+        end
+
+        function Item:add(value)
+            if type(value) == "function" then
+                self.call = value;
+            elseif type(value) == "table" then
+                for i = 1, #value, 2 do
+                    local item = _G.Item:New(value[i],value[i+1]);
+                    item.parent = self;
+                    self:addItem(item);
+                end
+            end
+        end
+
+        function Item:addItem(item)
+            self.children[#self.children+1] = item;
+        end
+        
+        function Item:remove(name)
+            for i = #self.children,1,-1 do
+                if self.children[i].name == name then
+                    table.remove(self.children,i);
+                    return;
+                elseif #self.children[i].children ~= 0 then
+                    self.children[i]:remove(name);
+                end
+            end
+        end
+    end,Component);
 
     Class("ItemMenu",function(ItemMenu)
         function ItemMenu:constructor(itemTree)
-            self.super();
-            self.root = itemTree;
-        
+            self.super(self.type,itemTree);
+
+            self.page = 1;
+            self.cursor = self;
+
+            self.y = 100;
+            self.height = 200;
+            self.width = 100;
+
+            self.lineheight = 30;
+
+            self.backgroundcolor = {0,0,0,0};
+            self.bordercolor = {0,0,0,0};
+
+
+
             Event:addEventListener(Event.OnKeyDown,function(input)
                 if input[UI.KEY.O] == true then
-                    self:repaint();
+                    if self.isVisible == true then
+                        self:hide();
+                    else
+                        self:show();
+                    end
+                end
+
+                if self.isVisible == true then
+                    local item;
+                    if input[UI.KEY.NUM1] == true then
+                        item = self.cursor.children[(self.page - 1) * 6 + 1]
+                    elseif input[UI.KEY.NUM2] == true then
+                        item = self.cursor.children[(self.page - 1) * 6 + 2]
+                    elseif input[UI.KEY.NUM3] == true then
+                        item = self.cursor.children[(self.page - 1) * 6 + 3]
+                    elseif input[UI.KEY.NUM4] == true then
+                        item = self.cursor.children[(self.page - 1) * 6 + 4]
+                    elseif input[UI.KEY.NUM5] == true then
+                        item = self.cursor.children[(self.page - 1) * 6 + 5]
+                    elseif input[UI.KEY.NUM6] == true then
+                        item = self.cursor.children[(self.page - 1) * 6 + 6]
+                    elseif input[UI.KEY.NUM7] == true then
+                        if self.page ~= 1 then
+                            self.page = self.page - 1;
+                            self:repaint();
+                        end
+                    elseif input[UI.KEY.NUM8] == true then
+                        if self.page * 6 < #self.cursor.children then
+                            self.page = self.page + 1;
+                            self:repaint();
+                        end
+                    elseif input[UI.KEY.NUM9] == true then
+                        if self.cursor.parent ~= NULL then
+                            self.cursor = self.cursor.parent;
+                            self:repaint();
+                        end
+                    end
+                    if item ~= nil then
+                        if #item.children ~= 0 then
+                            if item.call ~= NULL then
+                                item.call();
+                            end
+                            self.cursor = item;
+                            self:repaint();
+                        else
+                            self:hide();
+                        end
+                    end
                 end
             end);
         end
 
         function ItemMenu:show()
-
-        end
-
-        function ItemMenu:hide()
-
+            self.page = 1;
+            self.cursor = self;
+            self.super.show(self);
         end
 
         function ItemMenu:paint()
             self.super:paint();
+
+            Song.size = self.fontsize;
+            Graphics.color = self.fontcolor;
+
+            local __,height = Song:getCharSize("A");
+            height = height + self.lineheight;
+
+            for i = 1,6 do
+                if self.cursor.children[(self.page - 1) * 6 + i] == nil then
+                    break;
+                end
+                print(self.cursor.children[(self.page - 1) * 6 + i].name)
+                Graphics:drawText(self,self.x,self.y + (i * height),self.fontsize,self.letterspacing,Song,i..'.'..self.cursor.children[(self.page - 1) * 6 + i].name);
+            end
+            if self.page ~= 1 then
+                Graphics:drawText(self,self.x,self.y + 7 * height,self.fontsize,self.letterspacing,Song,"7.上一页");
+            end
+
+            if self.page * 6 < #self.cursor.children then
+                Graphics:drawText(self,self.x,self.y + 8 * height,self.fontsize,self.letterspacing,Song,"8.下一页");
+            end
+
+            if self.cursor.parent ~= NULL then
+                Graphics:drawText(self,self.x,self.y + 9 * height,self.fontsize,self.letterspacing,Song,"9.返回");
+            end
         end
 
-    end,Component);
+    end,Item);
     
+    -- o = ItemMenu:New(
+    --     {"设置",{
+    --     "开启",function() end,
+    --     "关闭",function() end,
+    --     "更多设置",{
+    --         "QWQ",function() end,
+    --         "123",function() end,
+    --         "43",function() end,
+    --     }
+    --     },
+    --     "帮助",function() end,
+    --     "帮助12",function() end,
+    --     "帮助",function() end,
+    --     "帮助2",function() end,
+    --     "帮助3",function() end,
+    --     "帮助",function() end,
+    --     "帮助5",function() end,
+    --     "帮助",function() end,
+    --     "帮6助",function() end,
+    --     "帮7助",function() end,
+    --     "帮助",function() end,
+    --     "帮助",function() end,
+    --     "帮助",function() end,
+    --     }
+    -- );
+
     Class("Lable",function(Lable)
         function Lable:constructor(x,y,width,height,font,text)
             self.super(x,y,width,height);
             self.font = font;
-            self.charArray = String:toTable(text);
-            self:paint();
+            self.charArray = String.toTable(text);
+            self.rect = {self.x,self.y,self.width,self.height};
         end
     
         function Lable:paint()
             self.super:paint();
-            self.root = Graphics:drawText(self.x,self.y,self.font,self.text,{self.x,self.y,self.width,self.height});
+            self.root = Graphics:drawText(self.x,self.y,self.fontsize,self.letterspacing,self.font,self.text,self.rect);
         end
     
     end,Component);
     
+
+    local l = Lable:New(0,0,100,100,Song,"123")
+    l:show();
     Class("PictureBox",function(PictureBox)
         function PictureBox:constructor(x,y,width,height,bitmap)
             self.super(x,y,width,height);
@@ -846,10 +1027,11 @@ if UI ~= nil then
         end
     
     end,Component);
+
+
 end
 
 
-----------------------------------------------------
 ----------------------------------------------------
 ----------------------------------------------------
 ----------------------------------------------------
