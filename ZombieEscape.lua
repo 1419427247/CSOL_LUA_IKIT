@@ -110,6 +110,7 @@ end
 
 if UI ~= nil then
 
+
     Class("Scoreboard",function(Scoreboard)
         function Scoreboard:constructor()
             self.super(0,0,400,140);
@@ -123,9 +124,9 @@ if UI ~= nil then
         function Scoreboard:paint()
             self.super:paint();
             Song.size = 3;
-            Graphics:drawText(self,self.x,self.y,self.fontsize,self.letterspacing,Song,"总回合:"..45,{0,0,self.width,self.height});
-            Graphics:drawText(self,self.x,self.y + 40,self.fontsize,self.letterspacing,Song,"僵尸胜利:"..123,{0,0,self.width,self.height});
-            Graphics:drawText(self,self.x,self.y + 80,self.fontsize,self.letterspacing,Song,"人类胜利:"..44,{0,0,self.width,self.height});
+            Graphics:drawText(self,self.x,self.y,"总回合:"..45,self.fontsize,self.letterspacing,Song);
+            Graphics:drawText(self,self.x,self.y + 40,"僵尸胜利:"..123,self.fontsize,self.letterspacing,Song);
+            Graphics:drawText(self,self.x,self.y + 80,"人类胜利:"..44,self.fontsize,self.letterspacing,Song);
         end
 
         function Scoreboard:repaint()
@@ -222,6 +223,8 @@ if UI ~= nil then
     NetClient = NetClient:New();
     ZombieEscape = ZombieEscape:New();
 end
+
+
 
 
 

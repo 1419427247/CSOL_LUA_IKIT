@@ -500,8 +500,6 @@ if UI ~= nil then
                 [' '] = {},
             };
             self.sizeMap = {};
-            self.size = size or 5;
-            self.letterspacing = 0;
         end
     
         function Font:getChar(c)
@@ -546,9 +544,9 @@ if UI ~= nil then
             end
         end
     
-        function Font:getCharSize(c)
-            if self.sizeMap[c] == nil then
-                local charArray = self:getChar(c);
+        function Font:getCharSize(char,size)
+            if self.sizeMap[char] == nil then
+                local charArray = self:getChar(char);
                 local width = 0;
                 local height = 0;
                 
@@ -564,24 +562,23 @@ if UI ~= nil then
                         height = _y + _height;
                     end
                 end
-                self.sizeMap[c] = {width,height};
+                self.sizeMap[char] = {width,height};
             end
-            return self.sizeMap[c][1] * self.size,self.sizeMap[c][2] * self.size;
+            return self.sizeMap[char][1] * size,self.sizeMap[char][2] * size;
         end
 
-        function Font:getTextSize(text,letterspacing)
-            text = String.toTable();
-            space = space or 0;
+        function Font:getTextSize(text,size,letterspacing)
+            text = String.toTable(text);
             local height = 0;
             local width = 0;
             for i = 1,#text do
-                local w,h = self:getCharSize(text[i]);
-                width = width + h + letterspacing;
+                local w,h = self:getCharSize(text[i],size);
+                width = width + w + letterspacing;
                 if h > height  then
                     height = h;
                 end
             end
-            return width,height;
+            return width-letterspacing,height;
         end
     end);
 
@@ -642,7 +639,7 @@ if UI ~= nil then
     
         function Graphics:drawRect(component,x,y,width,height,rect)
             local box;
-            if self.color[4] == 0 or self.opacity == 0 then
+            if self.color[4] <= 0 or self.opacity <= 0 then
                 return;
             end
             if rect~=nil then
@@ -681,7 +678,10 @@ if UI ~= nil then
             component.root[#component.root+1] = box;
         end;
     
-        function Graphics:drawText(component,x,y,size,letterspacing,font,text,rect)
+        function Graphics:drawText(component,x,y,text,size,letterspacing,font,rect)
+            size = size or 2;
+            letterspacing = letterspacing or 0;
+            font = font or Song;
             if type(text) == "string" then
                 text = String.toTable(text);
             end
@@ -697,14 +697,13 @@ if UI ~= nil then
                     local _y = boxArray[j+1];
                     local _width = boxArray[j+2];
                     local _height = boxArray[j+3];
-                    local box;
                     if i == 1 then
                         self:drawRect(component,x + _x*size,y + _y*size,_width*size,_height*size,rect);
                     else
                         self:drawRect(component,x + ls + letterspacing + _x*size,y + _y*size,_width*size,_height*size,rect);
                     end
                 end
-                local charWidth = font:getCharSize(c);
+                local charWidth = font:getCharSize(c,size);
                 ls = ls + charWidth + letterspacing;
             end
         end
@@ -738,13 +737,15 @@ if UI ~= nil then
             self.height = height or 0;
             
             self.isVisible = false;
-            self.rect = NULL;
+            self.rect = {self.x,self.y,self.width,self.height};
             self.opacity = 1;
             self.backgroundcolor = {255,255,255,255};
             self.border = {0,0,0,0};
             self.bordercolor = {0,0,0,255};
 
+            self.font = Song;
             self.fontsize = 2;
+            self.letterspacing = 0;
             self.fontcolor = {0,0,0,255};
         end
     
@@ -817,10 +818,6 @@ if UI ~= nil then
         end
     end);
     
-    Class("Toast",function()
-        
-    end);
-
     Class("Item",function(Item)
         function Item:constructor(name,value)
             self.super();
@@ -877,8 +874,6 @@ if UI ~= nil then
             self.backgroundcolor = {0,0,0,0};
             self.bordercolor = {0,0,0,0};
 
-
-
             Event:addEventListener(Event.OnKeyDown,function(input)
                 if input[UI.KEY.O] == true then
                     if self.isVisible == true then
@@ -914,15 +909,16 @@ if UI ~= nil then
                         end
                     elseif input[UI.KEY.NUM9] == true then
                         if self.cursor.parent ~= NULL then
+                            self.page = 1;
                             self.cursor = self.cursor.parent;
                             self:repaint();
                         end
                     end
                     if item ~= nil then
+                        if item.call ~= NULL then
+                            item.call();
+                        end
                         if #item.children ~= 0 then
-                            if item.call ~= NULL then
-                                item.call();
-                            end
                             self.cursor = item;
                             self:repaint();
                         else
@@ -945,75 +941,104 @@ if UI ~= nil then
             Song.size = self.fontsize;
             Graphics.color = self.fontcolor;
 
-            local __,height = Song:getCharSize("A");
+            local __,height = Song:getCharSize("A",self.fontsize);
             height = height + self.lineheight;
 
             for i = 1,6 do
                 if self.cursor.children[(self.page - 1) * 6 + i] == nil then
                     break;
                 end
-                print(self.cursor.children[(self.page - 1) * 6 + i].name)
-                Graphics:drawText(self,self.x,self.y + (i * height),self.fontsize,self.letterspacing,Song,i..'.'..self.cursor.children[(self.page - 1) * 6 + i].name);
+                Graphics:drawText(self,self.x,self.y + (i * height),i..'.'..self.cursor.children[(self.page - 1) * 6 + i].name,self.fontsize,self.letterspacing,Song);
             end
             if self.page ~= 1 then
-                Graphics:drawText(self,self.x,self.y + 7 * height,self.fontsize,self.letterspacing,Song,"7.上一页");
+                Graphics:drawText(self,self.x,self.y + 7 * height,"7.上一页",self.fontsize,self.letterspacing,Song);
             end
 
             if self.page * 6 < #self.cursor.children then
-                Graphics:drawText(self,self.x,self.y + 8 * height,self.fontsize,self.letterspacing,Song,"8.下一页");
+                Graphics:drawText(self,self.x,self.y + 8 * height,"8.下一页",self.fontsize,self.letterspacing,Song);
             end
 
             if self.cursor.parent ~= NULL then
-                Graphics:drawText(self,self.x,self.y + 9 * height,self.fontsize,self.letterspacing,Song,"9.返回");
+                Graphics:drawText(self,self.x,self.y + 9 * height,"9.返回",self.fontsize,self.letterspacing,Song);
             end
         end
 
     end,Item);
     
-    -- o = ItemMenu:New(
-    --     {"设置",{
-    --     "开启",function() end,
-    --     "关闭",function() end,
-    --     "更多设置",{
-    --         "QWQ",function() end,
-    --         "123",function() end,
-    --         "43",function() end,
-    --     }
-    --     },
-    --     "帮助",function() end,
-    --     "帮助12",function() end,
-    --     "帮助",function() end,
-    --     "帮助2",function() end,
-    --     "帮助3",function() end,
-    --     "帮助",function() end,
-    --     "帮助5",function() end,
-    --     "帮助",function() end,
-    --     "帮6助",function() end,
-    --     "帮7助",function() end,
-    --     "帮助",function() end,
-    --     "帮助",function() end,
-    --     "帮助",function() end,
-    --     }
-    -- );
+    MyMenu = ItemMenu:New(
+        {"设置",{
+        "开启",function() Toast:makeText("成功开启"); end,
+        "关闭",function() Toast:makeText("成功关闭"); end,
+        "更多设置",{
+            "设置1",function() end,
+            "设置2",function() end,
+            "设置3",function() end,
+            "设置4",function() end,
+            "设置5",function() end,
+            "设置6",function() end,
+            "设置7",function() end,
+            "设置8",function() end,
+        }
+        },
+        "帮助",function() end,
+        "帮助12",function() end,
+        "帮助",function() end,
+        "帮助2",function() end,
+        "帮助3",function() end,
+        "帮助",function() end,
+        "帮助5",function() end,
+        "帮助",function() end,
+        "帮6助",function() end,
+        "帮7助",function() end,
+        "帮助",function() end,
+        "帮助",function() end,
+        "帮助",function() end,
+        }
+    );
 
     Class("Lable",function(Lable)
-        function Lable:constructor(x,y,width,height,font,text)
+        function Lable:constructor(x,y,width,height,text,font)
             self.super(x,y,width,height);
-            self.font = font;
+            self.font = font or self.font;
             self.charArray = String.toTable(text);
-            self.rect = {self.x,self.y,self.width,self.height};
         end
     
         function Lable:paint()
             self.super:paint();
-            self.root = Graphics:drawText(self.x,self.y,self.fontsize,self.letterspacing,self.font,self.text,self.rect);
+            Graphics.color = self.fontcolor;
+            Graphics:drawText(self,self.x,self.y,self.charArray,self.fontsize,self.letterspacing,self.font);
         end
     
     end,Component);
-    
 
-    local l = Lable:New(0,0,100,100,Song,"123")
-    l:show();
+    Class("Toast",function(Toast)
+        function Toast:constructor()
+
+        end
+
+        function Toast:makeText(text,x,y)
+            local lable = Lable:New(0,0,0,0,text);
+
+            local w,h = lable.font:getTextSize(text,lable.fontsize,lable.letterspacing);
+            
+            lable.x = x or (Graphics.width - w)/2;
+            lable.y  = y or Graphics.height * 0.8;
+            lable.width = w + 3 * lable.fontsize;
+            lable.height = h + 3 * lable.fontsize;
+
+
+            lable.backgroundcolor = {0,0,0,255};
+            lable.fontcolor = {255,255,255,255};
+
+            lable:show();
+            lable:animate({"opacity",0},500,function(self)
+                self:hide();
+            end);
+        end
+    end);
+
+    Toast = Toast:New();
+
     Class("PictureBox",function(PictureBox)
         function PictureBox:constructor(x,y,width,height,bitmap)
             self.super(x,y,width,height);
@@ -1023,11 +1048,10 @@ if UI ~= nil then
     
         function PictureBox:paint()
             self.super:paint();
-            self.root = Graphics:drawBitmap(self.x,self.y,self.bitmap,{self.x,self.y,self.width,self.height});
+            Graphics:drawBitmap(self,self.x,self.y,self.bitmap,{self.x,self.y,self.width,self.height});
         end
     
     end,Component);
-
 
 end
 
