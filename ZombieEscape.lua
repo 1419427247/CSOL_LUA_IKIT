@@ -117,8 +117,8 @@ if UI ~= nil then
             self.backgroundcolor = {255,255,255,160};
             self.border = {1,1,1,1};
 
-            self:animate({"opacity",0},300);
-            self:animate({"width",0},800);
+            self:animate({{key = "opacity",value = 0}},300);
+            self:animate({{key = "width",value = 0}},800);
         end
 
         function Scoreboard:paint()
@@ -145,7 +145,7 @@ if UI ~= nil then
             self.ctPositionPoints = {};
             self.trPositionPoints = {};
 
-            self:animate({"opacity",1},600);
+            self:animate({{key = "opacity",value = 1}},600);
         end
 
         function PoisitionBar:paint()

@@ -221,6 +221,7 @@ Class("Timer",function(Timer)
                     if not success then
                         print("计时器中ID为:[" .. task[i].id .. "]的函数发生了异常");
                         print(result);
+                        log(result)
                         table.remove(task,i);
                     elseif task[i].period == nil or result == true then
                         table.remove(task,i);
@@ -742,7 +743,7 @@ if UI ~= nil then
             self.backgroundcolor = {255,255,255,255};
             self.border = {0,0,0,0};
             self.bordercolor = {0,0,0,255};
-
+            self.animations = {};
             self.font = Song;
             self.fontsize = 2;
             self.letterspacing = 0;
@@ -790,18 +791,23 @@ if UI ~= nil then
     
         function Component:animate(params,step,callback)
             local style = {};
-            for i = 1, #params, 2 do
+            for i = 1, #params, 1 do
+                local table = params[i].table or self;
+                local key = params[i].key;
+                local value = params[i].value;
+
                 style[#style+1] = {
-                    params[i],
-                    (params[i+1] - self[params[i]]) / step,
-                    params[i+1],
+                    table,
+                    key,
+                    (value - table[key]) / step,
+                    value,
                 };
             end
 
             Timer:schedule(function()
                 if step == 0 then
                     for i = 1, #style, 1 do
-                        self[style[i][1]] = style[i][3];
+                        style[i][1][style[i][2]] = style[i][4];
                     end
                     if callback ~= nil then
                         callback(self);
@@ -809,12 +815,12 @@ if UI ~= nil then
                     return true;
                 end
                 for i = 1, #style, 1 do
-                    self[style[i][1]] = self[style[i][1]] + style[i][2];
+                    style[i][1][style[i][2]] = style[i][1][style[i][2]] + style[i][3];
                 end
                 step = step - 1;
                 self:repaint();
                 return false;
-            end,0,1);
+            end,0,3);
         end
     end);
     
@@ -830,23 +836,24 @@ if UI ~= nil then
             self:add(value);
         end
 
-        function Item:add(value)
+        function Item:add(value,pos)
             if type(value) == "function" then
                 self.call = value;
             elseif type(value) == "table" then
                 for i = 1, #value, 2 do
                     local item = _G.Item:New(value[i],value[i+1]);
                     item.parent = self;
-                    self:addItem(item);
+                    self:addItem(item,pos);
                 end
             end
         end
 
-        function Item:addItem(item)
-            self.children[#self.children+1] = item;
+        function Item:addItem(item,pos)
+            pos = pos or #self.children+1;
+            table.insert(self.children,pos,item);
         end
         
-        function Item:remove(name)
+        function Item:removeItem(name)
             for i = #self.children,1,-1 do
                 if self.children[i].name == name then
                     table.remove(self.children,i);
@@ -856,15 +863,26 @@ if UI ~= nil then
                 end
             end
         end
+
+        function Item:getItem(name)
+            for i = 1,#self.children do
+                if self.children[i].name == name then
+                    return self.children[i];
+                end
+            end
+            return nil;
+        end
+
     end,Component);
 
     Class("ItemMenu",function(ItemMenu)
-        function ItemMenu:constructor(itemTree)
+        function ItemMenu:constructor(itemTree,hotkey)
             self.super(self.type,itemTree);
 
             self.page = 1;
             self.cursor = self;
 
+            self.x = 0;
             self.y = 100;
             self.height = 200;
             self.width = 100;
@@ -874,8 +892,10 @@ if UI ~= nil then
             self.backgroundcolor = {0,0,0,0};
             self.bordercolor = {0,0,0,0};
 
+            self.hotkey = hotkey or UI.KEY.O;
+
             Event:addEventListener(Event.OnKeyDown,function(input)
-                if input[UI.KEY.O] == true then
+                if input[self.hotkey] == true then
                     if self.isVisible == true then
                         self:hide();
                     else
@@ -916,14 +936,15 @@ if UI ~= nil then
                     end
                     if item ~= nil then
                         if item.call ~= NULL then
-                            item.call();
+                            local success,result =  pcall(item.call);
+                            if result ~= true then
+                                self:hide();
+                            end
                         end
                         if #item.children ~= 0 then
                             self.cursor = item;
-                            self:repaint();
-                        else
-                            self:hide();
                         end
+                        self:repaint();
                     end
                 end
             end);
@@ -964,37 +985,12 @@ if UI ~= nil then
         end
 
     end,Item);
-    
-    MyMenu = ItemMenu:New(
+
+    MainMenu = ItemMenu:New(
         {"设置",{
         "开启",function() Toast:makeText("成功开启"); end,
-        "关闭",function() Toast:makeText("成功关闭"); end,
-        "更多设置",{
-            "设置1",function() end,
-            "设置2",function() end,
-            "设置3",function() end,
-            "设置4",function() end,
-            "设置5",function() end,
-            "设置6",function() end,
-            "设置7",function() end,
-            "设置8",function() end,
-        }
-        },
-        "帮助",function() end,
-        "帮助12",function() end,
-        "帮助",function() end,
-        "帮助2",function() end,
-        "帮助3",function() end,
-        "帮助",function() end,
-        "帮助5",function() end,
-        "帮助",function() end,
-        "帮6助",function() end,
-        "帮7助",function() end,
-        "帮助",function() end,
-        "帮助",function() end,
-        "帮助",function() end,
-        }
-    );
+        "关闭",function() Toast:makeText("成功关闭啦"); end,
+        }},UI.KEY.O);
 
     Class("Lable",function(Lable)
         function Lable:constructor(x,y,width,height,text,font)
@@ -1031,7 +1027,7 @@ if UI ~= nil then
             lable.fontcolor = {255,255,255,255};
 
             lable:show();
-            lable:animate({"opacity",0},500,function(self)
+            lable:animate({{key = "opacity",value = 0}},500,function(self)
                 self:hide();
             end);
         end
