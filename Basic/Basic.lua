@@ -751,6 +751,7 @@ if UI ~= nil then
             self.height = height or 0;
             
             self.isVisible = false;
+            self.stopplayercontrol = false;
             self.rect = {self.x,self.y,self.width,self.height};
             self.opacity = 1;
             self.backgroundcolor = {255,255,255,255};
@@ -765,6 +766,9 @@ if UI ~= nil then
     
         function Component:show()
             if self.isVisible == false then
+                if self.stopplayercontrol == true then
+                    UI.StopPlayerControl(true);
+                end
                 self:paint();
                 self.isVisible = true;
             end
@@ -772,6 +776,9 @@ if UI ~= nil then
 
         function Component:hide()
             if self.isVisible == true then
+                if self.stopplayercontrol == true then
+                    UI.StopPlayerControl(false);
+                end
                 self:clear();
                 self.isVisible = false;
             end
@@ -1084,16 +1091,6 @@ if UI ~= nil then
             end);
         end
 
-        function Edit:show()
-            UI.StopPlayerControl(true);
-            self.super:show();
-        end
-
-        function Edit:hide()
-            UI.StopPlayerControl(false);
-            self.super:hide();
-        end
-
         function Edit:paint()
             self.super:paint();
             local textArray = {};
@@ -1148,7 +1145,6 @@ if UI ~= nil then
         end
     
     end,Component);
-
 end
 
 

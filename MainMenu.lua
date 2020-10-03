@@ -1,7 +1,21 @@
 if UI~=nil then
-    a = Edit:New(400,400,200,40,"@iPad水晶");
-    a.intype = "all";
-    a:show();
+    -- Class("Circle",function(Circle)
+    --     function Circle:constructor(x,y,radius)
+    --         self.super(x,y);
+    --         self.radius = radius;
+    --         self.backgroundcolor[4] = 0;
+    --     end
+
+    --     function Circle:paint()
+    --         self.super:paint();
+    --         for i = -self.radius,self.radius do
+    --             local x = (math.sqrt(self.radius*self.radius - i * i));
+    --             Graphics:drawRect(self,self.x + x,self.y + i,-2 * x,1);
+    --         end
+    --     end
+    -- end,Component);
+    -- b = Circle:New(300,300,400)
+    -- b:show();
 
     MainMenu:add({
     "更多设置",{
