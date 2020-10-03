@@ -1022,7 +1022,7 @@ if UI ~= nil then
             self.super(x,y,width,height,text,font);
             self.cursor = 0;
             self.maxlength = 10;
-            self.intype = "english";
+            self.intype = "number";
 
             self.keyprevious = UI.KEY.LEFT;
             self.keynext = UI.KEY.RIGHT;
@@ -1033,7 +1033,6 @@ if UI ~= nil then
                     for key, value in pairs(inputs) do
                         if value == true then
                             if #self.charArray < self.maxlength then
-                                print(self.intype == "all")
                                 if self.intype == "all" or self.intype == "number" then
                                     if key >=0 and key <= 8 then
                                         table.insert(self.charArray,self.cursor+1,string.char(key+49));
