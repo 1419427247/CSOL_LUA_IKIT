@@ -500,7 +500,8 @@ if UI ~= nil then
             self.map = {
                 [' '] = {},
             };
-            self.sizeMap = {};
+            self.sizeMap = {
+            };
         end
     
         function Font:getChar(c)
@@ -563,13 +564,21 @@ if UI ~= nil then
                         height = _y + _height;
                     end
                 end
+
+                if char == " " then
+                    local w,h = self:getCharSize('a',1);
+                    width = w;
+                    height = h;
+                end
                 self.sizeMap[char] = {width,height};
             end
             return self.sizeMap[char][1] * size,self.sizeMap[char][2] * size;
         end
 
         function Font:getTextSize(text,size,letterspacing)
-            text = String.toTable(text);
+            if type(text) == "string" then
+                text = String.toTable(text);
+            end
             local height = 0;
             local width = 0;
             for i = 1,#text do
@@ -899,6 +908,8 @@ if UI ~= nil then
                     if self.isVisible == true then
                         self:hide();
                     else
+                        self.page = 1;
+                        self.cursor = self;
                         self:show();
                     end
                 end
@@ -950,12 +961,6 @@ if UI ~= nil then
             end);
         end
 
-        function ItemMenu:show()
-            self.page = 1;
-            self.cursor = self;
-            self.super.show(self);
-        end
-
         function ItemMenu:paint()
             self.super:paint();
 
@@ -987,14 +992,15 @@ if UI ~= nil then
     end,Item);
 
     MainMenu = ItemMenu:New(
-        {"设置",{
-        "开启",function() Toast:makeText("成功开启"); end,
-        "关闭",function() Toast:makeText("成功关闭啦"); end,
+        {"帮助",{
+        "关于",function() Toast:makeText("作者:@iPad水晶"); end,
         }},UI.KEY.O);
 
     Class("Lable",function(Lable)
         function Lable:constructor(x,y,width,height,text,font)
             self.super(x,y,width,height);
+            self.offx = 0;
+            self.offy = 0;
             self.font = font or self.font;
             self.charArray = String.toTable(text);
         end
@@ -1002,17 +1008,107 @@ if UI ~= nil then
         function Lable:paint()
             self.super:paint();
             Graphics.color = self.fontcolor;
-            Graphics:drawText(self,self.x,self.y,self.charArray,self.fontsize,self.letterspacing,self.font);
+            Graphics:drawText(self,self.x + self.offx,self.y + self.offy,self.charArray,self.fontsize,self.letterspacing,self.font);
+        end
+
+        function Lable:getText()
+            return String.toString(self.charArray);
         end
     
     end,Component);
+
+    Class("Edit",function(Edit)
+        function Edit:constructor(x,y,width,height,text,font)
+            self.super(x,y,width,height,text,font);
+            self.cursor = 0;
+            self.maxlength = 10;
+            self.intype = "english";
+
+            self.keyprevious = UI.KEY.LEFT;
+            self.keynext = UI.KEY.RIGHT;
+            self.keybackspace = UI.KEY.SHIFT;
+
+            Event:addEventListener(Event.OnKeyDown,function(inputs)
+                if self.isVisible == true then
+                    for key, value in pairs(inputs) do
+                        if value == true then
+                            if #self.charArray < self.maxlength then
+                                print(self.intype == "all")
+                                if self.intype == "all" or self.intype == "number" then
+                                    if key >=0 and key <= 8 then
+                                        table.insert(self.charArray,self.cursor+1,string.char(key+49));
+                                        self.cursor = self.cursor + 1;
+                                    end
+                                    if key == 9 then
+                                        table.insert(self.charArray,self.cursor+1,"0");
+                                        self.cursor = self.cursor + 1;
+                                    end
+                                end
+            
+                                if self.intype == "all" or self.intype == "english" then
+                                    if key >= 10 and key <= 35 then
+                                        table.insert(self.charArray,self.cursor+1,string.char(key+87));
+                                        self.cursor = self.cursor + 1;
+                                    end
+            
+                                    if key == 37 then
+                                        table.insert(self.charArray,self.cursor+1,' ');
+                                        self.cursor = self.cursor + 1;
+                                    end
+                                end
+                            end
+                            if key == self.keyprevious then
+                                if self.cursor > 0 then
+                                    self.cursor = self.cursor - 1;
+                                end
+                            end
+                            if key == self.keynext then
+                                if self.cursor < #self.charArray then
+                                    self.cursor = self.cursor + 1;
+                                end
+                            end
+                            if key == self.keybackspace then
+                                if self.cursor > 0 then
+                                    table.remove(self.charArray,self.cursor);
+                                    self.cursor = self.cursor - 1;
+                                end
+                            end
+                        end
+                    end
+                    self:repaint();
+                end
+            end);
+        end
+
+        function Edit:show()
+            UI.StopPlayerControl(true);
+            self.super:show();
+        end
+
+        function Edit:hide()
+            UI.StopPlayerControl(false);
+            self.super:hide();
+        end
+
+        function Edit:paint()
+            self.super:paint();
+            local textArray = {};
+            for i = 1,self.cursor do
+                textArray[#textArray+1] = self.charArray[i];
+            end
+            local w,h = self.font:getTextSize(textArray,self.fontsize,self.letterspacing);
+            Graphics:drawRect(self,self.x + w + self.offx + 1,self.y +self.offy,self.letterspacing /2 + self.fontsize,h);
+        end
+
+    end,Lable);
+
 
     Class("Toast",function(Toast)
         function Toast:constructor()
 
         end
 
-        function Toast:makeText(text,x,y)
+        function Toast:makeText(text,length,x,y)
             local lable = Lable:New(0,0,0,0,text);
 
             local w,h = lable.font:getTextSize(text,lable.fontsize,lable.letterspacing);
@@ -1027,7 +1123,7 @@ if UI ~= nil then
             lable.fontcolor = {255,255,255,255};
 
             lable:show();
-            lable:animate({{key = "opacity",value = 0}},500,function(self)
+            lable:animate({{key = "opacity",value = 0}},length or 120,function(self)
                 self:hide();
             end);
         end

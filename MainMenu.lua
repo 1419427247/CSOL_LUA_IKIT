@@ -1,4 +1,8 @@
 if UI~=nil then
+    a = Edit:New(400,400,200,40,"@iPad水晶");
+    a.intype = "all";
+    a:show();
+
     MainMenu:add({
     "更多设置",{
         "改变颜色",function() 
@@ -70,6 +74,6 @@ if UI~=nil then
     },
 
     "帮助",function() Toast:makeText("作者:@iPad水晶"); end
-});
-    
+},1);
+
 end
