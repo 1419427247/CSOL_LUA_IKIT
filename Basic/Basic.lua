@@ -675,6 +675,10 @@ if UI ~= nil then
                     height = rect[2] + rect[4] - y;
                 end
                 box = UI.Box.Create();
+                if box == nil then
+                    print("无法绘制矩形:已超过最大限制");
+                    return;
+                end
                 box:Set({x=x,y=y,width=width,height=height,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]*self.opacity});
             else
                 box = UI.Box.Create();
@@ -776,6 +780,7 @@ if UI ~= nil then
         function Component:paint()
             Graphics.color = self.backgroundcolor;
             Graphics.opacity = self.opacity;
+
             Graphics:drawRect(self,self.x,self.y,self.width,self.height);
     
             Graphics.color = self.bordercolor;
@@ -1134,7 +1139,7 @@ if UI ~= nil then
         function PictureBox:constructor(x,y,width,height,bitmap)
             self.super(x,y,width,height);
             self.bitmap = bitmap;
-            self:paint();
+            self.backgroundcolor[4] = 0;
         end
     
         function PictureBox:paint()
