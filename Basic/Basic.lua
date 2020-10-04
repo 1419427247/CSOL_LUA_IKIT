@@ -397,6 +397,17 @@ if Game ~= nil then
             self.methods[method.key] = method;
         end
     end);
+
+
+    -- group = {
+
+    -- }
+    -- Class("Group",function(Group)
+    --     function Group:constructor()
+    --         self.groups = {};
+
+    --     end
+    -- end);
 end
 
 if UI ~= nil then
@@ -1014,7 +1025,7 @@ if UI ~= nil then
             self.offx = 0;
             self.offy = 0;
             self.font = font or self.font;
-            self.charArray = String.toTable(text);
+            self.charArray = String.toTable(text or "");
         end
     
         function Lable:paint()
@@ -1035,6 +1046,7 @@ if UI ~= nil then
             self.cursor = 0;
             self.maxlength = 10;
             self.intype = "number";
+
 
             self.keyprevious = UI.KEY.LEFT;
             self.keynext = UI.KEY.RIGHT;
