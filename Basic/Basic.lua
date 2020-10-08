@@ -641,6 +641,13 @@ if UI ~= nil then
         function Graphics:constructor()
             self.color = {255,255,255,255};
             self.opacity = 1;
+
+            self.fontsize = 3;
+            self.letterspacing = 3;
+            self.font = Song;
+
+            
+
             self.width = UI.ScreenSize().width; 
             self.height = UI.ScreenSize().height;
         end
@@ -690,17 +697,14 @@ if UI ~= nil then
             component.root[#component.root+1] = box;
         end;
     
-        function Graphics:drawText(component,x,y,text,size,letterspacing,font,rect)
-            size = size or 2;
-            letterspacing = letterspacing or 0;
-            font = font or Song;
+        function Graphics:drawText(component,x,y,text,rect)
             if type(text) == "string" then
                 text = String.toTable(text);
             end
             local ls = 0;
             for i=1,#text do
                 local c = text[i]
-                local boxArray = font:getChar(c);
+                local boxArray = self.font:getChar(c);
                 if #boxArray == 0 then
                     print("未找到字符:"..c);
                 end
@@ -710,13 +714,13 @@ if UI ~= nil then
                     local _width = boxArray[j+2];
                     local _height = boxArray[j+3];
                     if i == 1 then
-                        self:drawRect(component,x + _x*size,y + _y*size,_width*size,_height*size,rect);
+                        self:drawRect(component,x + _x*self.fontsize,y + _y*self.fontsize,_width*self.fontsize,_height*self.fontsize,rect);
                     else
-                        self:drawRect(component,x + ls + letterspacing + _x*size,y + _y*size,_width*size,_height*size,rect);
+                        self:drawRect(component,x + ls + self.letterspacing + _x*self.fontsize,y + _y*self.fontsize,_width*self.fontsize,_height*self.fontsize,rect);
                     end
                 end
-                local charWidth = font:getCharSize(c,size);
-                ls = ls + charWidth + letterspacing;
+                local charWidth = self.font:getCharSize(c,self.fontsize);
+                ls = ls + charWidth + self.letterspacing;
             end
         end
     
@@ -756,9 +760,11 @@ if UI ~= nil then
             self.border = {0,0,0,0};
             self.bordercolor = {0,0,0,255};
             self.animations = {};
+            
             self.font = Song;
             self.fontsize = 2;
             self.letterspacing = 0;
+
             self.fontcolor = {0,0,0,255};
         end
     
@@ -783,6 +789,10 @@ if UI ~= nil then
         end
 
         function Component:paint()
+            Graphics.font = self.font;
+            Graphics.fontsize = self.fontsize;
+            Graphics.letterspacing = self.letterspacing;
+
             Graphics.color = self.backgroundcolor;
             Graphics.opacity = self.opacity;
 
@@ -985,18 +995,18 @@ if UI ~= nil then
                 if self.cursor.children[(self.page - 1) * 6 + i] == nil then
                     break;
                 end
-                Graphics:drawText(self,self.x,self.y + (i * height),i..'.'..self.cursor.children[(self.page - 1) * 6 + i].name,self.fontsize,self.letterspacing,Song);
+                Graphics:drawText(self,self.x,self.y + (i * height),i..'.'..self.cursor.children[(self.page - 1) * 6 + i].name);
             end
             if self.page ~= 1 then
-                Graphics:drawText(self,self.x,self.y + 7 * height,"7.上一页",self.fontsize,self.letterspacing,Song);
+                Graphics:drawText(self,self.x,self.y + 7 * height,"7.上一页");
             end
 
             if self.page * 6 < #self.cursor.children then
-                Graphics:drawText(self,self.x,self.y + 8 * height,"8.下一页",self.fontsize,self.letterspacing,Song);
+                Graphics:drawText(self,self.x,self.y + 8 * height,"8.下一页");
             end
 
             if self.cursor.parent ~= NULL then
-                Graphics:drawText(self,self.x,self.y + 9 * height,"9.返回",self.fontsize,self.letterspacing,Song);
+                Graphics:drawText(self,self.x,self.y + 9 * height,"9.返回");
             end
         end
 
@@ -1021,7 +1031,7 @@ if UI ~= nil then
         function Lable:paint()
             self.super:paint();
             Graphics.color = self.fontcolor;
-            Graphics:drawText(self,self.x + self.offx,self.y + self.offy,self.charArray,self.fontsize,self.letterspacing,self.font);
+            Graphics:drawText(self,self.x + self.offx,self.y + self.offy,self.charArray);
         end
 
         function Lable:getText()
