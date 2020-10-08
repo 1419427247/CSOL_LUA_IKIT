@@ -831,6 +831,7 @@ if UI ~= nil then
                     if callback ~= nil then
                         callback(self);
                     end
+                    self:repaint();
                     return true;
                 end
                 for i = 1, #style, 1 do

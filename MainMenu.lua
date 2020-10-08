@@ -87,8 +87,10 @@ if UI~=nil then
             return true;
         end,
         "随机字号",function()
+            local ran =  math.floor(math.random(5));
+            print(ran);
             MainMenu:animate({
-                {key="fontsize",value = math.random(5)}},
+                {key="fontsize",value = ran}},
             80,function() Toast:makeText("改变了字号") end);
             return true;
         end,
