@@ -98,6 +98,17 @@ if UI~=nil then
 
     "帮助",function() Toast:makeText("作者:@iPad水晶"); end
 },1);
+DIV = Container:New();
+DIV:add(Lable:New(0,0,0,0,"text"));
+DIV:add(Lable:New(88,88,0,0,"QWQ"));
+DIV:show();
+
+Event:addEventListener(Event.OnKeyDown,function(self,inputs)
+    if inputs[UI.KEY.U] == true then
+        print("QWQ")
+        DIV:hide();
+    end
+end);
 
 end
 

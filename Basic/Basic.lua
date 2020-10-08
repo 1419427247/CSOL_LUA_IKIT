@@ -752,7 +752,9 @@ if UI ~= nil then
             self.width = width or 0;
             self.height = height or 0;
             
-            self.isVisible = false;
+            self.parent = NULL;
+
+            self.isvisible = false;
             self.stopplayercontrol = false;
             self.rect = {self.x,self.y,self.width,self.height};
             self.opacity = 1;
@@ -769,22 +771,22 @@ if UI ~= nil then
         end
     
         function Component:show()
-            if self.isVisible == false then
+            if self.isvisible == false then
                 if self.stopplayercontrol == true then
                     UI.StopPlayerControl(true);
                 end
                 self:paint();
-                self.isVisible = true;
+                self.isvisible = true;
             end
         end
 
         function Component:hide()
-            if self.isVisible == true then
+            if self.isvisible == true then
                 if self.stopplayercontrol == true then
                     UI.StopPlayerControl(false);
                 end
                 self:clear();
-                self.isVisible = false;
+                self.isvisible = false;
             end
         end
 
@@ -807,7 +809,7 @@ if UI ~= nil then
         end
 
         function Component:repaint()
-            if self.isVisible == true then
+            if self.isvisible == true then
                 self:clear();
                 self:paint();
             end
@@ -854,6 +856,59 @@ if UI ~= nil then
         end
     end);
     
+    Class("Container",function(Container)
+        function Container:constructor(x,y,width,height)
+            self.super(x,y,width,height);
+            self.children = {};
+        end
+    
+        function Container:add(component,pos)
+            table.insert(self.children,pos or #self.children + 1,component);
+        end
+    
+        function Container:remove(component)
+            for i = 1,#self.children do
+                if component == self.children[i] then
+                    table.remove(self.children,i);
+                    return;
+                end
+            end
+        end
+
+        function Container:show()
+            if self.isvisible == false then
+                if self.stopplayercontrol == true then
+                    UI.StopPlayerControl(true);
+                end
+                self:paint();
+                for i = 1,#self.children do
+                    self.children[i]:show();
+                end
+                self.isvisible = true;
+            end
+        end
+
+        function Container:hide()
+            if self.isvisible == true then
+                if self.stopplayercontrol == true then
+                    UI.StopPlayerControl(true);
+                end
+                self.super:hide();
+                for i = 1,#self.children do
+                    self.children[i]:hide();
+                end
+                self.isvisible = false;
+            end
+        end
+    end,Component);
+
+    Class("Windows",function(Windows)
+        function Windows:constructor()
+            self.width = Graphics.width;
+            self.height = Graphics.height;
+        end
+    end,Container);
+
     Class("Item",function(Item)
         function Item:constructor(name,value)
             self.super();
@@ -926,7 +981,7 @@ if UI ~= nil then
 
             Event:addEventListener(Event.OnKeyDown,function(listener,inputs)
                 if inputs[self.hotkey] == true then
-                    if self.isVisible == true then
+                    if self.isvisible == true then
                         self:hide();
                     else
                         self.page = 1;
@@ -935,7 +990,7 @@ if UI ~= nil then
                     end
                 end
 
-                if self.isVisible == true then
+                if self.isvisible == true then
                     local item;
                     if inputs[UI.KEY.NUM1] == true then
                         item = self.cursor.children[(self.page - 1) * 6 + 1]
@@ -1053,7 +1108,7 @@ if UI ~= nil then
             self.keybackspace = UI.KEY.SHIFT;
 
             Event:addEventListener(Event.OnKeyDown,function(listener,inputs)
-                if self.isVisible == true then
+                if self.isvisible == true then
                     for key, value in pairs(inputs) do
                         if value == true then
                             if #self.charArray < self.maxlength then
