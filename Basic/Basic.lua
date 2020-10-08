@@ -3,7 +3,7 @@ Class,InstanceOf,Type = (function()
         charSize = function(char)
             local seperate = {0, 0xc0, 0xe0, 0xf0}
             for i = #seperate, 1, -1 do
-                if char >= seperate[i] then 
+                if char >= seperate[i] then
                     return i;
                 end
             end
@@ -319,9 +319,9 @@ Timer = Timer:New();
 --             self.syncValue = {};
 
 --             self.players = {};
-    
+
 --             self.methods = {};
-    
+
 --             Event:addEventListener(Event.OnUpdate,function()
 --                 for i = #self.sendbuffer,1,-1 do
 --                     self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].key);
@@ -334,7 +334,7 @@ Timer = Timer:New();
 --                     self.cursor = 1;
 --                 end
 --             end);
-    
+
 --             Event:addEventListener(Event.OnPlayerSignal,function(player,signal)
 --                 if self.receivbBuffer.key == 0 then
 --                     self.receivbBuffer.key = signal;
@@ -351,18 +351,18 @@ Timer = Timer:New();
 --                     end
 --                 end
 --             end);
-    
+
 --             Event:addEventListener(Event.OnPlayerConnect,function(player)
 --                 self.players[player.name] = player;
 --                 self.syncValue[player.name] = {};
 --                 self:sendMessageBySignal(player,METHODTABLE.UI.GETNAME.key,String.toBytes(player.name));
 --             end);
-    
+
 --             Event:addEventListener(Event.OnPlayerDisconnect,function(player)
 --                 self.syncValue[player.name] = nil;
 --             end);
 --         end
-        
+
 --         function NetServer:createSyncValue(player,key,value)
 --             self:sendMessageBySignal(player,METHODTABLE.UI.CREATSYNCVALUE.key,String.toBytes(key));
 --             self.syncValue[player.name] = self.syncValue[player.name] or {};
@@ -375,11 +375,11 @@ Timer = Timer:New();
 --         function NetServer:setSyncValue(player,key,value)
 --             self.syncValue[player.name .. key].value = value;
 --         end
-    
+
 --         function NetServer:sendMessageBySignal(player,key,bytes)
 --             self.sendbuffer[#self.sendbuffer + 1] = {receiver = player,key = key,length = #bytes,bytes = bytes};
 --         end
-    
+
 --         function NetServer:register(method)
 --             self.methods[method.key] = method;
 --         end
@@ -408,14 +408,14 @@ if UI ~= nil then
 --                 length = -1,
 --                 bytes = {},
 --             };
-    
+
 --             self.syncValue = NULL;
 
 --             self.methods = {
 --                 [METHODTABLE.UI.GETNAME.key] = METHODTABLE.UI.GETNAME,
 --                 [METHODTABLE.UI.CREATSYNCVALUE.key] = METHODTABLE.UI.CREATSYNCVALUE,
 --             };
-    
+
 --             Event:addEventListener(Event.OnUpdate,function()
 --                 for i = #self.sendbuffer,1,-1 do
 --                     UI.Signal(self.sendbuffer[i].key);
@@ -428,7 +428,7 @@ if UI ~= nil then
 --                     self.cursor = 1;
 --                 end
 --             end);
-    
+
 --             Event:addEventListener(Event.OnSignal,function(signal)
 --                 if self.receivbBuffer.key == 0 then
 --                     self.receivbBuffer.key = signal;
@@ -446,15 +446,15 @@ if UI ~= nil then
 --                 end
 --             end);
 --         end
-        
+
 --         function NetClient:sendMessageBySignal(key,bytes)
 --             self.sendbuffer[#self.sendbuffer + 1] = {key = key,length = #bytes,bytes = bytes};
 --         end
-    
+
 --         function NetClient:register(method)
 --             self.methods[method.key] = method;
 --         end
-    
+
 --     end);
 
     Class("Base64",function(Base64)
@@ -465,7 +465,7 @@ if UI ~= nil then
                 self.charmap[string.sub(self.charlist,i,i)] = i-1;
             end
         end
-    
+
         function Base64:toString(number,bit)
             local list = {};
             for i = bit,1,-1 do
@@ -474,7 +474,7 @@ if UI ~= nil then
             end
             return table.concat(list);
         end
-    
+
         function Base64:toNumber(text)
             local type = Type(text);
             local number = 0;
@@ -501,7 +501,7 @@ if UI ~= nil then
             self.sizeMap = {
             };
         end
-    
+
         function Font:getChar(c)
             if self.map[c] == nil then
                 if self.data[c] == nil then
@@ -518,24 +518,24 @@ if UI ~= nil then
             end
             return self.map[c];
         end
-    
+
         local seperate = {0, 0xc0, 0xe0, 0xf0}
         function Font:load(data)
             local s = 1;
             local i = 1;
-    
+
             while i < #data do
                 local c;
                 local length = 1;
                 for j = #seperate, 1, -1 do
-                    if string.byte(data,s) >= seperate[j] then 
+                    if string.byte(data,s) >= seperate[j] then
                         length = j;
                         break;
                     end
                 end
                 c = string.sub(data,s,s+length-1);
                 i = i + length;
-    
+
                 while string.sub(data,i,i) ~= ' ' do
                     i = i + 1;
                 end
@@ -543,13 +543,13 @@ if UI ~= nil then
                 s = i + 1;
             end
         end
-    
+
         function Font:getCharSize(char,size)
             if self.sizeMap[char] == nil then
                 local charArray = self:getChar(char);
                 local width = 0;
                 local height = 0;
-                
+
                 for j = 1,#charArray,4 do
                     local _x = charArray[j];
                     local _y = charArray[j+1];
@@ -599,10 +599,10 @@ if UI ~= nil then
             self.data = {};
             self.size = 1;
             self.map = NULL;
-    
+
             self.width = Base64:toNumber(string.sub(data,1,2));
             self.height = Base64:toNumber(string.sub(data,3,4));
-    
+
             while i < #data do
                 local c;
                 local color = string.sub(data,s,s+3);
@@ -614,7 +614,7 @@ if UI ~= nil then
                 s = i + 1;
             end
         end
-    
+
         function Bitmap:getTable()
             if self.map == NULL then
                 self.map = {};
@@ -630,13 +630,13 @@ if UI ~= nil then
             end
             return self.map;
         end
-    
+
         function Bitmap:getSize()
             return self.width*self.size,self.height*self.size;
         end
-    
+
     end);
-    
+
     Class("Graphics",function(Graphics)
         function Graphics:constructor()
             self.color = {255,255,255,255};
@@ -646,12 +646,12 @@ if UI ~= nil then
             self.letterspacing = 3;
             self.font = Song;
 
-            
 
-            self.width = UI.ScreenSize().width; 
+
+            self.width = UI.ScreenSize().width;
             self.height = UI.ScreenSize().height;
         end
-    
+
         function Graphics:drawRect(component,x,y,width,height,rect)
             local box;
             if self.color[4] <= 0 or self.opacity <= 0 then
@@ -696,7 +696,7 @@ if UI ~= nil then
             box:Show();
             component.root[#component.root+1] = box;
         end;
-    
+
         function Graphics:drawText(component,x,y,text,rect)
             if type(text) == "string" then
                 text = String.toTable(text);
@@ -723,7 +723,7 @@ if UI ~= nil then
                 ls = ls + charWidth + self.letterspacing;
             end
         end
-    
+
         function Graphics:drawBitmap(component,x,y,bitmap,rect)
             local map = bitmap:getTable();
             for key, value in pairs(map) do
@@ -739,9 +739,9 @@ if UI ~= nil then
                 end
             end
         end
-    
+
     end);
-    
+
     Graphics = Graphics:New();
 
     Class("Component",function(Component)
@@ -751,9 +751,9 @@ if UI ~= nil then
             self.y = y or 0;
             self.width = width or 0;
             self.height = height or 0;
-            
-            self.parent = NULL;
 
+            self.parent = NULL;
+            
             self.isvisible = false;
             self.stopplayercontrol = false;
             self.rect = {self.x,self.y,self.width,self.height};
@@ -766,28 +766,41 @@ if UI ~= nil then
             self.font = Song;
             self.fontsize = 2;
             self.letterspacing = 0;
-
+            
             self.fontcolor = {0,0,0,255};
-        end
-    
-        function Component:show()
-            if self.isvisible == false then
-                if self.stopplayercontrol == true then
-                    UI.StopPlayerControl(true);
-                end
-                self:paint();
-                self.isvisible = true;
+            
+            self.onKeyDown = NULL;
+            self.onKeyUp = NULL;
+            if MainWindows ~= nil then
+               self:setParent(MainWindows); 
             end
+        end
+
+        function Component:setParent(container)
+            if self.parent ~= NULL then
+                self.parent:remove(self);
+            end
+            self.parent = NULL;
+            for key, value in pairs(container) do
+                print(key)
+            end
+            container:add(self);
+        end
+
+        function Component:show()
+            if self.stopplayercontrol == true then
+                UI.StopPlayerControl(true);
+            end
+            self:paint();
+            self.isvisible = true;
         end
 
         function Component:hide()
-            if self.isvisible == true then
-                if self.stopplayercontrol == true then
-                    UI.StopPlayerControl(false);
-                end
-                self:clear();
-                self.isvisible = false;
+            if self.stopplayercontrol == true then
+                UI.StopPlayerControl(false);
             end
+            self:clear();
+            self.isvisible = false;
         end
 
         function Component:paint()
@@ -799,7 +812,7 @@ if UI ~= nil then
             Graphics.opacity = self.opacity;
 
             Graphics:drawRect(self,self.x,self.y,self.width,self.height);
-    
+
             Graphics.color = self.bordercolor;
 
             Graphics:drawRect(self,self.x,self.y,self.width,self.border[1]);
@@ -819,7 +832,7 @@ if UI ~= nil then
             self.root = {};
             collectgarbage("collect");
         end
-    
+
         function Component:animate(params,step,callback)
             local style = {};
             for i = 1, #params, 1 do
@@ -834,7 +847,6 @@ if UI ~= nil then
                     value,
                 };
             end
-
             Timer:schedule(function()
                 if step == 0 then
                     for i = 1, #style, 1 do
@@ -855,17 +867,37 @@ if UI ~= nil then
             end,0,3);
         end
     end);
-    
+
     Class("Container",function(Container)
         function Container:constructor(x,y,width,height)
             self.super(x,y,width,height);
             self.children = {};
         end
-    
+
+        function Container:onKeyDown(inputs)
+            for i = 1,#self.children do
+                if self.children[i].onKeyDown ~= NULL then
+                    self.children[i]:onKeyDown(inputs);
+                end
+            end
+        end
+
+        function Container:onKeyUp(inputs)
+            for i = 1,#self.children do
+                if self.children[i].onKeyUp ~= NULL then
+                    self.children[i]:onKeyUp(inputs);
+                end
+            end
+        end
+
         function Container:add(component,pos)
+            if component.parent ~= NULL then
+                component.parent:remove(component);
+            end
+            component.parent = self;
             table.insert(self.children,pos or #self.children + 1,component);
         end
-    
+
         function Container:remove(component)
             for i = 1,#self.children do
                 if component == self.children[i] then
@@ -875,39 +907,59 @@ if UI ~= nil then
             end
         end
 
-        function Container:show()
-            if self.isvisible == false then
-                if self.stopplayercontrol == true then
-                    UI.StopPlayerControl(true);
-                end
-                self:paint();
+        function Container:repaint()
+            if self.isvisible == true then
+                self.super:repaint();
                 for i = 1,#self.children do
-                    self.children[i]:show();
+                    self.children[i]:repaint();
                 end
-                self.isvisible = true;
+            end
+        end
+
+        function Container:show()
+            self.super:show();
+            for i = 1,#self.children do
+                self.children[i]:show();
             end
         end
 
         function Container:hide()
-            if self.isvisible == true then
-                if self.stopplayercontrol == true then
-                    UI.StopPlayerControl(true);
-                end
-                self.super:hide();
-                for i = 1,#self.children do
-                    self.children[i]:hide();
-                end
-                self.isvisible = false;
+            self.super:hide();
+            for i = 1,#self.children do
+                self.children[i]:hide();
             end
         end
+
     end,Component);
 
     Class("Windows",function(Windows)
         function Windows:constructor()
+            self.super();
+            self.parent = NULL;
             self.width = Graphics.width;
             self.height = Graphics.height;
+
+            Event:addEventListener(Event.OnKeyDown,function(listener,inputs)
+                 for i = 1,#self.children do
+                     if self.children[i].onKeyDown ~= NULL then
+                        self.children[i]:onKeyDown(inputs);
+                    end
+                end
+            end);
+
+            Event:addEventListener(Event.OnKeyUp,function(listener,inputs)
+                for i = 1,#self.children do
+                    if self.children[i].onKeyUp ~= NULL then
+                       self.children[i]:onKeyUp(inputs);
+                    end
+                end
+           end);
         end
+
     end,Container);
+
+    MainWindows = Windows:New();
+
 
     Class("Item",function(Item)
         function Item:constructor(name,value)
@@ -917,7 +969,7 @@ if UI ~= nil then
             self.children = {};
             self.call = NULL;
             self.name = name;
-            
+
             self:add(value);
         end
 
@@ -937,7 +989,7 @@ if UI ~= nil then
             pos = pos or #self.children+1;
             table.insert(self.children,pos,item);
         end
-        
+
         function Item:removeItem(name)
             for i = #self.children,1,-1 do
                 if self.children[i].name == name then
@@ -1069,7 +1121,7 @@ if UI ~= nil then
 
     MainMenu = ItemMenu:New(
         {"帮助",{
-        "关于",function() 
+        "关于",function()
             Toast:makeText("作者:@iPad水晶");
          end,
         }},UI.KEY.O);
@@ -1082,7 +1134,7 @@ if UI ~= nil then
             self.charArray = String.toTable(text or "");
             self.font = font or self.font;
         end
-    
+
         function Lable:paint()
             self.super:paint();
             Graphics.color = self.fontcolor;
@@ -1092,7 +1144,7 @@ if UI ~= nil then
         function Lable:getText()
             return String.toString(self.charArray);
         end
-    
+
     end,Component);
 
     Class("Edit",function(Edit)
@@ -1122,13 +1174,13 @@ if UI ~= nil then
                                         self.cursor = self.cursor + 1;
                                     end
                                 end
-            
+
                                 if self.intype == "all" or self.intype == "english" then
                                     if key >= 10 and key <= 35 then
                                         table.insert(self.charArray,self.cursor+1,string.char(key+87));
                                         self.cursor = self.cursor + 1;
                                     end
-            
+
                                     if key == 37 then
                                         table.insert(self.charArray,self.cursor+1,' ');
                                         self.cursor = self.cursor + 1;
@@ -1181,7 +1233,7 @@ if UI ~= nil then
             local lable = Lable:New(0,0,0,0,text);
 
             local w,h = lable.font:getTextSize(text,lable.fontsize,lable.letterspacing);
-            
+
             lable.x = x or (Graphics.width - w)/2;
             lable.y  = y or Graphics.height * 0.8;
             lable.width = w + 3 * lable.fontsize;
@@ -1206,12 +1258,12 @@ if UI ~= nil then
             self.bitmap = bitmap;
             self.backgroundcolor[4] = 0;
         end
-    
+
         function PictureBox:paint()
             self.super:paint();
             Graphics:drawBitmap(self,self.x,self.y,self.bitmap,{self.x,self.y,self.width,self.height});
         end
-    
+
     end,Component);
 end
 
