@@ -31,12 +31,12 @@ if UI~=nil then
             return true;
         end,
         "字号加大",function()
-             MainMenu.fontsize = MainMenu.fontsize + 1; 
+             MainMenu.pixelsize = MainMenu.pixelsize + 1; 
              return true;
             end,
         "字号减小",function() 
-            if MainMenu.fontsize > 1 then 
-                MainMenu.fontsize = MainMenu.fontsize - 1; 
+            if MainMenu.pixelsize > 1 then 
+                MainMenu.pixelsize = MainMenu.pixelsize - 1; 
             end 
             return true;
         end,
@@ -90,7 +90,7 @@ if UI~=nil then
             local ran =  math.floor(math.random(5));
             print(ran);
             MainMenu:animate({
-                {key="fontsize",value = ran}},
+                {key="pixelsize",value = ran}},
             80,function() Toast:makeText("改变了字号") end);
             return true;
         end,
@@ -98,28 +98,14 @@ if UI~=nil then
 
     "帮助",function() Toast:makeText("作者:@iPad水晶"); end
 },1);
-DIV = Container:New(80,80,80,80);
-DIV:add(Lable:New(0,0,0,0,"text"));
-DIV:add(Lable:New(88,88,0,0,"QWQ"));
+-- DIV = Container:New(80,80,80,80);
+-- P = Edit:New(0,0,88,88,"text")
+-- P.align = "right";
+-- P.letterspacing = 6;
 
-function DIV:onKeyDown(inputs)
-    print("QWQ");
-end
-
-DIV:show();
-
-Event:addEventListener(Event.OnKeyDown,function(self,inputs)
-    if inputs[UI.KEY.U] == true then
-        DIV:hide();
-    end
-end);
-
-Event:addEventListener(Event.OnKeyUp,function(self,inputs)
-    if inputs[UI.KEY.U] == true then
-        DIV:show();
-    end
-end);
-
+-- DIV:add(P);
+-- MainWindows:add(DIV);
+-- DIV:show();
 end
 
 

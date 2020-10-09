@@ -642,7 +642,7 @@ if UI ~= nil then
             self.color = {255,255,255,255};
             self.opacity = 1;
 
-            self.fontsize = 3;
+            self.pixelsize = 3;
             self.letterspacing = 3;
             self.font = Song;
 
@@ -714,12 +714,12 @@ if UI ~= nil then
                     local _width = boxArray[j+2];
                     local _height = boxArray[j+3];
                     if i == 1 then
-                        self:drawRect(component,x + _x*self.fontsize,y + _y*self.fontsize,_width*self.fontsize,_height*self.fontsize,rect);
+                        self:drawRect(component,x + _x*self.pixelsize,y + _y*self.pixelsize,_width*self.pixelsize,_height*self.pixelsize,rect);
                     else
-                        self:drawRect(component,x + ls + self.letterspacing + _x*self.fontsize,y + _y*self.fontsize,_width*self.fontsize,_height*self.fontsize,rect);
+                        self:drawRect(component,x + ls + _x*self.pixelsize,y + _y*self.pixelsize,_width*self.pixelsize,_height*self.pixelsize,rect);
                     end
                 end
-                local charWidth = self.font:getCharSize(c,self.fontsize);
+                local charWidth = self.font:getCharSize(c,self.pixelsize);
                 ls = ls + charWidth + self.letterspacing;
             end
         end
@@ -764,15 +764,26 @@ if UI ~= nil then
             self.animations = {};
             
             self.font = Song;
-            self.fontsize = 2;
+            self.pixelsize = 2;
             self.letterspacing = 0;
             
             self.fontcolor = {0,0,0,255};
             
-            self.onKeyDown = NULL;
-            self.onKeyUp = NULL;
-            if MainWindows ~= nil then
-               self:setParent(MainWindows); 
+            self.animation = NULL;
+
+            self.onkeydown = NULL;
+            self.onkeyup = NULL;
+        end
+
+        function Component:onKeyDown()
+            if self.onkeydown ~= NULL then
+                self.onkeydown(self);
+            end
+        end
+
+        function Component:onKeyUp()
+            if self.onkeyup ~= NULL then
+                self.onkeyup(self);
             end
         end
 
@@ -805,20 +816,20 @@ if UI ~= nil then
 
         function Component:paint()
             Graphics.font = self.font;
-            Graphics.fontsize = self.fontsize;
+            Graphics.pixelsize = self.pixelsize;
             Graphics.letterspacing = self.letterspacing;
 
             Graphics.color = self.backgroundcolor;
             Graphics.opacity = self.opacity;
 
-            Graphics:drawRect(self,self.x,self.y,self.width,self.height);
+            Graphics:drawRect(self,self.parent.x + self.x,self.parent.y + self.y,self.width,self.height);
 
             Graphics.color = self.bordercolor;
 
-            Graphics:drawRect(self,self.x,self.y,self.width,self.border[1]);
-            Graphics:drawRect(self,self.x + self.width - self.border[2],self.y,self.border[2],self.height);
-            Graphics:drawRect(self,self.x,self.y + self.height - self.border[3],self.width,self.border[3]);
-            Graphics:drawRect(self,self.x,self.y,self.border[4],self.height);
+            Graphics:drawRect(self,self.parent.x + self.x,self.parent.y + self.y,self.width,self.border[1]);
+            Graphics:drawRect(self,self.parent.x + self.x + self.width - self.border[2],self.parent.y + self.y,self.border[2],self.height);
+            Graphics:drawRect(self,self.parent.x + self.x,self.parent.y + self.y + self.height - self.border[3],self.width,self.border[3]);
+            Graphics:drawRect(self,self.parent.x + self.x,self.parent.y + self.y,self.border[4],self.height);
         end
 
         function Component:repaint()
@@ -847,7 +858,10 @@ if UI ~= nil then
                     value,
                 };
             end
-            Timer:schedule(function()
+            if self.animation ~= NULL then
+                self.animation.destroy = true;
+            end
+            self.animation = Timer:schedule(function()
                 if step == 0 then
                     for i = 1, #style, 1 do
                         style[i][1][style[i][2]] = style[i][4];
@@ -856,6 +870,7 @@ if UI ~= nil then
                         callback(self);
                     end
                     self:repaint();
+                    self.animation = NULL;
                     return true;
                 end
                 for i = 1, #style, 1 do
@@ -876,17 +891,13 @@ if UI ~= nil then
 
         function Container:onKeyDown(inputs)
             for i = 1,#self.children do
-                if self.children[i].onKeyDown ~= NULL then
-                    self.children[i]:onKeyDown(inputs);
-                end
+                self.children[i]:onKeyDown(inputs);
             end
         end
 
         function Container:onKeyUp(inputs)
             for i = 1,#self.children do
-                if self.children[i].onKeyUp ~= NULL then
-                    self.children[i]:onKeyUp(inputs);
-                end
+                self.children[i]:onKeyUp(inputs);
             end
         end
 
@@ -896,12 +907,14 @@ if UI ~= nil then
             end
             component.parent = self;
             table.insert(self.children,pos or #self.children + 1,component);
+            return self;
         end
 
         function Container:remove(component)
             for i = 1,#self.children do
                 if component == self.children[i] then
                     table.remove(self.children,i);
+                    component.parent = NULL;
                     return;
                 end
             end
@@ -929,7 +942,6 @@ if UI ~= nil then
                 self.children[i]:hide();
             end
         end
-
     end,Component);
 
     Class("Windows",function(Windows)
@@ -940,31 +952,20 @@ if UI ~= nil then
             self.height = Graphics.height;
 
             Event:addEventListener(Event.OnKeyDown,function(listener,inputs)
-                 for i = 1,#self.children do
-                     if self.children[i].onKeyDown ~= NULL then
-                        self.children[i]:onKeyDown(inputs);
-                    end
-                end
+                self:onKeyDown(inputs);
             end);
 
             Event:addEventListener(Event.OnKeyUp,function(listener,inputs)
-                for i = 1,#self.children do
-                    if self.children[i].onKeyUp ~= NULL then
-                       self.children[i]:onKeyUp(inputs);
-                    end
-                end
+                self:onKeyUp(inputs);
            end);
         end
-
     end,Container);
 
     MainWindows = Windows:New();
 
-
     Class("Item",function(Item)
         function Item:constructor(name,value)
             self.super();
-
             self.parent = NULL;
             self.children = {};
             self.call = NULL;
@@ -1025,77 +1026,76 @@ if UI ~= nil then
             self.width = 100;
 
             self.lineheight = 30;
+            self.letterspacing = 5;
 
             self.backgroundcolor = {0,0,0,0};
             self.bordercolor = {0,0,0,0};
 
             self.hotkey = hotkey or UI.KEY.O;
+        end
 
-            Event:addEventListener(Event.OnKeyDown,function(listener,inputs)
-                if inputs[self.hotkey] == true then
-                    if self.isvisible == true then
-                        self:hide();
-                    else
-                        self.page = 1;
-                        self.cursor = self;
-                        self:show();
-                    end
-                end
-
+        function ItemMenu:onKeyDown(inputs)
+            if inputs[self.hotkey] == true then
                 if self.isvisible == true then
-                    local item;
-                    if inputs[UI.KEY.NUM1] == true then
-                        item = self.cursor.children[(self.page - 1) * 6 + 1]
-                    elseif inputs[UI.KEY.NUM2] == true then
-                        item = self.cursor.children[(self.page - 1) * 6 + 2]
-                    elseif inputs[UI.KEY.NUM3] == true then
-                        item = self.cursor.children[(self.page - 1) * 6 + 3]
-                    elseif inputs[UI.KEY.NUM4] == true then
-                        item = self.cursor.children[(self.page - 1) * 6 + 4]
-                    elseif inputs[UI.KEY.NUM5] == true then
-                        item = self.cursor.children[(self.page - 1) * 6 + 5]
-                    elseif inputs[UI.KEY.NUM6] == true then
-                        item = self.cursor.children[(self.page - 1) * 6 + 6]
-                    elseif inputs[UI.KEY.NUM7] == true then
-                        if self.page ~= 1 then
-                            self.page = self.page - 1;
-                            self:repaint();
-                        end
-                    elseif inputs[UI.KEY.NUM8] == true then
-                        if self.page * 6 < #self.cursor.children then
-                            self.page = self.page + 1;
-                            self:repaint();
-                        end
-                    elseif inputs[UI.KEY.NUM9] == true then
-                        if self.cursor.parent ~= NULL then
-                            self.page = 1;
-                            self.cursor = self.cursor.parent;
-                            self:repaint();
-                        end
+                    self:hide();
+                else
+                    self.page = 1;
+                    self.cursor = self;
+                    self:show();
+                end
+            end
+
+            if self.isvisible == true then
+                local item;
+                if inputs[UI.KEY.NUM1] == true then
+                    item = self.cursor.children[(self.page - 1) * 6 + 1]
+                elseif inputs[UI.KEY.NUM2] == true then
+                    item = self.cursor.children[(self.page - 1) * 6 + 2]
+                elseif inputs[UI.KEY.NUM3] == true then
+                    item = self.cursor.children[(self.page - 1) * 6 + 3]
+                elseif inputs[UI.KEY.NUM4] == true then
+                    item = self.cursor.children[(self.page - 1) * 6 + 4]
+                elseif inputs[UI.KEY.NUM5] == true then
+                    item = self.cursor.children[(self.page - 1) * 6 + 5]
+                elseif inputs[UI.KEY.NUM6] == true then
+                    item = self.cursor.children[(self.page - 1) * 6 + 6]
+                elseif inputs[UI.KEY.NUM7] == true then
+                    if self.page ~= 1 then
+                        self.page = self.page - 1;
+                        self:repaint();
                     end
-                    if item ~= nil then
-                        if item.call ~= NULL then
-                            local success,result =  pcall(item.call);
-                            if result ~= true then
-                                self:hide();
-                            end
-                        end
-                        if #item.children ~= 0 then
-                            self.cursor = item;
-                        end
+                elseif inputs[UI.KEY.NUM8] == true then
+                    if self.page * 6 < #self.cursor.children then
+                        self.page = self.page + 1;
+                        self:repaint();
+                    end
+                elseif inputs[UI.KEY.NUM9] == true then
+                    if self.cursor.parent ~= NULL then
+                        self.page = 1;
+                        self.cursor = self.cursor.parent;
                         self:repaint();
                     end
                 end
-            end);
+                if item ~= nil then
+                    if item.call ~= NULL then
+                        local success,result =  pcall(item.call);
+                        if result ~= true then
+                            self:hide();
+                        end
+                    end
+                    if #item.children ~= 0 then
+                        self.cursor = item;
+                    end
+                    self:repaint();
+                end
+            end
         end
 
         function ItemMenu:paint()
             self.super:paint();
-
-            Song.size = self.fontsize;
             Graphics.color = self.fontcolor;
 
-            local __,height = Song:getCharSize("A",self.fontsize);
+            local __,height = Song:getCharSize("A",self.pixelsize);
             height = height + self.lineheight;
 
             for i = 1,6 do
@@ -1125,12 +1125,14 @@ if UI ~= nil then
             Toast:makeText("作者:@iPad水晶");
          end,
         }},UI.KEY.O);
+    MainWindows:add(MainMenu);
 
     Class("Lable",function(Lable)
         function Lable:constructor(x,y,width,height,text,font)
             self.super(x,y,width,height);
             self.offx = 0;
             self.offy = 0;
+            self.align = "center" or "left"or "right";
             self.charArray = String.toTable(text or "");
             self.font = font or self.font;
         end
@@ -1138,11 +1140,25 @@ if UI ~= nil then
         function Lable:paint()
             self.super:paint();
             Graphics.color = self.fontcolor;
-            Graphics:drawText(self,self.x + self.offx,self.y + self.offy,self.charArray);
+
+            local w,h = self.font:getTextSize(self.charArray,self.pixelsize,self.letterspacing);
+
+            if self.align == "center" then
+                Graphics:drawText(self,self.parent.x + self.x + self.offx + (self.width - w)/2,self.parent.y + self.y + self.offy,self.charArray);
+            elseif self.align == "left" then
+                Graphics:drawText(self,self.parent.x + self.x + self.offx,self.parent.y + self.y + self.offy,self.charArray);
+            elseif self.align == "right" then
+                Graphics:drawText(self,self.parent.x + self.x + self.offx + (self.width - w),self.parent.y + self.y + self.offy,self.charArray);
+            end
         end
 
         function Lable:getText()
             return String.toString(self.charArray);
+        end
+
+        function Lable:setText(text)
+            self.charArray = String.toTable(text or "");
+            self:repaint();
         end
 
     end,Component);
@@ -1154,60 +1170,60 @@ if UI ~= nil then
             self.maxlength = 10;
             self.intype = "number";
 
-
             self.keyprevious = UI.KEY.LEFT;
             self.keynext = UI.KEY.RIGHT;
             self.keybackspace = UI.KEY.SHIFT;
+        end
 
-            Event:addEventListener(Event.OnKeyDown,function(listener,inputs)
-                if self.isvisible == true then
-                    for key, value in pairs(inputs) do
-                        if value == true then
-                            if #self.charArray < self.maxlength then
-                                if self.intype == "all" or self.intype == "number" then
-                                    if key >=0 and key <= 8 then
-                                        table.insert(self.charArray,self.cursor+1,string.char(key+49));
-                                        self.cursor = self.cursor + 1;
-                                    end
-                                    if key == 9 then
-                                        table.insert(self.charArray,self.cursor+1,"0");
-                                        self.cursor = self.cursor + 1;
-                                    end
+        function Edit:onKeyDown(inputs)
+            self.super:onKeyDown(inputs);
+            if self.isvisible == true then
+                for key, value in pairs(inputs) do
+                    if value == true then
+                        if #self.charArray < self.maxlength then
+                            if self.intype == "all" or self.intype == "number" then
+                                if key >=0 and key <= 8 then
+                                    table.insert(self.charArray,self.cursor+1,string.char(key+49));
+                                    self.cursor = self.cursor + 1;
                                 end
-
-                                if self.intype == "all" or self.intype == "english" then
-                                    if key >= 10 and key <= 35 then
-                                        table.insert(self.charArray,self.cursor+1,string.char(key+87));
-                                        self.cursor = self.cursor + 1;
-                                    end
-
-                                    if key == 37 then
-                                        table.insert(self.charArray,self.cursor+1,' ');
-                                        self.cursor = self.cursor + 1;
-                                    end
-                                end
-                            end
-                            if key == self.keyprevious then
-                                if self.cursor > 0 then
-                                    self.cursor = self.cursor - 1;
-                                end
-                            end
-                            if key == self.keynext then
-                                if self.cursor < #self.charArray then
+                                if key == 9 then
+                                    table.insert(self.charArray,self.cursor+1,"0");
                                     self.cursor = self.cursor + 1;
                                 end
                             end
-                            if key == self.keybackspace then
-                                if self.cursor > 0 then
-                                    table.remove(self.charArray,self.cursor);
-                                    self.cursor = self.cursor - 1;
+
+                            if self.intype == "all" or self.intype == "english" then
+                                if key >= 10 and key <= 35 then
+                                    table.insert(self.charArray,self.cursor+1,string.char(key+87));
+                                    self.cursor = self.cursor + 1;
+                                end
+
+                                if key == 37 then
+                                    table.insert(self.charArray,self.cursor+1,' ');
+                                    self.cursor = self.cursor + 1;
                                 end
                             end
                         end
+                        if key == self.keyprevious then
+                            if self.cursor > 0 then
+                                self.cursor = self.cursor - 1;
+                            end
+                        end
+                        if key == self.keynext then
+                            if self.cursor < #self.charArray then
+                                self.cursor = self.cursor + 1;
+                            end
+                        end
+                        if key == self.keybackspace then
+                            if self.cursor > 0 then
+                                table.remove(self.charArray,self.cursor);
+                                self.cursor = self.cursor - 1;
+                            end
+                        end
                     end
-                    self:repaint();
                 end
-            end);
+                self:repaint();
+            end
         end
 
         function Edit:paint()
@@ -1216,8 +1232,17 @@ if UI ~= nil then
             for i = 1,self.cursor do
                 textArray[#textArray+1] = self.charArray[i];
             end
-            local w,h = self.font:getTextSize(textArray,self.fontsize,self.letterspacing);
-            Graphics:drawRect(self,self.x + w + self.offx + 1,self.y +self.offy,self.letterspacing /2 + self.fontsize,h);
+            local w,h = self.font:getTextSize(textArray,self.pixelsize,self.letterspacing);
+
+            if self.align == "left" then
+                Graphics:drawRect(self,self.parent.x + self.x + w + self.offx + 1,self.parent.y + self.y +self.offy,self.letterspacing /3 + self.pixelsize,h);
+            elseif self.align == "center" then
+                local tw,th = self.font:getTextSize(self.charArray,self.pixelsize,self.letterspacing);
+                Graphics:drawRect(self,self.parent.x + self.x + w + self.offx + (self.width - tw)/2 + 1,self.parent.y + self.y +self.offy,self.letterspacing /3 + self.pixelsize,h);
+            elseif self.align == "right" then
+                local tw,th = self.font:getTextSize(self.charArray,self.pixelsize,self.letterspacing);
+                Graphics:drawRect(self,self.parent.x + self.x + w + self.offx + (self.width - tw) + 1,self.parent.y + self.y +self.offy,self.letterspacing /3 + self.pixelsize,h);
+            end
         end
 
     end,Lable);
@@ -1225,32 +1250,33 @@ if UI ~= nil then
 
     Class("Toast",function(Toast)
         function Toast:constructor()
-
+            self.super(0,0,100,100,"QWQ");
+            self.letterspacing = 5;
         end
 
         function Toast:makeText(text,length,x,y)
+            self:setText(text);
 
-            local lable = Lable:New(0,0,0,0,text);
+            local w,h = self.font:getTextSize(text,self.pixelsize,self.letterspacing);
 
-            local w,h = lable.font:getTextSize(text,lable.fontsize,lable.letterspacing);
-
-            lable.x = x or (Graphics.width - w)/2;
-            lable.y  = y or Graphics.height * 0.8;
-            lable.width = w + 3 * lable.fontsize;
-            lable.height = h + 3 * lable.fontsize;
+            self.x = x or (MainWindows.width - w)/2;
+            self.y  = y or MainWindows.height * 0.8;
+            self.width = w + 3 * self.pixelsize;
+            self.height = h + 3 * self.pixelsize;
 
 
-            lable.backgroundcolor = {0,0,0,255};
-            lable.fontcolor = {255,255,255,255};
-
-            lable:show();
-            lable:animate({{key = "opacity",value = 0}},length or 120,function(self)
+            self.backgroundcolor = {0,0,0,255};
+            self.opacity = 1;
+            self.fontcolor = {255,255,255,255};
+            self:show();
+            self:animate({{key = "opacity",value = 0}},length or 120,function(self)
                 self:hide();
             end);
         end
-    end);
+    end,Lable);
 
     Toast = Toast:New();
+    MainWindows:add(Toast);
 
     Class("PictureBox",function(PictureBox)
         function PictureBox:constructor(x,y,width,height,bitmap)

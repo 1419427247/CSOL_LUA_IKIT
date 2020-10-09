@@ -10,6 +10,9 @@
     "Basic/Song_1.lua",
     "Basic/Song_2.lua",
     "Basic/Song_3.lua",
+    "Basic/Song_4.lua",
+    "Basic/Song_5.lua",
+    "Basic/Song_6.lua",
     "MainMenu.lua"
   ]
 }
