@@ -111,8 +111,8 @@ end)();
 Class("Node",function(Node)
     function Node:constructor()
         self.parent = NULL;
-        self.left = {};
-        self.right = {};
+        self.left = NULL;
+        self.right = NULL;
     end
 end);
 
@@ -137,7 +137,7 @@ Class("Symbol",function(Symbol)
     end
 
     function Symbol:getPriority(symbol)
-        return self.symbols[symbol];
+        return self.priorityMap[symbol];
     end
 
     function Symbol:getSymbol(text,index)
@@ -206,7 +206,7 @@ end
 
 Class("SyntacticAnalysis",function(SyntacticAnalysis)
     function SyntacticAnalysis:constructor()
-        self.root = Node:New();
+        self.root = NULL;
     end
 
     function SyntacticAnalysis:Create(...)
@@ -216,10 +216,18 @@ Class("SyntacticAnalysis",function(SyntacticAnalysis)
     function SyntacticAnalysis:Explain(list)
         local cursor = self.root;
         for i = 1,#list do
-            local priority = Symbol:getPriority(list[i]);
-            print(priority)
-            if priority ~= nil then
+            if self.root ==NULL then
+                self.root = Node:New();
+                self.root.value = list[i];
+            else
+                local priority = Symbol:getPriority(list[i]);
+                if self.root  then
+                    
+                end
             end
+            
+            
+
         end
     end
 end);
