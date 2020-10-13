@@ -111,9 +111,27 @@ end)();
 Class("Node",function(Node)
     function Node:constructor()
         self.parent = NULL;
-        self.left = NULL;
-        self.right = NULL;
+        self.children = {};
     end
+
+    function Node:add(node)
+        if node.parent ~= NULL then
+            node.parent:remove(node);
+        end
+        node.parent = self;
+        self.children[#self.children+1] = node;
+    end
+
+    function Node:remove(node)
+        for i = 1,#self.children do
+            if self.children[i] == node then
+                self.children[i].parent = NULL;
+                table.remove(self.children,i);
+                return;
+            end
+        end
+    end
+
 end);
 
 
@@ -136,6 +154,10 @@ Class("Symbol",function(Symbol)
         end);
     end
 
+    function Symbol:isSymbol(symbol)
+        return self.priorityMap[symbol] ~= nil;
+    end
+
     function Symbol:getPriority(symbol)
         return self.priorityMap[symbol];
     end
@@ -152,9 +174,19 @@ Class("Symbol",function(Symbol)
 end);
 
 Class("Keyword",function(Keyword)
-    function Keyword:constructor(value)
-        self.value = value;
+    function Keyword:constructor(...)
+        self.keywordsMap = {};
+        local values = {...};
+        
+        for i = 1,#values do
+            self.keywordsMap[values[i]] = {};
+        end
     end
+
+    function Keyword:isKeyword(keyword)
+        return self.keywordsMap[keyword] ~= nil;
+    end
+
 end);
 
 Class("LexicalAnalyzer",function(LexicalAnalyzer)
@@ -166,6 +198,7 @@ Class("LexicalAnalyzer",function(LexicalAnalyzer)
         local value = {};
         local stack = {};
         local i = 1;
+
         while i <= #text do
             local symbol = self.symbol:getSymbol(text,i);
             if symbol ~= nil then
@@ -198,43 +231,96 @@ Symbol = Symbol:New(
 
 LexicalAnalyzer = LexicalAnalyzer:New(Symbol);
 
-local value = LexicalAnalyzer:Explain("44+2-3*2");
+local value = LexicalAnalyzer:Explain("3*2*3-3*1");
 
-for i = 1,#value do
-    print(value[i])
-end
+-- for i = 1,#value do
+--     print(value[i])
+-- end
+
+
+
 
 Class("SyntacticAnalysis",function(SyntacticAnalysis)
     function SyntacticAnalysis:constructor()
-        self.root = NULL;
-    end
-
-    function SyntacticAnalysis:Create(...)
 
     end
 
     function SyntacticAnalysis:Explain(list)
-        local cursor = self.root;
+        local cursor = NULL;
         for i = 1,#list do
-            if self.root ==NULL then
-                self.root = Node:New();
-                self.root.value = list[i];
+            if cursor ==NULL then
+                cursor = Node:New();
+                cursor.value = list[i];
             else
-                local priority = Symbol:getPriority(list[i]);
-                if self.root  then
-                    
+                local node = Node:New();
+                node.value = list[i];
+                if Symbol:isSymbol(list[i]) then
+                    if cursor.parent == NULL then
+                        node:add(cursor);
+                    else
+                        if Symbol:getPriority(list[i]) > Symbol:getPriority(cursor.parent.value) then
+                            -- print(list[i] .. ">" .. cursor.parent.value)
+                            local tmp = cursor.parent;
+                            node:add(cursor);
+                            tmp:add(node);
+                        elseif Symbol:getPriority(list[i]) < Symbol:getPriority(cursor.parent.value) then
+                            -- print(list[i] .. "<" .. cursor.parent.value)
+                            node:add(cursor.parent);
+                        else
+                            node:add(cursor.parent);
+                        end
+                    end
+                else
+                    cursor:add(node);
                 end
+                cursor = node;
             end
-            
-            
-
         end
+
+        while cursor.parent ~= NULL do
+            cursor = cursor.parent;
+        end
+        return cursor;
     end
 end);
 
 SyntacticAnalysis = SyntacticAnalysis:New();
 
-SyntacticAnalysis:Explain(value);
+local root = SyntacticAnalysis:Explain(value);
+
+
+
+
+local list = {};
+function PrintTree(root,index)
+    index = index or 1;
+    list[index] = list[index] or {};
+
+    list[index][#list[index]+1] = root.value;
+    for i = 1,#root.children do
+        PrintTree(root.children[i],index + 1);
+    end
+end
+
+PrintTree(root);
+for i = 1,#list do
+    local r = {};
+    for j = 1,#list[i] do
+        r[#r+1] = list[i][j];
+    end
+    print(table.concat(r," "));
+end
+
+-- function PrintTree(root)
+--     local list = {};
+--     list[#list+1] = root.value .. "\n";
+--     for i = 1,#root.children do
+--         list[#list+1] = PrintTree(root.children[i]);
+--     end
+--     return table.concat(list," ");
+-- end
+
+-- print(PrintTree(root))
 
 
 -- Class("Grammar",function(Grammar)
