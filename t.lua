@@ -226,19 +226,11 @@ end);
 
 Symbol = Symbol:New(
     {"+","-"},
-    {"*","/"}
+    {"*","/"},
+    {"%","^"}
 );
 
 LexicalAnalyzer = LexicalAnalyzer:New(Symbol);
-
-local value = LexicalAnalyzer:Explain("3*2*3-3*1");
-
--- for i = 1,#value do
---     print(value[i])
--- end
-
-
-
 
 Class("SyntacticAnalysis",function(SyntacticAnalysis)
     function SyntacticAnalysis:constructor()
@@ -286,30 +278,43 @@ end);
 
 SyntacticAnalysis = SyntacticAnalysis:New();
 
-local root = SyntacticAnalysis:Explain(value);
+local root = SyntacticAnalysis:Explain(LexicalAnalyzer:Explain("42*32^38768672"));
 
+function ExplainTree(root)
+    if root.value == "*" then
+        return ExplainTree(root.children[1]) * ExplainTree(root.children[2]);
+    elseif root.value == "/" then
+        return ExplainTree(root.children[1]) / ExplainTree(root.children[2]);
+    elseif root.value == "+" then
+        return ExplainTree(root.children[1]) + ExplainTree(root.children[2]);
+    elseif root.value == "-" then
+        return ExplainTree(root.children[1]) - ExplainTree(root.children[2]);
+    elseif root.value == "^" then
+        return math.pow(ExplainTree(root.children[1]),ExplainTree(root.children[2]));
+    else
+        return tonumber(root.value);
+    end
+end
 
+print(ExplainTree(root));
 
-
-local list = {};
 function PrintTree(root,index)
     index = index or 1;
-    list[index] = list[index] or {};
-
-    list[index][#list[index]+1] = root.value;
+    local space = {};
+    space[#space+1] = "|";
+    for i = 2,index-1 do
+        space[#space+1] = "--";
+    end
+    space[#space+1] = "->  | ";
+    space[#space+1] = root.value;
+    print(table.concat(space));
     for i = 1,#root.children do
-        PrintTree(root.children[i],index + 1);
+        PrintTree(root.children[i],index + 1)
     end
 end
 
+print("table")
 PrintTree(root);
-for i = 1,#list do
-    local r = {};
-    for j = 1,#list[i] do
-        r[#r+1] = list[i][j];
-    end
-    print(table.concat(r," "));
-end
 
 -- function PrintTree(root)
 --     local list = {};
