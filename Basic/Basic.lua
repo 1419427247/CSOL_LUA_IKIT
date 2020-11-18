@@ -1,140 +1,17 @@
 Class,InstanceOf,Type = (function()
-    String = {
-        charSize = function(char)
-            local seperate = {0, 0xc0, 0xe0, 0xf0}
-            for i = #seperate, 1, -1 do
-                if char >= seperate[i] then
-                    return i;
-                end
-            end
-            return 1;
-        end,
-        toString = function(value)
-            local array = {};
-            local currentIndex = 1;
-            while currentIndex <= #value do
-                local cs = String.charSize(value[currentIndex]);
-                array[#array+1] = string.char(table.unpack(value,currentIndex,currentIndex + cs - 1));
-                currentIndex = currentIndex + cs;
-            end
-            return table.concat(array);
-        end,
-        toBytes = function(value)
-            local bytes = {};
-            if type(value) == "string" then
-                value = String.toTable(value);
-            end
-            for i = 1, #value do
-                for j = 1, #value[i], 1 do
-                    table.insert(bytes,string.byte(value[i],j));
-                end
-            end
-            return bytes;
-        end,
-        toTable = function(value)
-            local currentIndex = 1;
-            local array = {};
-            while currentIndex <= #value do
-                local cs = String.charSize(string.byte(value, currentIndex));
-                array[#array+1] = string.sub(value,currentIndex,currentIndex+cs-1);
-                currentIndex = currentIndex + cs;
-            end
-            return array;
+    local congif = {};
+    function Config(_table)
+        for key, value in pairs(_table) do
+            congif[key] = value;
         end
-    };
-
-    Event = (function()
-        local object;
-        local event;
-        if Game ~= nil then
-            object = {
-                    ["OnPlayerConnect"] = {},
-                    ["OnPlayerDisconnect"] = {},
-                    ["OnRoundStart"] = {},
-                    ["OnRoundStartFinished"] = {},
-                    ["OnPlayerSpawn"] = {},
-                    ["OnPlayerJoiningSpawn"] = {},
-                    ["OnPlayerKilled"] = {},
-                    ["OnKilled"] = {},
-                    ["OnPlayerSignal"] = {},
-                    ["OnUpdate"] = {},
-                    ["OnPlayerAttack"] = {},
-                    ["OnTakeDamage"] = {},
-                    ["CanBuyWeapon"] = {},
-                    ["CanHaveWeaponInHand"] = {},
-                    ["OnGetWeapon"] = {},
-                    ["OnReload"] = {},
-                    ["OnReloadFinished"] = {},
-                    ["OnSwitchWeapon"] = {},
-                    ["PostFireWeapon"] = {},
-                    ["OnGameSave"] = {},
-                    ["OnLoadGameSave"] = {},
-                    ["OnClearGameSave"] = {},
-                };
-                event = Game.Rule;
-        end
-        if UI~=nil then
-            object = {
-                    ["OnRoundStart"] = {},
-                    ["OnSpawn"] = {},
-                    ["OnKilled"] = {},
-                    ["OnInput"] = {},
-                    ["OnUpdate"] = {},
-                    ["OnChat"] = {},
-                    ["OnSignal"] = {},
-                    ["OnKeyDown"] = {},
-                    ["OnKeyUp"] = {},
-                };
-                event = UI.Event;
-        end
-        for key, value in pairs(object) do
-            event[key] = function(self,...)
-                for i = #value,1,-1 do
-                    if value[i].stop == false then
-                        value[i]:call(...);
-                    end
-                    if value[i].destroy == true then
-                        table.remove(value,i);
-                    end
-                end
-            end;
-        end
-
-        local metatable = {
-            id = 0,
-            addEventListener = function(self,event,listener)
-                event[#event + 1] = {call = listener,stop = false,destroy = false};
-                return event[#event];
-            end,
-            detachEventListener = function(self,listener)
-                if type(event) == "string" then
-                    event = self[event];
-                end
-                listener.destroy = true;
-            end,
-            stopEventListener = function(self,listener)
-                if type(event) == "string" then
-                    event = self[event];
-                end
-                listener.stop = true;
-            end,
-            startEventListener = function(self,listener)
-                if type(event) == "string" then
-                    event = self[event];
-                end
-                listener.stop = false;
-            end,
-        };
-        metatable.__index = metatable;
-        return setmetatable(object,metatable);
-    end)();
-
+    end
     NULL = {};
     local CLASS = {};
     CLASS["Object"] = {
         TABLE = {
             type = "Object",
             super = nil,
+            config = {};
             __call = function (table,...)
                 table:constructor(...);
             end,
@@ -184,6 +61,7 @@ Class,InstanceOf,Type = (function()
         end
         local object = CLONE(CLASS[_name]);
         object(...);
+        object.congif = config[_name] or object.congif;
         rawset(object,"type",_name);
         return setmetatable({},object);
     end
@@ -206,13 +84,16 @@ Class,InstanceOf,Type = (function()
             SUPER = CLASS[_super],
             TYPE = _name,
         };
-        _G[_name] = {
-            Name = _name;
-            New = function(self,...)
-                return NEW(self.Name,...);
-            end
-        };
-
+        if (Config[_name] or {["自动实例化"]=false}) == true then
+            _G[_name] = _G[_name]:New();
+        else
+            _G[_name] = {
+                Name = _name;
+                New = function(self,...)
+                    return NEW(self.Name,...);
+                end
+            };
+        end
     end
 
     local function INSTANCEOF(_object,_class)
@@ -238,45 +119,209 @@ Class,InstanceOf,Type = (function()
     return CREATECLASS,INSTANCEOF,TYPE;
 end)();
 
+Config({
+    ["Event"] = {
+        ["自动实例化"] = true,
+        ["安全模式"] = true,
+    },
+    ["String"] = {
+        ["自动实例化"] = true,
+        ["启用缓存"] = false,
+    },
+    ["Timer"] = {
+        ["自动实例化"] = true,
+        ["最大任务数"] = -1,
+        ["步长"] = 1,
+        ["安全模式"] = true,
+        ["任务发生异常后自动移除"] = true,
+    },
+    ["Database"] = {
 
-Class("Timer",function(Timer)
-    local task = {};
-    local count = 0;
-    function Timer:constructor()
-        Event:addEventListener(Event.OnUpdate,function(listener,time)
-            for i = #task,1,-1 do
-                if task[i].value <= count then
-                    local success,result;
-                    if task[i].stop == false then
-                        success,result = pcall(task[i].call,task[i])
-                        if not success then
-                            print("计时器中的函数发生了异常");
-                            log(result)
-                            table.remove(task,i);
-                        end
-                    end
-                    if task[i].period == nil or task[i].destroy == true or result == true then
-                        table.remove(task,i);
-                    else
-                        task[i].value = count + task[i].period;
-                    end
-                end
+    },
+});
+
+
+Class("String",function(String)
+    function String:charSize(char)
+        local seperate = {0, 0xc0, 0xe0, 0xf0}
+        for i = #seperate, 1, -1 do
+            if char >= seperate[i] then
+                return i;
             end
-            count = count + 1;
-        end);
+        end
+        return 1;
     end
 
-    function Timer:schedule(call,delay,period)
-        task[#task+1] = {call = call,value = count + delay,period = period,destroy = false,stop = false};
-        return task[#task];
+    function String:toString(value)
+        local array = {};
+        local currentIndex = 1;
+        while currentIndex <= #value do
+            local cs = String:charSize(value[currentIndex]);
+            array[#array+1] = string.char(table.unpack(value,currentIndex,currentIndex + cs - 1));
+            currentIndex = currentIndex + cs;
+        end
+        return table.concat(array);
     end
 
-    function Timer:purge()
-        task = {}
+    function String:toBytes(value)
+        local bytes = {};
+        if type(value) == "string" then
+            value = String:toTable(value);
+        end
+        for i = 1, #value do
+            for j = 1, #value[i], 1 do
+                table.insert(bytes,string.byte(value[i],j));
+            end
+        end
+        return bytes;
+    end
+
+    function String:toTable(value)
+        local currentIndex = 1;
+        local array = {};
+        while currentIndex <= #value do
+            local cs = String:charSize(string.byte(value, currentIndex));
+            array[#array+1] = string.sub(value,currentIndex,currentIndex+cs-1);
+            currentIndex = currentIndex + cs;
+        end
+        return array;
     end
 end);
 
-Timer = Timer:New();
+Class("Listener",function(Listener)
+    function Listener:constructor(func)
+        self.call = func;
+        self.status = 1;
+    end
+
+    function Listener:stop()
+        self.status = 0;
+    end
+
+    function Listener:start()
+        self.status = 1;
+    end
+
+    function Listener:cancel()
+        self.status = -1;
+    end
+end);
+
+Class("Event",function(Event)
+    function Event:constructor()
+        self.listenerList = NULL;
+        if Game ~= nil then
+            self.listenerList = {"OnPlayerConnect","OnPlayerDisconnect","OnRoundStart","OnRoundStartFinished","OnPlayerSpawn","OnPlayerJoiningSpawn","OnPlayerKilled","OnKilled","OnPlayerSignal","OnUpdate","OnPlayerAttack","OnTakeDamage","CanBuyWeapon","CanHaveWeaponInHand","OnGetWeapon","OnReload","OnReloadFinished","OnSwitchWeapon","PostFireWeapon","OnGameSave","OnLoadGameSave","OnClearGameSave",
+            };
+        end
+        if UI~=nil then
+            self.listenerList ={"OnRoundStart","OnSpawn","OnKilled","OnInput","OnUpdate","OnChat","OnSignal","OnKeyDown","OnKeyUp"};
+        end
+
+        for i = 1, #self.listenerList do
+            self[self.listenerList[i]] = {};
+            ((UI or Game).Event or (UI or Game).Rule)[self.listenerList[i]] = function(...)
+                local list = self[self.listenerList[i]];
+                for j = #list,1,-1 do
+                    if list.status == 1 then
+                        list[i]:call(...);
+                    elseif list.status == -1 then
+                        table.remove(list,i);
+                    end
+                end
+            end
+        end
+    end
+
+    function Event:addEventListener(event,listener)
+        if Type(event) == "string" then
+            event = self[event];
+        end
+        if Type(value) == "function" then
+            listener = Listener:New(listener);
+        end
+        event[#event + 1] = listener;
+        return listener;
+    end
+
+    function Event:purge(event)
+        if Type(event) == "string" then
+            event = self[event];
+        end
+        event = {};
+    end
+end);
+
+Class("TimerTask",function(TimerTask)
+    function TimerTask:constructor(func,time,period)
+        self.super(func);
+        self.time = time;
+        self.period = period or NULL;
+    end
+end,Listener);
+
+Class("Timer",function(Timer)
+    function Timer:constructor()
+        self.super(self.onUpdate);
+        self.task = {};
+        self.count = 0;
+        Event:addEventListener(Event.OnUpdate,self);
+    end
+
+    function Timer:onUpdate()
+        for i = #self.task,1,-1 do
+            if self.task[i].value <= self.count then
+                local success,result;
+                if self.task[i].status == 1 then
+                    success,result = pcall(self.task[i].call,self.task[i])
+                    if not success then
+                        print("计时器中的函数发生了异常");
+                        table.remove(self.task,i);
+                    end
+                end
+                if self.task[i].period == NULL or self.task[i].status == -1 or result == true then
+                    table.remove(self.task,i);
+                else
+                    self.task[i].time = self.count + self.task[i].period;
+                end
+            end
+        end
+        self.count = self.count + 1;
+    end
+
+    function Timer:schedule(call,delay,period)
+        self.task[#self.task+1] = TimerTask:New(call,count + delay,period);
+        return self.task[#self.task];
+    end
+
+    function Timer:purge()
+        self.task = {}
+    end
+end);
+
+Class("Database",function(Database)
+    function Database:constructor()
+
+    end
+end);
+
+Class("Model",function(Model)
+    function Model:constructor()
+
+    end
+
+    function Model:Set(...)
+
+    end
+
+    function Model:Get(...)
+
+    end
+
+    function Model:Save()
+
+    end
+end);
 
 Class("Method",function(Method)
     local key = 1;
@@ -298,13 +343,13 @@ METHODTABLE = {
     },
     UI = {
         GETNAME = Method:Create(function(self,bytes)
-            self.name = String.toString(bytes);
+            self.name = String:toString(bytes);
             self.syncValue = {};
         end),
         CREATSYNCVALUE = Method:Create(function(self,bytes)
-            local key = String.toString(bytes);
+            local key = String:toString(bytes);
             self.syncValue[key] = UI.SyncValue:Create(self.name .. key);
-            print("成功创建同步变量:"..String.toString(bytes));
+            print("成功创建同步变量:"..String:toString(bytes));
         end),
     }
 };
@@ -358,7 +403,7 @@ if Game ~= nil then
             Event:addEventListener(Event.OnPlayerConnect,function(player)
                 self.players[player.name] = player;
                 self.syncValue[player.name] = {};
-                self:sendMessageBySignal(player,METHODTABLE.UI.GETNAME.key,String.toBytes(player.name));
+                self:sendMessageBySignal(player,METHODTABLE.UI.GETNAME.key,String:toBytes(player.name));
             end);
 
             Event:addEventListener(Event.OnPlayerDisconnect,function(player)
@@ -367,7 +412,7 @@ if Game ~= nil then
         end
 
         function NetServer:createSyncValue(player,key,value)
-            self:sendMessageBySignal(player,METHODTABLE.UI.CREATSYNCVALUE.key,String.toBytes(key));
+            self:sendMessageBySignal(player,METHODTABLE.UI.CREATSYNCVALUE.key,String:toBytes(key));
             self.syncValue[player.name] = self.syncValue[player.name] or {};
             local syncValue = Game.SyncValue:Create(player.name .. key);
             syncValue.value = value;
@@ -578,7 +623,7 @@ if UI ~= nil then
 
         function Font:getTextSize(text,size,letterspacing)
             if type(text) == "string" then
-                text = String.toTable(text);
+                text = String:toTable(text);
             end
             local height = 0;
             local width = 0;
@@ -702,7 +747,7 @@ if UI ~= nil then
 
         function Graphics:drawText(component,x,y,text,rect)
             if type(text) == "string" then
-                text = String.toTable(text);
+                text = String:toTable(text);
             end
             local ls = 0;
             for i=1,#text do
@@ -1136,7 +1181,7 @@ if UI ~= nil then
             self.offx = 0;
             self.offy = 0;
             self.align = "center" or "left"or "right";
-            self.charArray = String.toTable(text or "");
+            self.charArray = String:toTable(text or "");
             self.font = font or self.font;
         end
 
@@ -1156,11 +1201,11 @@ if UI ~= nil then
         end
 
         function Lable:getText()
-            return String.toString(self.charArray);
+            return String:toString(self.charArray);
         end
 
         function Lable:setText(text)
-            self.charArray = String.toTable(text or "");
+            self.charArray = String:toTable(text or "");
             self:repaint();
         end
 
