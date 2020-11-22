@@ -1,19 +1,29 @@
 Class,InstanceOf,Type = (function()
-    local congif = {};
-    function Config(_table)
-        for key, value in pairs(_table) do
-            congif[key] = value;
+    Config = setmetatable({},{
+        __call = function(self,value)
+                for key, value in pairs(value) do
+                    if string.sub(key,1,1) == '$' then
+                        key = string.sub(key,2,#key);
+                        if _G[key] ~= nil then
+                            _G[key] = _G[key]:New();
+                        end
+                    end
+                    self[key] = value;
+                end
         end
-    end
+    });
+
+
     NULL = {};
     local CLASS = {};
     CLASS["Object"] = {
         TABLE = {
             type = "Object",
             super = nil,
-            config = {};
             __call = function (table,...)
-                table:constructor(...);
+                if table.constructor ~= nil then
+                    table:constructor(...);
+                end
             end,
             __newindex = function(table,key,value)
                 if value == nil then
@@ -61,7 +71,6 @@ Class,InstanceOf,Type = (function()
         end
         local object = CLONE(CLASS[_name]);
         object(...);
-        object.congif = config[_name] or object.congif;
         rawset(object,"type",_name);
         return setmetatable({},object);
     end
@@ -84,16 +93,12 @@ Class,InstanceOf,Type = (function()
             SUPER = CLASS[_super],
             TYPE = _name,
         };
-        if (Config[_name] or {["自动实例化"]=false}) == true then
-            _G[_name] = _G[_name]:New();
-        else
-            _G[_name] = {
-                Name = _name;
-                New = function(self,...)
-                    return NEW(self.Name,...);
-                end
-            };
-        end
+        _G[_name] = {
+            Name = _name;
+            New = function(self,...)
+                return NEW(self.Name,...);
+            end
+        };
     end
 
     local function INSTANCEOF(_object,_class)
@@ -118,28 +123,6 @@ Class,InstanceOf,Type = (function()
 
     return CREATECLASS,INSTANCEOF,TYPE;
 end)();
-
-Config({
-    ["Event"] = {
-        ["自动实例化"] = true,
-        ["安全模式"] = true,
-    },
-    ["String"] = {
-        ["自动实例化"] = true,
-        ["启用缓存"] = false,
-    },
-    ["Timer"] = {
-        ["自动实例化"] = true,
-        ["最大任务数"] = -1,
-        ["步长"] = 1,
-        ["安全模式"] = true,
-        ["任务发生异常后自动移除"] = true,
-    },
-    ["Database"] = {
-
-    },
-});
-
 
 Class("String",function(String)
     function String:charSize(char)
@@ -211,11 +194,10 @@ Class("Event",function(Event)
     function Event:constructor()
         self.listenerList = NULL;
         if Game ~= nil then
-            self.listenerList = {"OnPlayerConnect","OnPlayerDisconnect","OnRoundStart","OnRoundStartFinished","OnPlayerSpawn","OnPlayerJoiningSpawn","OnPlayerKilled","OnKilled","OnPlayerSignal","OnUpdate","OnPlayerAttack","OnTakeDamage","CanBuyWeapon","CanHaveWeaponInHand","OnGetWeapon","OnReload","OnReloadFinished","OnSwitchWeapon","PostFireWeapon","OnGameSave","OnLoadGameSave","OnClearGameSave",
-            };
+            self.listenerList = {"OnPlayerConnect","OnPlayerDisconnect","OnRoundStart","OnRoundStartFinished","OnPlayerSpawn","OnPlayerJoiningSpawn","OnPlayerKilled","OnKilled","OnPlayerSignal","OnUpdate","OnPlayerAttack","OnTakeDamage","CanBuyWeapon","CanHaveWeaponInHand","OnGetWeapon","OnReload","OnReloadFinished","OnSwitchWeapon","PostFireWeapon","OnGameSave","OnLoadGameSave","OnClearGameSave"};
         end
         if UI~=nil then
-            self.listenerList ={"OnRoundStart","OnSpawn","OnKilled","OnInput","OnUpdate","OnChat","OnSignal","OnKeyDown","OnKeyUp"};
+            self.listenerList = {"OnRoundStart","OnSpawn","OnKilled","OnInput","OnUpdate","OnChat","OnSignal","OnKeyDown","OnKeyUp"};
         end
 
         for i = 1, #self.listenerList do
@@ -237,13 +219,12 @@ Class("Event",function(Event)
         if Type(event) == "string" then
             event = self[event];
         end
-        if Type(value) == "function" then
+        if Type(listener) == "function" then
             listener = Listener:New(listener);
         end
         event[#event + 1] = listener;
         return listener;
     end
-
     function Event:purge(event)
         if Type(event) == "string" then
             event = self[event];
@@ -297,7 +278,7 @@ Class("Timer",function(Timer)
     function Timer:purge()
         self.task = {}
     end
-end);
+end,Listener);
 
 Class("Database",function(Database)
     function Database:constructor()
@@ -334,6 +315,26 @@ Class("Method",function(Method)
         return {KEY = key - 1,CALL = call};
     end
 end);
+
+Config({
+    ["$Event"] = {
+        ["安全模式"] = true,
+    },
+    ["$String"] = {
+        ["启用缓存"] = false,
+    },
+    ["$Timer"] = {
+        ["最大任务数"] = -1,
+        ["步长"] = 1,
+        ["安全模式"] = true,
+        ["任务发生异常后自动移除"] = true,
+    },
+    ["Database"] = {
+
+    },
+});
+
+
 
 Method = Method:New();
 
