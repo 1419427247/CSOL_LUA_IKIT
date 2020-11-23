@@ -1,18 +1,18 @@
 Class,InstanceOf,Type = (function()
     Config = setmetatable({},{
-        __call = function(self,value)
-                for key, value in pairs(value) do
-                    if string.sub(key,1,1) == '$' then
-                        key = string.sub(key,2,#key);
-                        if _G[key] ~= nil then
-                            _G[key] = _G[key]:New();
-                        end
+        __call = function(self,...)
+            local params = {...};
+            for i = 1, #params, 2 do
+                local model = params[i];
+                if string.sub(model,1,1) == '$' then
+                    model = string.sub(model,2,#model);
+                    if _G[model] ~= nil then
+                        _G[model] = _G[model]();
                     end
-                    self[key] = value;
                 end
+                self[model] = params[i+1];
         end
-    });
-
+    end});
 
     NULL = {};
     local CLASS = {};
@@ -20,9 +20,9 @@ Class,InstanceOf,Type = (function()
         TABLE = {
             type = "Object",
             super = nil,
-            __call = function (table,...)
-                if table.constructor ~= nil then
-                    table:constructor(...);
+            __call = function (self,...)
+                if self.constructor ~= nil then
+                    self:constructor(...);
                 end
             end,
             __newindex = function(table,key,value)
@@ -93,12 +93,13 @@ Class,InstanceOf,Type = (function()
             SUPER = CLASS[_super],
             TYPE = _name,
         };
-        _G[_name] = {
-            Name = _name;
-            New = function(self,...)
+        _G[_name] = setmetatable({
+            Name = _name
+        },{
+            __call = function(self,...)
                 return NEW(self.Name,...);
             end
-        };
+        });
     end
 
     local function INSTANCEOF(_object,_class)
@@ -205,10 +206,10 @@ Class("Event",function(Event)
             ((UI or Game).Event or (UI or Game).Rule)[self.listenerList[i]] = function(...)
                 local list = self[self.listenerList[i]];
                 for j = #list,1,-1 do
-                    if list.status == 1 then
-                        list[i]:call(...);
-                    elseif list.status == -1 then
-                        table.remove(list,i);
+                    if list[j].status == 1 then
+                        list[j]:call(...);
+                    elseif list[j].status == -1 then
+                        table.remove(list,j);
                     end
                 end
             end
@@ -220,7 +221,7 @@ Class("Event",function(Event)
             event = self[event];
         end
         if Type(listener) == "function" then
-            listener = Listener:New(listener);
+            listener = Listener(listener);
         end
         event[#event + 1] = listener;
         return listener;
@@ -251,7 +252,7 @@ Class("Timer",function(Timer)
 
     function Timer:onUpdate()
         for i = #self.task,1,-1 do
-            if self.task[i].value <= self.count then
+            if self.task[i].time <= self.count then
                 local success,result;
                 if self.task[i].status == 1 then
                     success,result = pcall(self.task[i].call,self.task[i])
@@ -271,7 +272,7 @@ Class("Timer",function(Timer)
     end
 
     function Timer:schedule(call,delay,period)
-        self.task[#self.task+1] = TimerTask:New(call,count + delay,period);
+        self.task[#self.task+1] = TimerTask(call,self.count + delay,period);
         return self.task[#self.task];
     end
 
@@ -280,29 +281,7 @@ Class("Timer",function(Timer)
     end
 end,Listener);
 
-Class("Database",function(Database)
-    function Database:constructor()
 
-    end
-end);
-
-Class("Model",function(Model)
-    function Model:constructor()
-
-    end
-
-    function Model:Set(...)
-
-    end
-
-    function Model:Get(...)
-
-    end
-
-    function Model:Save()
-
-    end
-end);
 
 Class("Method",function(Method)
     local key = 1;
@@ -316,27 +295,27 @@ Class("Method",function(Method)
     end
 end);
 
-Config({
-    ["$Event"] = {
+
+Config(
+    "$Event",{
         ["安全模式"] = true,
     },
-    ["$String"] = {
+    "$String",{
         ["启用缓存"] = false,
     },
-    ["$Timer"] = {
+    "$Timer",{
         ["最大任务数"] = -1,
         ["步长"] = 1,
         ["安全模式"] = true,
         ["任务发生异常后自动移除"] = true,
     },
-    ["Database"] = {
+    "Database",{
 
-    },
-});
+    }
+);
 
 
-
-Method = Method:New();
+Method = Method();
 
 METHODTABLE = {
     GAME = {
@@ -356,6 +335,93 @@ METHODTABLE = {
 };
 
 if Game ~= nil then
+    Class("DataModel",function(DataModel)
+        function DataModel:constructor(name,model)
+            self.canSave = Game.Rule:CanSave();
+            self.name = name;
+            self.keys = {};
+            self.models = {};
+            for key, value in pairs(model) do
+                self.keys[key] = value;
+            end
+            
+            if self.canSave then
+                print(self:count())
+                for i = 1,self:count() do
+                    local model = {};
+                    for key,value in pairs(self.keys) do
+                        model[key] = Game.Rule:GetGameSave(string.format("Model.%s.%s.%s",name,key,i)) or value;
+                        print(key,model[key])
+                    end
+                    self.models[#self.models+1] = model;
+                end
+            else
+                print("该地图无法保存数据");
+            end
+        end
+    
+        function DataModel:count()
+            return Game.Rule:GetGameSave(string.format("Model.%s",self.name)) or 0;
+        end
+
+        function DataModel:set(index,key,value)
+            Game.Rule:SetGameSave(string.format("Model.%s.%s.%d",self.name,key,index),value or self.keys[key]);
+        end
+
+        function DataModel:get(index,key)
+            Game.Rule:GetGameSave(string.format("Model.%s.%s.%d",self.name,key,index));
+        end
+
+        function DataModel:insert(model)
+            if self.canSave then
+                self.models[#self.models+1] = {};
+                for key,value in pairs(self.keys) do
+                    self:set(#self.models,key,model[key])
+                    self.models[#self.models][key] = model[key] or value;
+                end
+                Game.Rule:SetGameSave(string.format("Model.%s",self.name),#self.models);
+            end
+        end
+
+
+
+        function DataModel:select(condition)
+            if self.canSave then
+                local list = {};
+                for i = 1,#self.models do
+                    if condition(self.models[i]) then
+                        list[#list+1] = self.models[i];
+                    end
+                end
+                return list;
+            end
+        end
+    
+        function DataModel:delete(condition)
+            if self.canSave then
+                
+            end
+        end
+    end);
+    
+    -- Game.Rule:SetGameSave("0","#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models");
+    print(#Game.Rule:GetGameSave("0"));
+    local userModel = DataModel("user",{
+        name = "",
+        health = 100,
+    });
+    
+    userModel:insert({
+        name = "rwqr",
+        health = 515,
+    });
+
+    for i = 1,#userModel.models do
+        print(userModel.models[i].name);
+        print(userModel.models[i].health);
+    end
+
+
     Class("NetServer",function(NetServer)
         function NetServer:constructor()
             self.cursor = 1;
@@ -539,7 +605,7 @@ if UI ~= nil then
             return number;
         end
     end);
-    Base64 = Base64:New();
+    Base64 = Base64();
 
     Class("Font",function(Font)
         function Font:constructor(size)
@@ -639,7 +705,7 @@ if UI ~= nil then
         end
     end);
 
-    Song = Font:New();
+    Song = Font();
 
     Class("Bitmap",function(Bitmap)
         function Bitmap:constructor(data)
@@ -791,7 +857,7 @@ if UI ~= nil then
 
     end);
 
-    Graphics = Graphics:New();
+    Graphics = Graphics();
 
     Class("Component",function(Component)
         function Component:constructor(x,y,width,height)
@@ -1010,7 +1076,7 @@ if UI ~= nil then
         end
     end,Container);
 
-    MainWindows = Windows:New();
+    MainWindows = Windows();
 
     Class("Item",function(Item)
         function Item:constructor(name,value)
@@ -1028,7 +1094,7 @@ if UI ~= nil then
                 self.call = value;
             elseif type(value) == "table" then
                 for i = 1, #value, 2 do
-                    local item = _G.Item:New(value[i],value[i+1]);
+                    local item = _G.Item(value[i],value[i+1]);
                     item.parent = self;
                     self:addItem(item,pos);
                 end
@@ -1168,7 +1234,7 @@ if UI ~= nil then
 
     end,Item);
 
-    MainMenu = ItemMenu:New(
+    MainMenu = ItemMenu(
         {"帮助",{
         "关于",function()
             Toast:makeText("作者:@iPad水晶");
@@ -1324,7 +1390,7 @@ if UI ~= nil then
         end
     end,Lable);
 
-    Toast = Toast:New();
+    Toast = Toast();
     MainWindows:add(Toast);
 
     Class("PictureBox",function(PictureBox)
