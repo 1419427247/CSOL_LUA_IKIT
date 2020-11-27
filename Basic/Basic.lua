@@ -335,58 +335,94 @@ METHODTABLE = {
 };
 
 if Game ~= nil then
-    Class("DataModel",function(DataModel)
-        function DataModel:constructor(name,model)
-            self.canSave = Game.Rule:CanSave();
-            self.name = name;
-            self.keys = {};
+
+
+
+    Class("Database",function(Database)
+        function Database:constructor()
             self.models = {};
-            for key, value in pairs(model) do
-                self.keys[key] = value;
+            if not Game.Rule:CanSave() then
+                error("该地图无法保存数据");
             end
-            
-            if self.canSave then
-                print(self:count())
-                for i = 1,self:count() do
-                    local model = {};
-                    for key,value in pairs(self.keys) do
-                        model[key] = Game.Rule:GetGameSave(string.format("Model.%s.%s.%s",name,key,i)) or value;
-                        print(key,model[key])
-                    end
-                    self.models[#self.models+1] = model;
+            local value = Game.Rule:GetGameSave("database");
+            if value ~= nil then
+                for modelName in string.gmatch(value, "%a+") do
+                    self.models[modelName] = Model:New(modelName);
                 end
+            end
+        end
+
+        --("ModelName",{['key']=default,...}
+        function Database:model(name,struct)
+            local model = self.models[name];
+            if model == nil then
+                local fields = {};
+                for key, value in pairs(struct) do
+                    fields[#fields+1] = key;
+                    fields[#fields+1] = value;
+                end
+                fields = string.concat(fields,' ');
+                Game.Rule:SetGameSave(string.format("%s.%s",name,"count"),0);
+                Game.Rule:SetGameSave(string.format("%s.%s",name,"fields"),fields);
+
+                model = Model:New(name);
             else
-                print("该地图无法保存数据");
+                local temp = Game.Rule:GetGameSave(string.format("%s.%s",name,"fields"));
+                local fields = {};
+                for field in string.gmatch(temp, "%a+") do
+                    fields[#fields+1] = field;
+                end
+                for i = 1, #fields, 2 do
+                    if struct[fields[i]] == nil then
+                        error("字段不匹配");
+                    end
+                end
+            end
+            return model;
+        end
+
+        function Database:delete(modelName)
+
+        end
+    end);
+    
+    Class("Model",function(Model)
+        function Model:constructor(name)
+            self.name = name;
+            local temp = {};
+            self.fields = {};
+            for field in string.gmatch(Game.Rule:GetGameSave(string.format("%s.%s",self.name,"fields")), "%a+") do
+                temp[#temp+1] = field;
+            end
+            for i = 1, #temp,2 do
+                fields[temp[i]] = temp[i+1];
+            end
+
+            self.records = {};
+            local count = self:count();
+            for i = 1,count do
+                local model = {};
+                for key,value in pairs(self.fields) do
+                    model[key] = Game.Rule:GetGameSave(string.format("%s.%s.%s",name,i,key)) or value;
+                end
+                self.models[#self.models+1] = model;
             end
         end
     
-        function DataModel:count()
-            return Game.Rule:GetGameSave(string.format("Model.%s",self.name)) or 0;
+        function Model:count()
+            return Game.Rule:GetGameSave(string.format("%s.%s",self.name,"count"));
         end
 
-        function DataModel:set(index,key,value)
-            Game.Rule:SetGameSave(string.format("Model.%s.%s.%d",self.name,key,index),value or self.keys[key]);
-        end
-
-        function DataModel:get(index,key)
-            Game.Rule:GetGameSave(string.format("Model.%s.%s.%d",self.name,key,index));
-        end
-
-        function DataModel:insert(model)
-            if self.canSave then
+        function Model:insert(model)
                 self.models[#self.models+1] = {};
                 for key,value in pairs(self.keys) do
                     self:set(#self.models,key,model[key])
                     self.models[#self.models][key] = model[key] or value;
                 end
-                Game.Rule:SetGameSave(string.format("Model.%s",self.name),#self.models);
-            end
+                Game.Rule:SetGameSave(string.format("%s.%s",self.name,"count"),#self.models);
         end
 
-
-
-        function DataModel:select(condition)
-            if self.canSave then
+        function Model:select(condition)
                 local list = {};
                 for i = 1,#self.models do
                     if condition(self.models[i]) then
@@ -394,16 +430,15 @@ if Game ~= nil then
                     end
                 end
                 return list;
-            end
         end
     
-        function DataModel:delete(condition)
+        function Model:delete(condition)
             if self.canSave then
                 
             end
         end
     end);
-    
+
     -- Game.Rule:SetGameSave("0","#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models");
     print(#Game.Rule:GetGameSave("0"));
     local userModel = DataModel("user",{
