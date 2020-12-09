@@ -1,3 +1,4 @@
+
 Class,InstanceOf,Type = (function()
     Config = setmetatable({},{
         __call = function(self,...)
@@ -26,19 +27,14 @@ Class,InstanceOf,Type = (function()
                 end
             end,
             __newindex = function(table,key,value)
-                if value == nil then
-                    error("不可将字段设置为nil");
+                if table[key] ~= nil and type(value) ~= type(table[key]) then
+                    error("赋值类型与原类型不相同");
                 end
                 local temporary = table;
-                if key == "type" and temporary.type ~= nil then
-                    error("type不可修改");
-                end
                 while table ~= nil do
-                    for k in pairs(table) do
-                        if key == k then
-                            rawset(table,key,value);
-                            return;
-                        end
+                    if rawget(table,key) ~= nil then
+                        rawset(table,key,value);
+                        return;
                     end
                     table = getmetatable(table);
                 end
@@ -50,7 +46,14 @@ Class,InstanceOf,Type = (function()
     }
 
     local function CLONE(_table)
-        local object = {};
+        local object = {
+            constructor=NULL,
+            super = NULL,
+            type = NULL,
+            __call = NULL,
+            __newindex = NULL,
+            __index = NULL,
+        };
         for key, value in pairs(_table.TABLE) do
             object[key] = value;
         end
@@ -58,7 +61,7 @@ Class,InstanceOf,Type = (function()
         if _table.SUPER ~= NULL then
             object.super = CLONE(_table.SUPER)
             object.type = _table.TYPE;
-            object.__call = object.super.__call;
+            object.__call = object.constructor;
             object.__newindex = object.super.__newindex;
             setmetatable(object,object.super);
         end
@@ -70,8 +73,7 @@ Class,InstanceOf,Type = (function()
             error("没有找到类:" .. _name);
         end
         local object = CLONE(CLASS[_name]);
-        object(...);
-        rawset(object,"type",_name);
+        object:constructor(...);
         return setmetatable({},object);
     end
 
@@ -124,6 +126,8 @@ Class,InstanceOf,Type = (function()
 
     return CREATECLASS,INSTANCEOF,TYPE;
 end)();
+
+
 
 Class("String",function(String)
     function String:charSize(char)
@@ -1550,3 +1554,7 @@ end
 -- --         end
 -- --     end);
 -- -- end
+
+
+
+
