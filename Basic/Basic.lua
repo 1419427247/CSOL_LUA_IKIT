@@ -1,5 +1,5 @@
 
-Class,InstanceOf,Type = (function()
+Class,StaticClass,InstanceOf,Type = (function()
     Config = setmetatable({},{
         __call = function(self,...)
             local params = {...};
@@ -28,7 +28,8 @@ Class,InstanceOf,Type = (function()
             end,
             __newindex = function(table,key,value)
                 if table[key] ~= nil and type(value) ~= type(table[key]) then
-                    error("赋值类型与原类型不相同");
+                    print(key,value,table[key]);
+                    error("赋值类型与原类型不相同" .. type(value) .. "~=" .. type(table[key]));
                 end
                 local temporary = table;
                 while table ~= nil do
@@ -47,7 +48,7 @@ Class,InstanceOf,Type = (function()
 
     local function CLONE(_table)
         local object = {
-            constructor=NULL,
+            constructor=function() end,
             super = NULL,
             type = NULL,
             __call = NULL,
@@ -61,7 +62,7 @@ Class,InstanceOf,Type = (function()
         if _table.SUPER ~= NULL then
             object.super = CLONE(_table.SUPER)
             object.type = _table.TYPE;
-            object.__call = object.constructor;
+            object.__call = object.super.__call;
             object.__newindex = object.super.__newindex;
             setmetatable(object,object.super);
         end
@@ -104,6 +105,11 @@ Class,InstanceOf,Type = (function()
         });
     end
 
+    local function CREATESTATICCLASS(_name,_function,_super)
+        CREATECLASS(_name,_function,_super);
+        _G[_name] =  _G[_name]();
+    end
+
     local function INSTANCEOF(_object,_class)
         local table = CLASS[_object.type];
         while table ~= NULL do
@@ -124,12 +130,12 @@ Class,InstanceOf,Type = (function()
         return type(value);
     end
 
-    return CREATECLASS,INSTANCEOF,TYPE;
+    return CREATECLASS,CREATESTATICCLASS,INSTANCEOF,TYPE;
 end)();
 
 
 
-Class("String",function(String)
+StaticClass("String",function(String)
     function String:charSize(char)
         local seperate = {0, 0xc0, 0xe0, 0xf0}
         for i = #seperate, 1, -1 do
@@ -195,7 +201,7 @@ Class("Listener",function(Listener)
     end
 end);
 
-Class("Event",function(Event)
+StaticClass("Event",function(Event)
     function Event:constructor()
         self.listenerList = NULL;
         if Game ~= nil then
@@ -207,15 +213,17 @@ Class("Event",function(Event)
 
         for i = 1, #self.listenerList do
             self[self.listenerList[i]] = {};
-            ((UI or Game).Event or (UI or Game).Rule)[self.listenerList[i]] = function(...)
+            ((UI or Game).Event or (UI or Game).Rule)[self.listenerList[i]] = function(_,...)
                 local list = self[self.listenerList[i]];
+                local result;
                 for j = #list,1,-1 do
                     if list[j].status == 1 then
-                        list[j]:call(...);
+                        result = list[j]:call(...);
                     elseif list[j].status == -1 then
                         table.remove(list,j);
                     end
                 end
+                return result;
             end
         end
     end
@@ -230,6 +238,7 @@ Class("Event",function(Event)
         event[#event + 1] = listener;
         return listener;
     end
+
     function Event:purge(event)
         if Type(event) == "string" then
             event = self[event];
@@ -246,7 +255,7 @@ Class("TimerTask",function(TimerTask)
     end
 end,Listener);
 
-Class("Timer",function(Timer)
+StaticClass("Timer",function(Timer)
     function Timer:constructor()
         self.super(self.onUpdate);
         self.task = {};
@@ -287,60 +296,43 @@ end,Listener);
 
 
 
-Class("Method",function(Method)
-    local key = 1;
+StaticClass("Method",function(Method)
+    local id = 1;
     function Method:constructor()
-
+        self.gameList = {};
+        self.uiList = {};
     end
 
-    function Method:Create(call)
-        key = key + 1;
-        return {KEY = key - 1,CALL = call};
+    function Method:game(table)
+        for key, value in pairs(table) do
+            self.gameList[key] = {id = id,value = value};
+            id = id + 1;
+        end
+    end
+
+    function Method:ui(table)
+        for key, value in pairs(table) do
+            self.gameList[key] = {id = id,value = value};
+            id = id + 1;
+        end
     end
 end);
 
 
-Config(
-    "$Event",{
-        ["安全模式"] = true,
-    },
-    "$String",{
-        ["启用缓存"] = false,
-    },
-    "$Timer",{
-        ["最大任务数"] = -1,
-        ["步长"] = 1,
-        ["安全模式"] = true,
-        ["任务发生异常后自动移除"] = true,
-    },
-    "Database",{
+Method:game({
+    ["GETNAME"] = function(self,bytes)
+        self.name = String:toString(bytes);
+        self.syncValue = {};
+    end,
+    ["CREATSYNCVALUE"] = function(self,bytes)
+        local key = String:toString(bytes);
+        self.syncValue[key] = UI.SyncValue:Create(self.name .. key);
+        print("成功创建同步变量:"..String:toString(bytes));
+    end
+})
 
-    }
-);
-
-
-Method = Method();
-
-METHODTABLE = {
-    GAME = {
-
-    },
-    UI = {
-        GETNAME = Method:Create(function(self,bytes)
-            self.name = String:toString(bytes);
-            self.syncValue = {};
-        end),
-        CREATSYNCVALUE = Method:Create(function(self,bytes)
-            local key = String:toString(bytes);
-            self.syncValue[key] = UI.SyncValue:Create(self.name .. key);
-            print("成功创建同步变量:"..String:toString(bytes));
-        end),
-    }
-};
 
 if Game ~= nil then
-
-
 
     Class("Database",function(Database)
         function Database:constructor()
@@ -442,24 +434,6 @@ if Game ~= nil then
             end
         end
     end);
-
-    -- Game.Rule:SetGameSave("0","#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models#self.models");
-    print(#Game.Rule:GetGameSave("0"));
-    local userModel = DataModel("user",{
-        name = "",
-        health = 100,
-    });
-    
-    userModel:insert({
-        name = "rwqr",
-        health = 515,
-    });
-
-    for i = 1,#userModel.models do
-        print(userModel.models[i].name);
-        print(userModel.models[i].health);
-    end
-
 
     Class("NetServer",function(NetServer)
         function NetServer:constructor()
@@ -611,7 +585,7 @@ if UI ~= nil then
 
     end);
 
-    Class("Base64",function(Base64)
+    StaticClass("Base64",function(Base64)
         function Base64:constructor(value,bit)
             self.charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
             self.charmap = {};
@@ -644,7 +618,6 @@ if UI ~= nil then
             return number;
         end
     end);
-    Base64 = Base64();
 
     Class("Font",function(Font)
         function Font:constructor(size)
@@ -744,7 +717,7 @@ if UI ~= nil then
         end
     end);
 
-    Song = Font();
+    Song = Font()
 
     Class("Bitmap",function(Bitmap)
         function Bitmap:constructor(data)
@@ -791,7 +764,7 @@ if UI ~= nil then
 
     end);
 
-    Class("Graphics",function(Graphics)
+    StaticClass("Graphics",function(Graphics)
         function Graphics:constructor()
             self.color = {255,255,255,255};
             self.opacity = 1;
@@ -896,8 +869,6 @@ if UI ~= nil then
 
     end);
 
-    Graphics = Graphics();
-
     Class("Component",function(Component)
         function Component:constructor(x,y,width,height)
             self.root = {};
@@ -917,7 +888,7 @@ if UI ~= nil then
             self.bordercolor = {0,0,0,255};
             self.animations = {};
             
-            self.font = Song;
+            self.font = Song or NULL;
             self.pixelsize = 2;
             self.letterspacing = 0;
             
@@ -925,8 +896,8 @@ if UI ~= nil then
             
             self.animation = NULL;
 
-            self.onkeydown = NULL;
-            self.onkeyup = NULL;
+            self.onkeydown = function() end;
+            self.onkeyup = function() end;
         end
 
         function Component:onKeyDown()
@@ -1115,14 +1086,12 @@ if UI ~= nil then
         end
     end,Container);
 
-    MainWindows = Windows();
-
     Class("Item",function(Item)
         function Item:constructor(name,value)
             self.super();
             self.parent = NULL;
             self.children = {};
-            self.call = NULL;
+            self.call = function() end;
             self.name = name;
 
             self:add(value);
@@ -1173,7 +1142,6 @@ if UI ~= nil then
 
             self.page = 1;
             self.cursor = self;
-
             self.x = 0;
             self.y = 100;
             self.height = 200;
@@ -1272,7 +1240,7 @@ if UI ~= nil then
         end
 
     end,Item);
-
+    MainWindows = Windows();
     MainMenu = ItemMenu(
         {"帮助",{
         "关于",function()
@@ -1401,7 +1369,6 @@ if UI ~= nil then
 
     end,Lable);
 
-
     Class("Toast",function(Toast)
         function Toast:constructor()
             self.super(0,0,100,100,"QWQ");
@@ -1429,9 +1396,6 @@ if UI ~= nil then
         end
     end,Lable);
 
-    Toast = Toast();
-    MainWindows:add(Toast);
-
     Class("PictureBox",function(PictureBox)
         function PictureBox:constructor(x,y,width,height,bitmap)
             self.super(x,y,width,height);
@@ -1445,6 +1409,12 @@ if UI ~= nil then
         end
 
     end,Component);
+
+
+    Event:addEventListener(Event.OnKeyDown,function(self,inputs)
+        print(inputs[UI.KEY.NUM1])
+    end)
+
 end
 
 
