@@ -135,7 +135,7 @@ end)();
 
 
 
-StaticClass("String",function(String)
+Class("String",function(String)
     function String:charSize(char)
         local seperate = {0, 0xc0, 0xe0, 0xf0}
         for i = #seperate, 1, -1 do
@@ -181,6 +181,14 @@ StaticClass("String",function(String)
         return array;
     end
 end);
+
+s = os.clock()
+for i = 1,100000 do
+    local m  = String();
+
+end
+print(os.clock()-s)
+
 
 Class("Listener",function(Listener)
     function Listener:constructor(func)
