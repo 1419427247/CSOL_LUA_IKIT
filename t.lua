@@ -1,167 +1,67 @@
-(function()
-    NULL = {};
-    local CLASS = {};
+
+
+
+
+-- s =  os.clock();
+-- for i = 1, 100000 do
+--     local __data = {};
+--     local Object = {
+--         __call = function (self,...)
+--             if self.constructor ~= nil then
+--                 self:constructor(...);
+--             end
+--         end,
+--         __newindex = function(table,key,value)
+--             if table[key] ~= nil and type(value) ~= type(table[key]) then
+--                 error('key:'..key.."赋值类型与原类型不相同" .. type(value) .. "~=" .. type(table[key]));
+--             end
+--             __data[key] = value;
+--         end,
+--         __index = function(table,key)
+--             if __data[key] ~= nil then
+--                 return __data[key];
+--             end
+--             while table ~= nil do
+--                 local value = rawget(table,key);
+--                 if  value~= nil then
+--                     return value;
+--                 end
+--                 table = getmetatable(table);
+--             end
+--             return nil;
+--         end
+--     };
     
-    local Object = {
-
-    }
-
-
-
-    local function CREATECLASS(_name,_function,_super)
-        local object = {};
-        _function(object);
-
-        CLASS[_name] = {
-            NAME = _name,
-            TABLE = object,
-            SUPER = (_super or {}).NAME,
-        }
-
-
-        local str = {
-            "local Object={__data={},__call=nil,__newindex=nil,__index=nil}",
-            "Object.__index = function(table,key)",
-            "if Object.__data[key] ~= nil then ",
-            "return Object.__data[key];",
-            "else ",
-            "while table ~= nil do ",
-            "if rawget(table,key) ~= nil then ",
-            "return rawget(table,key);",
-            "end ",
-            "table = getmetatable(table);",
-            "end ",
-            "end ",
-            "return nil;",
-            "end ",
-            "Object.__newindex = function(table,key,value);",
-            "if Object.__data[key] ~= nil and type(value) ~= type(Object.__data[key]) then ",
-            "error('key:'..key..':赋值类型与原类型不相同' .. type(value) .. '~=' .. type(table[key]));",
-            "end ",
-            "Object.__data[key] = value;",
-            "end \n",
-        }
-        local classList = {CLASS[_name]}
-        while _super ~= nil do
-            clazzList[#clazzList+1] = _super.CLASS;
-            _super = _super.CLASS.SUPER;
-        end
-        for i = 1,#classList do
-            str[#str+1] = string.format("local %s = {super=nil,__call =nil,__newindex = Object.__newindex,__index = Object.__index,",classList[i].NAME)
-            for key, value in pairs(classList[i].TABLE) do
-                str[#str+1] = string.format("%s = CLASS['%s'].TABLE.%s,",key,classList[i].NAME,key);
-            end
-            str[#str+1] = "};\n"
-        end
-        for i = 1,#classList - 1 do
-            str[#str+1] = string.format("setmetatable(%s,%s);",classList[i],classList[i+1]);
-            str[#str+1] = string.format("%s.super=%s);",classList[i],classList[i+1]);
-            str[#str+1] = string.format("%s.__call=%s.constructor or function() end;",classList[i],classList[i]);
-        end
-        str[#str+1] = string.format("%s.__call=%s.constructor or function() end;",classList[#classList].NAME,classList[#classList].NAME);
-        str[#str+1] = string.format("setmetatable(%s,Object);",classList[#classList].NAME);
-        str[#str+1] = string.format("return setmetatable({},%s);",_name);
-        print(table.concat(str))
-        CLASS[_name].NEW = load(table.concat(str),"","t",{error=error,type=type,rawget=rawget,getmetatable=getmetatable,setmetatable = setmetatable,CLASS = CLASS})
-
-
-        _G[_name] = setmetatable({
-            CLASS = CLASS[_name]
-        },{
-            __call = function(self,...)
-                return self.CLASS.NEW(...);
-            end
-        });
-
-        s = os.clock()
-        for i = 1,1000000 do
-            String(1);
-        end
-        print(os.clock()-s)
-    end
-
-
-
-
-    local Object = {
-        __data = {},
-        __call = function() end,
-        __newindex = nil,
-        __index = nil,
-    };
-    Object.__index = function(table,key)
-        if Object.__data[key] ~= nil then
-            return Object.__data[key];
-        else
-            while table ~= nil do
-                if rawget(table,key) ~= nil then
-                    return rawget(table,key);
-                end
-                table = getmetatable(table);
-            end
-        end
-        return nil;
-    end
-
-    Object.__newindex = function(table,key,value)
-        Object.__data[key] = value;
-    end
-
-    local String = {
-        __call = Object.__call,
-        __newindex = Object.__newindex,
-        __index = Object.__index,
-    }
-    setmetatable(String,Object);
+--     local String = {
+--         __call = Object.__call,
+--         __index = Object.__index,
+--         __newindex = Object.__newindex,
+--         __metatable = Object,
+--         constructor = function(self,k)
+--             self.m = k;
+--         end
+--     }
     
-    CREATECLASS("String",function(String)
-        function String:charSize(char)
-            local seperate = {0, 0xc0, 0xe0, 0xf0}
-            for i = #seperate, 1, -1 do
-                if char >= seperate[i] then
-                    return i;
-                end
-            end
-            return 1;
-        end
-    
-        function String:toString(value)
-            local array = {};
-            local currentIndex = 1;
-            while currentIndex <= #value do
-                local cs = String:charSize(value[currentIndex]);
-                array[#array+1] = string.char(table.unpack(value,currentIndex,currentIndex + cs - 1));
-                currentIndex = currentIndex + cs;
-            end
-            return table.concat(array);
-        end
-    
-        function String:toBytes(value)
-            local bytes = {};
-            if type(value) == "string" then
-                value = String:toTable(value);
-            end
-            for i = 1, #value do
-                for j = 1, #value[i], 1 do
-                    table.insert(bytes,string.byte(value[i],j));
-                end
-            end
-            return bytes;
-        end
-    
-        function String:toTable(value)
-            local currentIndex = 1;
-            local array = {};
-            while currentIndex <= #value do
-                local cs = String:charSize(string.byte(value, currentIndex));
-                array[#array+1] = string.sub(value,currentIndex,currentIndex+cs-1);
-                currentIndex = currentIndex + cs;
-            end
-            return array;
-        end
-    end);
+--     local M = {
+--         __call = Object.__call,
+--         __index = Object.__index,
+--         __newindex = Object.__newindex,
+--         __metatable = String,
+--         super = String,
+--         constructor = function(self,k)
+--             self.super(k)
+--             self.m = 22;
+--         end
+--     }
+--     local object = setmetatable({},M);
+--     object(5);
+-- end
+-- print(os.clock() - s);
 
-end)();
+
+
+
+
 
 
 
@@ -308,7 +208,7 @@ end)();
 --         self.priorityMap = {};
 
 --         local values = {...};
-        
+
 --         for i = 1,#values do
 --             for j = 1,#values[i] do
 --                 self.symbols[#self.symbols+1] = values[i][j];
@@ -344,7 +244,7 @@ end)();
 --     function Keyword:constructor(...)
 --         self.keywordsMap = {};
 --         local values = {...};
-        
+
 --         for i = 1,#values do
 --             self.keywordsMap[values[i]] = {};
 --         end

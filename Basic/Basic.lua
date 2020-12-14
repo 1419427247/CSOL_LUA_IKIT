@@ -1,26 +1,9 @@
-
-Class,StaticClass,InstanceOf,Type = (function()
-    Config = setmetatable({},{
-        __call = function(self,...)
-            local params = {...};
-            for i = 1, #params, 2 do
-                local model = params[i];
-                if string.sub(model,1,1) == '$' then
-                    model = string.sub(model,2,#model);
-                    if _G[model] ~= nil then
-                        _G[model] = _G[model]();
-                    end
-                end
-                self[model] = params[i+1];
-        end
-    end});
-
+Class = (function()
     NULL = {};
     local CLASS = {};
     CLASS["Object"] = {
+        NAME = "Object",
         TABLE = {
-            type = "Object",
-            super = nil,
             __call = function (self,...)
                 if self.constructor ~= nil then
                     self:constructor(...);
@@ -28,10 +11,8 @@ Class,StaticClass,InstanceOf,Type = (function()
             end,
             __newindex = function(table,key,value)
                 if table[key] ~= nil and type(value) ~= type(table[key]) then
-                    print(key,value,table[key]);
-                    error("赋值类型与原类型不相同" .. type(value) .. "~=" .. type(table[key]));
+                    error('key:'..key.."赋值类型与原类型不相同" .. type(value) .. "~=" .. type(table[key]));
                 end
-                local temporary = table;
                 while table ~= nil do
                     if rawget(table,key) ~= nil then
                         rawset(table,key,value);
@@ -39,101 +20,59 @@ Class,StaticClass,InstanceOf,Type = (function()
                     end
                     table = getmetatable(table);
                 end
-                rawset(temporary,key,value);
             end,
-        },
-        SUPER = NULL,
-        TYPE = "Object",
+            SUPER = nil,
+        }
     }
-
-    local function CLONE(_table)
-        local object = {
-            constructor=function() end,
-            super = NULL,
-            type = NULL,
-            __call = NULL,
-            __newindex = NULL,
-            __index = NULL,
-        };
-        for key, value in pairs(_table.TABLE) do
-            object[key] = value;
-        end
-        object.__index = object;
-        if _table.SUPER ~= NULL then
-            object.super = CLONE(_table.SUPER)
-            object.type = _table.TYPE;
-            object.__call = object.super.__call;
-            object.__newindex = object.super.__newindex;
-            setmetatable(object,object.super);
-        end
-        return object;
-    end
-
-    local function NEW(_name,...)
-        if CLASS[_name] == nil then
-            error("没有找到类:" .. _name);
-        end
-        local object = CLONE(CLASS[_name]);
-        object:constructor(...);
-        return setmetatable({},object);
-    end
-
     local function CREATECLASS(_name,_function,_super)
-        _super = (_super or {Name = "Object"}).Name;
-
-        if CLASS[_name] ~= nil then
-            error("类'".. _name .."'重复定义");
-        end
-        if CLASS[_super] == nil then
-            error("没有找到类:" .. _super);
-        end
-
+        _super = (_super or {CLASS = CLASS["Object"]}).CLASS;
         local object = {};
         _function(object);
-
         CLASS[_name] = {
+            NAME = _name,
             TABLE = object,
-            SUPER = CLASS[_super],
-            TYPE = _name,
-        };
-        _G[_name] = setmetatable({
-            Name = _name
-        },{
-            __call = function(self,...)
-                return NEW(self.Name,...);
+            SUPER = _super,
+        }
+        if object.STATIC == true then
+            _G[_name] = CLASS[_name].TABLE;
+        else
+            local classList = {CLASS[_name]};
+            while _super ~= nil do
+                classList[#classList+1] = _super;
+                _super = _super.SUPER;
             end
-        });
-    end
-
-    local function CREATESTATICCLASS(_name,_function,_super)
-        CREATECLASS(_name,_function,_super);
-        _G[_name] =  _G[_name]();
-    end
-
-    local function INSTANCEOF(_object,_class)
-        local table = CLASS[_object.type];
-        while table ~= NULL do
-            if table.TYPE == _class.Name then
-                return true;
+            local str = {};
+            for i = 1,#classList do
+                str[#str+1] = string.format("local %s = {super=nil,__call =nil,__newindex=nil,__index=nil,",classList[i].NAME)
+                for key,_ in pairs(classList[i].TABLE) do
+                    str[#str+1] = string.format("%s = CLASS['%s'].TABLE.%s,",key,classList[i].NAME,key);
+                end
+                str[#str+1] = "};\n"
             end
-            table = table.SUPER;
+            for i = 1,#classList - 1 do
+                str[#str+1] = string.format("%s.super=%s;",classList[i].NAME,classList[i+1].NAME);
+                str[#str+1] = string.format("%s.__call=Object.__call;",classList[i].NAME,classList[i].NAME);
+                str[#str+1] = string.format("%s.__index=%s;",classList[i].NAME,classList[i].NAME);
+                str[#str+1] = string.format("%s.__newindex=Object.__newindex;",classList[i].NAME);
+                str[#str+1] = string.format("setmetatable(%s,%s);",classList[i].NAME,classList[i+1].NAME);
+            end
+            str[#str+1] = string.format("return setmetatable({},%s);",_name);
+            CLASS[_name].NEW = load(table.concat(str),"","t",{rawset=rawset,error=error,type=type,rawget=rawget,getmetatable=getmetatable,setmetatable = setmetatable,CLASS = CLASS})
+            --print(table.concat(str))
+            _G[_name] = setmetatable({
+                CLASS = CLASS[_name]
+            },{
+                __call = function(self,...)
+                    local object = self.CLASS.NEW();
+                    object(...);
+                    return object;
+                end
+            });
         end
-        return false;
     end
 
-    local function TYPE(value)
-        if type(value) == "table" then
-            if value.type ~= nil then
-                return value.type;
-            end
-        end
-        return type(value);
-    end
-
-    return CREATECLASS,CREATESTATICCLASS,INSTANCEOF,TYPE;
+    return CREATECLASS;
 end)();
-
-
 
 Class("String",function(String)
     function String:charSize(char)
@@ -182,12 +121,7 @@ Class("String",function(String)
     end
 end);
 
-s = os.clock()
-for i = 1,100000 do
-    local m  = String();
 
-end
-print(os.clock()-s)
 
 
 Class("Listener",function(Listener)
@@ -209,7 +143,7 @@ Class("Listener",function(Listener)
     end
 end);
 
-StaticClass("Event",function(Event)
+Class("Event",function(Event)
     function Event:constructor()
         self.listenerList = NULL;
         if Game ~= nil then
@@ -263,7 +197,7 @@ Class("TimerTask",function(TimerTask)
     end
 end,Listener);
 
-StaticClass("Timer",function(Timer)
+Class("Timer",function(Timer)
     function Timer:constructor()
         self.super(self.onUpdate);
         self.task = {};
@@ -304,17 +238,16 @@ end,Listener);
 
 
 
-StaticClass("Method",function(Method)
-    local id = 1;
-    function Method:constructor()
-        self.gameList = {};
-        self.uiList = {};
-    end
+Class("Method",function(Method)
+    Method.STATIC = true;
+    Method.id = 1;
+    Method.gameList = {};
+    Method.uiList = {};
 
     function Method:game(table)
         for key, value in pairs(table) do
             self.gameList[key] = {id = id,value = value};
-            id = id + 1;
+            self.id = self.id + 1;
         end
     end
 
@@ -593,7 +526,7 @@ if UI ~= nil then
 
     end);
 
-    StaticClass("Base64",function(Base64)
+    Class("Base64",function(Base64)
         function Base64:constructor(value,bit)
             self.charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
             self.charmap = {};
@@ -772,7 +705,7 @@ if UI ~= nil then
 
     end);
 
-    StaticClass("Graphics",function(Graphics)
+    Class("Graphics",function(Graphics)
         function Graphics:constructor()
             self.color = {255,255,255,255};
             self.opacity = 1;
@@ -1429,110 +1362,3 @@ end
 ----------------------------------------------------
 ----------------------------------------------------
 ----------------------------------------------------
-
-
--- (function()
---     local Text = {};
---     function Text:constructor(x,y,size,letterspacing,text)
---         self.boxlist = {};
---         self.x = x;
---         self.y = y;
---         self.size = size;
---         self.letterspacing = letterspacing;
---         self.text = text;
---     end
-
---     function Text:Show()
---         for i=1,str.length do
---             local char = self.text:charAt(i)
---             if Font[char] == nil then
---                 char = "?";
---             end
---             for j = 1,#Font[char],4 do
---                 local _x = Font[char][j];
---                 local _y = Font[char][j+1];
---                 local width = Font[char][j+2];
---                 local height = Font[char][j+3];
-
---                 local box = UI.Box.Create();
---                 if box == nil then
---                     print("无法绘制矩形:已超过最大限制");
---                     return;
---                 end
---                 if i == 1 then
---                     box:Set({x=x + _x*size,y=y + _y*size,width=width*size,height=height*size,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
---                 else
---                     box:Set({x=x + (i-1) * letterspacing + _x*size,y=y + _y*size,width=width*size,height=height*size,r=self.color[1],g=self.color[2],b=self.color[3],a=self.color[4]});
---                 end
---                 self.boxlist[#self.boxlist+1] = box;
---                 box:Show();
---             end
---         end
---     end
-
---     function Text:Hide()
---         self.boxlist = {};
---         collectgarbage("collect");
---     end
-
-
---     function Text:getSize(text,font)
-
---     end
-
---     IKit.Class(Text,"Text");
--- end)();
-
--- (function()
---     local Bitmap = {};
-
---     IKit.Class(Bitmap,"Bitmap");
--- end)();
-
--- if Game ~= nil then
---     for key, value in pairs(Game.Rule) do
---         print(key);
---     end
--- end
-
--- if UI ~= nil then
---     for key, value in pairs(UI.Event) do
---         print(key);
---     end
--- end
-
-
-
-
--- -- if Game ~= nil then
--- --     Command = IKit.New("ServerCommand");
-
--- --     Command:register("killme",function(player,args)
--- --         for i = 1, #args,1 do
--- --             print(args[i]:toString());
--- --         end
--- --         player:Kill();
--- --     end)
-
--- --     Command:register("kill",function(player,args)
--- --         IKit.Player:find(args[1]):Kill();
--- --     end);
-
--- --     Command:register("tp",function(player,args)
--- --         player.position = IKit.Player:find(args[1]).position;
--- --     end);
--- -- end
-
--- -- if UI ~= nil then
--- --     Command = IKit.New("ClientCommand");
-
--- --     Command:register("kill",function(args)
--- --         for i = 1, #args,1 do
--- --             print(args[i]:toString());
--- --         end
--- --     end);
--- -- end
-
-
-
-
