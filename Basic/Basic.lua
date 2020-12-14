@@ -1,3 +1,7 @@
+Game = {
+    Rule = {}
+};
+
 Class = (function()
     NULL = {};
     local CLASS = {};
@@ -13,6 +17,7 @@ Class = (function()
                 if table[key] ~= nil and type(value) ~= type(table[key]) then
                     error('key:'..key.."赋值类型与原类型不相同" .. type(value) .. "~=" .. type(table[key]));
                 end
+                local t = table;
                 while table ~= nil do
                     if rawget(table,key) ~= nil then
                         rawset(table,key,value);
@@ -20,6 +25,7 @@ Class = (function()
                     end
                     table = getmetatable(table);
                 end
+                rawset(t,key,value);
             end,
             SUPER = nil,
         }
@@ -121,9 +127,6 @@ Class("String",function(String)
     end
 end);
 
-
-
-
 Class("Listener",function(Listener)
     function Listener:constructor(func)
         self.call = func;
@@ -144,37 +147,37 @@ Class("Listener",function(Listener)
 end);
 
 Class("Event",function(Event)
-    function Event:constructor()
-        self.listenerList = NULL;
-        if Game ~= nil then
-            self.listenerList = {"OnPlayerConnect","OnPlayerDisconnect","OnRoundStart","OnRoundStartFinished","OnPlayerSpawn","OnPlayerJoiningSpawn","OnPlayerKilled","OnKilled","OnPlayerSignal","OnUpdate","OnPlayerAttack","OnTakeDamage","CanBuyWeapon","CanHaveWeaponInHand","OnGetWeapon","OnReload","OnReloadFinished","OnSwitchWeapon","PostFireWeapon","OnGameSave","OnLoadGameSave","OnClearGameSave"};
-        end
-        if UI~=nil then
-            self.listenerList = {"OnRoundStart","OnSpawn","OnKilled","OnInput","OnUpdate","OnChat","OnSignal","OnKeyDown","OnKeyUp"};
-        end
+    Event.STATIC = true;
+    Event.listenerList = {};
+    if Game ~= nil then
+        Event.listenerList = {"OnPlayerConnect","OnPlayerDisconnect","OnRoundStart","OnRoundStartFinished","OnPlayerSpawn","OnPlayerJoiningSpawn","OnPlayerKilled","OnKilled","OnPlayerSignal","OnUpdate","OnPlayerAttack","OnTakeDamage","CanBuyWeapon","CanHaveWeaponInHand","OnGetWeapon","OnReload","OnReloadFinished","OnSwitchWeapon","PostFireWeapon","OnGameSave","OnLoadGameSave","OnClearGameSave"};
+    end
+    if UI~=nil then
+        Event.listenerList = {"OnRoundStart","OnSpawn","OnKilled","OnInput","OnUpdate","OnChat","OnSignal","OnKeyDown","OnKeyUp"};
+    end
 
-        for i = 1, #self.listenerList do
-            self[self.listenerList[i]] = {};
-            ((UI or Game).Event or (UI or Game).Rule)[self.listenerList[i]] = function(_,...)
-                local list = self[self.listenerList[i]];
-                local result;
-                for j = #list,1,-1 do
-                    if list[j].status == 1 then
-                        result = list[j]:call(...);
-                    elseif list[j].status == -1 then
-                        table.remove(list,j);
-                    end
+    for i = 1, #Event.listenerList do
+        Event[Event.listenerList[i]] = {};
+        ((UI or Game).Event or (UI or Game).Rule)[Event.listenerList[i]] = function(_,...)
+            local list = Event[Event.listenerList[i]];
+            local result;
+            for j = #list,1,-1 do
+                if list[j].status == 1 then
+                    result = list[j]:call(...);
+                elseif list[j].status == -1 then
+                    table.remove(list,j);
                 end
-                return result;
             end
+            return result;
         end
     end
 
+
     function Event:addEventListener(event,listener)
-        if Type(event) == "string" then
+        if type(event) == "string" then
             event = self[event];
         end
-        if Type(listener) == "function" then
+        if type(listener) == "function" then
             listener = Listener(listener);
         end
         event[#event + 1] = listener;
@@ -182,12 +185,13 @@ Class("Event",function(Event)
     end
 
     function Event:purge(event)
-        if Type(event) == "string" then
+        if type(event) == "string" then
             event = self[event];
         end
         event = {};
     end
 end);
+
 
 Class("TimerTask",function(TimerTask)
     function TimerTask:constructor(func,time,period)
@@ -198,33 +202,31 @@ Class("TimerTask",function(TimerTask)
 end,Listener);
 
 Class("Timer",function(Timer)
-    function Timer:constructor()
-        self.super(self.onUpdate);
-        self.task = {};
-        self.count = 0;
-        Event:addEventListener(Event.OnUpdate,self);
-    end
+    Timer.STATIC = true;
 
-    function Timer:onUpdate()
-        for i = #self.task,1,-1 do
-            if self.task[i].time <= self.count then
+    Timer.task = {};
+    Timer.count = 0;
+    Event:addEventListener(Event.OnUpdate,function()
+        for i = #Timer.task,1,-1 do
+            if Timer.task[i].time <= Timer.count then
                 local success,result;
-                if self.task[i].status == 1 then
-                    success,result = pcall(self.task[i].call,self.task[i])
+                if Timer.task[i].status == 1 then
+                    success,result = pcall(Timer.task[i].call,Timer.task[i])
                     if not success then
-                        print("计时器中的函数发生了异常");
-                        table.remove(self.task,i);
+                        print("Timer中的函数发生了异常");
+                        print(result)
+                        Timer.task[i].status = -1;
                     end
                 end
-                if self.task[i].period == NULL or self.task[i].status == -1 or result == true then
-                    table.remove(self.task,i);
+                if Timer.task[i].period == NULL or Timer.task[i].status == -1 or result == true then
+                    table.remove(Timer.task,i);
                 else
-                    self.task[i].time = self.count + self.task[i].period;
+                    Timer.task[i].time = Timer.count + Timer.task[i].period;
                 end
             end
         end
-        self.count = self.count + 1;
-    end
+        Timer.count = Timer.count + 1;
+    end);
 
     function Timer:schedule(call,delay,period)
         self.task[#self.task+1] = TimerTask(call,self.count + delay,period);
@@ -234,27 +236,31 @@ Class("Timer",function(Timer)
     function Timer:purge()
         self.task = {}
     end
-end,Listener);
-
-
+end);
 
 Class("Method",function(Method)
     Method.STATIC = true;
+
     Method.id = 1;
-    Method.gameList = {};
+    Method.UI = {};
+    Method._UI = {};
+    Method.GAME = {};
+    Method._GAME = {};
     Method.uiList = {};
 
     function Method:game(table)
         for key, value in pairs(table) do
-            self.gameList[key] = {id = id,value = value};
+            self.GAME[key] = self.id;
+            self._GAME[self.id] = value;
             self.id = self.id + 1;
         end
     end
 
     function Method:ui(table)
         for key, value in pairs(table) do
-            self.gameList[key] = {id = id,value = value};
-            id = id + 1;
+            self.UI[key] = self.id;
+            self._UI[self.id] = value;
+            self.id = self.id + 1;
         end
     end
 end);
@@ -270,11 +276,10 @@ Method:game({
         self.syncValue[key] = UI.SyncValue:Create(self.name .. key);
         print("成功创建同步变量:"..String:toString(bytes));
     end
-})
+});
 
 
 if Game ~= nil then
-
     Class("Database",function(Database)
         function Database:constructor()
             self.models = {};
@@ -377,93 +382,68 @@ if Game ~= nil then
     end);
 
     Class("NetServer",function(NetServer)
-        function NetServer:constructor()
-            self.cursor = 1;
-            self.receivbBuffer = {
-                key = 0,
+
+        local receivbBuffer = {};
+
+        local syncValue = {};
+
+        local players = {};
+
+        Event:addEventListener(Event.OnPlayerSignal,function(player,signal)
+            local receivbBuffer = receivbBuffer[player.name];
+            if receivbBuffer.length == 0 then
+                Method.GAME[receivbBuffer.id](player,receivbBuffer.value);
+                receivbBuffer = {
+                    id = -1,
+                    length = -1,
+                    value = {},
+                };
+            elseif receivbBuffer.id == -1 then
+                receivbBuffer.id = signal;
+            elseif receivbBuffer.length == -1 then
+                receivbBuffer.length = signal;
+            else
+                receivbBuffer.value[#receivbBuffer.value+1] = signal;
+                receivbBuffer.length = receivbBuffer.length - 1;
+            end
+        end);
+        
+        Event:addEventListener(Event.OnPlayerConnect,function(player)
+            receivbBuffer[player.name] = {
+                id = -1,
                 length = -1,
-                bytes = {},
+                value = {},
             };
-            self.sendbuffer = {};
-            self.syncValue = {};
+            players[player.name] = player;
+            syncValue[player.name] = {};
+            self:execute(player,Method.UI.GETNAME,String:toBytes(player.name));
+        end);
 
-            self.players = {};
-
-            self.methods = {};
-
-            Event:addEventListener(Event.OnUpdate,function()
-                for i = #self.sendbuffer,1,-1 do
-                    self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].key);
-                    self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].length);
-                    while self.cursor <= #self.sendbuffer[i].bytes do
-                        self.sendbuffer[i].receiver:Signal(self.sendbuffer[i].bytes[self.cursor]);
-                        self.cursor = self.cursor + 1;
-                    end
-                    self.sendbuffer[#self.sendbuffer] = nil;
-                    self.cursor = 1;
-                end
-            end);
-
-            Event:addEventListener(Event.OnPlayerSignal,function(player,signal)
-                if self.receivbBuffer.key == 0 then
-                    self.receivbBuffer.key = signal;
-                elseif self.receivbBuffer.length == -1 then
-                    self.receivbBuffer.length = signal;
-                else
-                    self.receivbBuffer.length = self.receivbBuffer.length - 1;
-                    self.receivbBuffer.bytes[#self.receivbBuffer.bytes+1] = signal;
-                    if self.receivbBuffer.length == 0 then
-                        self.methods[self.receivbBuffer.key]:call(self,player,self.receivbBuffer.bytes);
-                        self.receivbBuffer.key = 0;
-                        self.receivbBuffer.length = -1;
-                        self.receivbBuffer.bytes = {};
-                    end
-                end
-            end);
-
-            Event:addEventListener(Event.OnPlayerConnect,function(player)
-                self.players[player.name] = player;
-                self.syncValue[player.name] = {};
-                self:sendMessageBySignal(player,METHODTABLE.UI.GETNAME.key,String:toBytes(player.name));
-            end);
-
-            Event:addEventListener(Event.OnPlayerDisconnect,function(player)
-                self.syncValue[player.name] = nil;
-            end);
-        end
+        Event:addEventListener(Event.OnPlayerDisconnect,function(player)
+            receivbBuffer[player.name] = nil;
+            players[player.name] = nil;
+            syncValue[player.name] = nil;
+        end);
 
         function NetServer:createSyncValue(player,key,value)
-            self:sendMessageBySignal(player,METHODTABLE.UI.CREATSYNCVALUE.key,String:toBytes(key));
-            self.syncValue[player.name] = self.syncValue[player.name] or {};
-            local syncValue = Game.SyncValue:Create(player.name .. key);
+            local syncValue = Game.SyncValue:Create(player.name .. "_" .. key);
             syncValue.value = value;
-            self.syncValue[player.name][player.name .. key] = syncValue;
+            self.syncValue[player.name][key] = syncValue;
             return syncValue;
         end
 
         function NetServer:setSyncValue(player,key,value)
-            self.syncValue[player.name .. key].value = value;
+            self.syncValue[player.name][key].value = value;
         end
 
-        function NetServer:sendMessageBySignal(player,key,bytes)
-            self.sendbuffer[#self.sendbuffer + 1] = {receiver = player,key = key,length = #bytes,bytes = bytes};
-        end
-
-        function NetServer:register(method)
-            self.methods[method.key] = method;
+        function NetServer:execute(player,key,bytes)
+            player:signal(key);
+            player:signal(#bytes);
+            for i = 1,#bytes do
+                player:signal(bytes[i]);
+            end
         end
     end);
-
-
-    -- group = {
-
-    -- }
-    -- Class("Group",function(Group)
-    --     function Group:constructor()
-    --         self.groups = {};
-
-    --     end
-    -- end);
 end
 
 if UI ~= nil then
@@ -545,7 +525,7 @@ if UI ~= nil then
         end
 
         function Base64:toNumber(text)
-            local type = Type(text);
+            local type = type(text);
             local number = 0;
             if type == "string" then
                 for i = 1,#text do
