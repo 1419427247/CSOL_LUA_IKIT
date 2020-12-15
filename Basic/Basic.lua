@@ -156,7 +156,7 @@ Class("TimerTask",function(TimerTask)
     function TimerTask:constructor(func,time,period)
         self.super(func);
         self.time = time;
-        self.period = period or NULL;
+        self.period = period or -1;
     end
 end,Listener);
 
@@ -223,7 +223,7 @@ Class("Timer",function(Timer)
                         Timer.task[i].status = -1;
                     end
                 end
-                if Timer.task[i].period == NULL or Timer.task[i].status == -1 or result == true then
+                if Timer.task[i].period == -1 or Timer.task[i].status == -1 or result == true then
                     table.remove(Timer.task,i);
                 else
                     Timer.task[i].time = Timer.count + Timer.task[i].period;
@@ -277,6 +277,9 @@ Method:game({
 });
 
 Method:ui({
+    ["REQUEST"] = function(self,bytes)
+        table.remove(self.requestQueue)(bytes);
+    end,
     ["STOPPLAYERCONTROL"] = function(self,bytes)
         UI.StopPlayerControl();
     end
@@ -401,7 +404,7 @@ if Game ~= nil then
                 receivbBuffer.length = receivbBuffer.length - 1;
             end
             if receivbBuffer.length == 0 then
-                self:sendMessage(Method.GAME[receivbBuffer.id](player,receivbBuffer.value) or {-1});
+                self:execute(player,Method.UI.REQUEST,Method.GAME[receivbBuffer.id](player,receivbBuffer.value) or {-1});
                 receivbBuffer = {
                     id = -1,
                     length = -1,
@@ -437,7 +440,7 @@ if Game ~= nil then
             self.syncValue[player.name][key].value = value;
         end
 
-        function NetServer:sendMessage(player,bytes)
+        function NetServer:execute(player,key,bytes)
             player:Signal(#bytes);
             for i = 1,#bytes do
                 player:Signal(bytes[i]);
@@ -454,6 +457,9 @@ if UI ~= nil then
     Class("NetClient",function(NetClient)
         NetClient.STATIC = true;
         NetClient.name = "";
+
+        NetClient.requestQueue = {};
+
         local receivbBuffer = {
             id = -1,
             length = -1,
@@ -488,14 +494,21 @@ if UI ~= nil then
                 end
             end,10,15);
         end
-        -- Timer:schedule(function()
-        --     print(NetClient.name)
-        -- end,10,10);
+
+        function NetClient:request(id,bytes,success)
+            UI.Signal(id);
+            UI.Signal(#bytes);
+            for i = 1,#bytes do
+                UI.Signal(bytes[i]);
+            end
+            requestQueue[#requestQueue+1] = success or function() end;
+        end
+
+        NetClient:request(Method.GAME.GETNAME,{},function(bytes)
+            print(String:toString(bytes))
+        end);
     end);
 
-    NetClient:createSyncValue("QWQ",function(self)
-
-    end)
 --     Class("Base64",function(Base64)
 --         local charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
 --         local charmap = {};
