@@ -23,8 +23,8 @@ Class = (function()
                 end
                 rawset(t,key,value);
             end,
-            SUPER = nil,
-        }
+        },
+        SUPER = nil,
     }
     local function CREATECLASS(_name,_function,_super)
         _super = (_super or {CLASS = CLASS["Object"]}).CLASS;
@@ -49,23 +49,32 @@ Class = (function()
                 for key,_ in pairs(classList[i].TABLE) do
                     str[#str+1] = string.format("%s = CLASS['%s'].TABLE.%s,",key,classList[i].NAME,key);
                 end
-                str[#str+1] = "};\n"
+                str[#str+1] = "};"
             end
+            
             for i = 1,#classList - 1 do
                 str[#str+1] = string.format("%s.super=%s;",classList[i].NAME,classList[i+1].NAME);
-                str[#str+1] = string.format("%s.__call=Object.__call;",classList[i].NAME,classList[i].NAME);
+                str[#str+1] = string.format("%s.__call=%s.constructor or function() end;",classList[i].NAME,classList[i].NAME);
                 str[#str+1] = string.format("%s.__index=%s;",classList[i].NAME,classList[i].NAME);
                 str[#str+1] = string.format("%s.__newindex=Object.__newindex;",classList[i].NAME);
                 str[#str+1] = string.format("setmetatable(%s,%s);",classList[i].NAME,classList[i+1].NAME);
             end
             str[#str+1] = string.format("return setmetatable({},%s);",_name);
             CLASS[_name].NEW = load(table.concat(str),"","t",{rawset=rawset,error=error,type=type,rawget=rawget,getmetatable=getmetatable,setmetatable = setmetatable,CLASS = CLASS})
-            --print(table.concat(str))
+            local POOL = {};
             _G[_name] = setmetatable({
-                CLASS = CLASS[_name]
+                CLASS = CLASS[_name],
+                RETURNOBJECT = function(self,object)
+                    POOL[#POOL+1] = object;
+                end
             },{
                 __call = function(self,...)
-                    local object = self.CLASS.NEW();
+                    local object;
+                    if #POOL ~= 0 then
+                        object = table.remove(POOL,#POOL);
+                    else
+                        object = self.CLASS.NEW();
+                    end
                     object(...);
                     return object;
                 end
@@ -77,6 +86,7 @@ Class = (function()
 end)();
 
 Class("String",function(String)
+    String.STATIC = true;
     function String:charSize(char)
         local seperate = {0, 0xc0, 0xe0, 0xf0}
         for i = #seperate, 1, -1 do
@@ -142,6 +152,14 @@ Class("Listener",function(Listener)
     end
 end);
 
+Class("TimerTask",function(TimerTask)
+    function TimerTask:constructor(func,time,period)
+        self.super(func);
+        self.time = time;
+        self.period = period or NULL;
+    end
+end,Listener);
+
 Class("Event",function(Event)
     Event.STATIC = true;
     Event.listenerList = {};
@@ -187,15 +205,6 @@ Class("Event",function(Event)
         event = {};
     end
 end);
-
-
-Class("TimerTask",function(TimerTask)
-    function TimerTask:constructor(func,time,period)
-        self.super(func);
-        self.time = time;
-        self.period = period or NULL;
-    end
-end,Listener);
 
 Class("Timer",function(Timer)
     Timer.STATIC = true;
@@ -262,14 +271,14 @@ Class("Method",function(Method)
 end);
 
 Method:game({
-    ["GETNAME"] = function(self,bytes)
-        self.name = String:toString(bytes);
-        self.syncValue = {};
-    end,
-    ["CREATSYNCVALUE"] = function(self,bytes)
-        local key = String:toString(bytes);
-        self.syncValue[key] = UI.SyncValue:Create(self.name .. key);
-        print("成功创建同步变量:"..String:toString(bytes));
+    ["GETNAME"] = function(self,player)
+        return String:toBytes(player.name);
+    end
+});
+
+Method:ui({
+    ["STOPPLAYERCONTROL"] = function(self,bytes)
+        UI.StopPlayerControl();
     end
 });
 
@@ -381,16 +390,9 @@ if Game ~= nil then
         local syncValue = {};
         local players = {};
 
-        Event:addEventListener(Event.OnPlayerSignal,function(player,signal)
+        Event:addEventListener(Event.OnPlayerSignal,function(self,player,signal)
             local receivbBuffer = receivbBuffer[player.name];
-            if receivbBuffer.length == 0 then
-                Method.GAME[receivbBuffer.id](player,receivbBuffer.value);
-                receivbBuffer = {
-                    id = -1,
-                    length = -1,
-                    value = {},
-                };
-            elseif receivbBuffer.id == -1 then
+            if receivbBuffer.id == -1 then
                 receivbBuffer.id = signal;
             elseif receivbBuffer.length == -1 then
                 receivbBuffer.length = signal;
@@ -398,9 +400,17 @@ if Game ~= nil then
                 receivbBuffer.value[#receivbBuffer.value+1] = signal;
                 receivbBuffer.length = receivbBuffer.length - 1;
             end
+            if receivbBuffer.length == 0 then
+                self:sendMessage(Method.GAME[receivbBuffer.id](player,receivbBuffer.value) or {-1});
+                receivbBuffer = {
+                    id = -1,
+                    length = -1,
+                    value = {},
+                };
+            end
         end);
-        
-        Event:addEventListener(Event.OnPlayerConnect,function(player)
+  
+        Event:addEventListener(Event.OnPlayerConnect,function(self,player)
             receivbBuffer[player.name] = {
                 id = -1,
                 length = -1,
@@ -408,19 +418,18 @@ if Game ~= nil then
             };
             players[player.name] = player;
             syncValue[player.name] = {};
-            NetServer:execute(player,Method.UI.GETNAME,String:toBytes(player.name));
         end);
 
-        Event:addEventListener(Event.OnPlayerDisconnect,function(player)
+        Event:addEventListener(Event.OnPlayerDisconnect,function(self,player)
             receivbBuffer[player.name] = nil;
             players[player.name] = nil;
             syncValue[player.name] = nil;
         end);
 
         function NetServer:createSyncValue(player,key,value)
-            local syncValue = Game.SyncValue:Create(player.name .. "_" .. key);
-            syncValue.value = value;
-            self.syncValue[player.name][key] = syncValue;
+            local sync = Game.SyncValue.Create(player.name .. "_" .. key);
+            sync.value = value;
+            syncValue[player.name][key] = syncValue;
             return syncValue;
         end
 
@@ -428,12 +437,10 @@ if Game ~= nil then
             self.syncValue[player.name][key].value = value;
         end
 
-        function NetServer:execute(player,key,bytes)
-            print(player.name)
-            player:signal(key);
-            player:signal(#bytes);
+        function NetServer:sendMessage(player,bytes)
+            player:Signal(#bytes);
             for i = 1,#bytes do
-                player:signal(bytes[i]);
+                player:Signal(bytes[i]);
             end
         end
     end);
@@ -443,66 +450,52 @@ if Game ~= nil then
     end);
 end
 
--- if UI ~= nil then
---     Class("NetClient",function(NetClient)
---         function NetClient:constructor()
---             self.name = NULL;
---             self.cursor = 1;
---             self.sendbuffer = {};
---             self.receivbBuffer = {
---                 key = 0,
---                 length = -1,
---                 bytes = {},
---             };
+if UI ~= nil then
+    Class("NetClient",function(NetClient)
+        NetClient.STATIC = true;
+        NetClient.name = "";
+        local receivbBuffer = {
+            id = -1,
+            length = -1,
+            value = {},
+        };
 
---             self.syncValue = NULL;
+        Event:addEventListener(Event.OnSignal,function(self,signal)
+            if receivbBuffer.id == -1 then
+                receivbBuffer.id = signal;
+            elseif receivbBuffer.length == -1 then
+                receivbBuffer.length = signal;
+            else
+                receivbBuffer.value[#receivbBuffer.value+1] = signal;
+                receivbBuffer.length = receivbBuffer.length - 1;
+            end
+            if receivbBuffer.length == 0 then
+                Method._UI[receivbBuffer.id](NetClient,receivbBuffer.value);
+                receivbBuffer = {
+                    id = -1,
+                    length = -1,
+                    value = {},
+                };
+            end
+        end);
 
---             self.methods = {
---                 [METHODTABLE.UI.GETNAME.key] = METHODTABLE.UI.GETNAME,
---                 [METHODTABLE.UI.CREATSYNCVALUE.key] = METHODTABLE.UI.CREATSYNCVALUE,
---             };
+        function NetClient:createSyncValue(key,call)
+            Timer:schedule(function(self)
+                if NetClient.name ~= "" then
+                    local syncValue = UI.SyncValue:Create(NetClient.name .. "_" .. key);
+                    syncValue.OnSync = call;
+                    self:cancel();
+                end
+            end,10,15);
+        end
+        -- Timer:schedule(function()
+        --     print(NetClient.name)
+        -- end,10,10);
+    end);
 
---             Event:addEventListener(Event.OnUpdate,function()
---                 for i = #self.sendbuffer,1,-1 do
---                     UI.Signal(self.sendbuffer[i].key);
---                     UI.Signal(self.sendbuffer[i].length);
---                     while self.cursor <= #self.sendbuffer[i].bytes do
---                         UI.Signal(self.sendbuffer[i].bytes[self.cursor]);
---                         self.cursor = self.cursor + 1;
---                     end
---                     self.sendbuffer[#self.sendbuffer] = nil;
---                     self.cursor = 1;
---                 end
---             end);
+    NetClient:createSyncValue("QWQ",function(self)
 
---             Event:addEventListener(Event.OnSignal,function(signal)
---                 if self.receivbBuffer.key == 0 then
---                     self.receivbBuffer.key = signal;
---                 elseif self.receivbBuffer.length == -1 then
---                     self.receivbBuffer.length = signal;
---                 else
---                     self.receivbBuffer.length = self.receivbBuffer.length - 1;
---                     self.receivbBuffer.bytes[#self.receivbBuffer.bytes+1] = signal;
---                     if self.receivbBuffer.length == 0 then
---                         self.methods[self.receivbBuffer.key]:call(self,self.receivbBuffer.bytes);
---                         self.receivbBuffer.key = 0;
---                         self.receivbBuffer.length = -1;
---                         self.receivbBuffer.bytes = {};
---                     end
---                 end
---             end);
---         end
-
---         function NetClient:sendMessageBySignal(key,bytes)
---             self.sendbuffer[#self.sendbuffer + 1] = {key = key,length = #bytes,bytes = bytes};
---         end
-
---         function NetClient:register(method)
---             self.methods[method.key] = method;
---         end
-
---     end);
-
+    end)
 --     Class("Base64",function(Base64)
 --         local charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
 --         local charmap = {};
@@ -977,11 +970,11 @@ end
 --             self.width = Graphics.width;
 --             self.height = Graphics.height;
 
---             Event:addEventListener(Event.OnKeyDown,function(listener,inputs)
+--             Event:addEventListener(Event.OnKeyDown,function(self,listener,inputs)
 --                 self:onKeyDown(inputs);
 --             end);
 
---             Event:addEventListener(Event.OnKeyUp,function(listener,inputs)
+--             Event:addEventListener(Event.OnKeyUp,function(self,listener,inputs)
 --                 self:onKeyUp(inputs);
 --            end);
 --         end
@@ -1310,7 +1303,7 @@ end
 --         end
 
 --     end,Component);
--- end
+end
 
 
 ----------------------------------------------------
