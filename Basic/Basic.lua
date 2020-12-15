@@ -509,120 +509,119 @@ if UI ~= nil then
         end);
     end);
 
---     Class("Base64",function(Base64)
---         local charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
---         local charmap = {};
---         for i = 1,#charlist do
---             charmap[string.sub(charlist,i,i)] = i-1;
---         end
+    Class("Base64",function(Base64)
+        local charlist = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ<>";
+        local charmap = {};
+        for i = 1,#charlist do
+            charmap[string.sub(charlist,i,i)] = i-1;
+        end
 
---         function Base64:toNumber(text)
---             local type = type(text);
---             local number = 0;
---             for i = 1,#text do
---                 number = (number << 6) + charmap[string.sub(text,i,i)];
---             end
---             return number;
---         end
---     end);
+        function Base64:toNumber(text)
+            local number = 0;
+            for i = 1,#text do
+                number = (number << 6) + charmap[string.sub(text,i,i)];
+            end
+            return number;
+        end
+    end);
 
---     Class("Font",function(Font)
---         function Font:constructor(size)
---             self.data = {};
---             self.map = {
---                 [' '] = {},
---             };
---             self.sizeMap = {
---             };
---         end
+    Class("Font",function(Font)
+        function Font:constructor(size)
+            self.data = {};
+            self.map = {
+                [' '] = {},
+            };
+            self.sizeMap = {
+            };
+        end
 
---         function Font:getChar(c)
---             if self.map[c] == nil then
---                 if self.data[c] == nil then
---                    return {};
---                 else
---                     local array = {};
---                     for i = 1,#self.data[c] do
---                         array[#array+1] = Base64:toNumber(string.sub(self.data[c],i,i));
---                     end
---                     self.data[c] = nil;
---                     self.map[c] = array;
---                     return self.map[c];
---                 end
---             end
---             return self.map[c];
---         end
+        function Font:getChar(c)
+            if self.map[c] == nil then
+                if self.data[c] == nil then
+                   return {};
+                else
+                    local array = {};
+                    for i = 1,#self.data[c] do
+                        array[#array+1] = Base64:toNumber(string.sub(self.data[c],i,i));
+                    end
+                    self.data[c] = nil;
+                    self.map[c] = array;
+                    return self.map[c];
+                end
+            end
+            return self.map[c];
+        end
 
---         local seperate = {0, 0xc0, 0xe0, 0xf0}
---         function Font:load(data)
---             local s = 1;
---             local i = 1;
+        local seperate = {0, 0xc0, 0xe0, 0xf0}
+        function Font:load(data)
+            local s = 1;
+            local i = 1;
 
---             while i < #data do
---                 local c;
---                 local length = 1;
---                 for j = #seperate, 1, -1 do
---                     if string.byte(data,s) >= seperate[j] then
---                         length = j;
---                         break;
---                     end
---                 end
---                 c = string.sub(data,s,s+length-1);
---                 i = i + length;
+            while i < #data do
+                local c;
+                local length = 1;
+                for j = #seperate, 1, -1 do
+                    if string.byte(data,s) >= seperate[j] then
+                        length = j;
+                        break;
+                    end
+                end
+                c = string.sub(data,s,s+length-1);
+                i = i + length;
 
---                 while string.sub(data,i,i) ~= ' ' do
---                     i = i + 1;
---                 end
---                 self.data[c] = string.sub(data,s+length,i-1);
---                 s = i + 1;
---             end
---         end
+                while string.sub(data,i,i) ~= ' ' do
+                    i = i + 1;
+                end
+                self.data[c] = string.sub(data,s+length,i-1);
+                s = i + 1;
+            end
+        end
 
---         function Font:getCharSize(char,size)
---             if self.sizeMap[char] == nil then
---                 local charArray = self:getChar(char);
---                 local width = 0;
---                 local height = 0;
+        function Font:getCharSize(char,size)
+            if self.sizeMap[char] == nil then
+                local charArray = self:getChar(char);
+                local width = 0;
+                local height = 0;
 
---                 for j = 1,#charArray,4 do
---                     local _x = charArray[j];
---                     local _y = charArray[j+1];
---                     local _width = charArray[j+2];
---                     local _height = charArray[j+3];
---                     if _x + _width > width then
---                         width = _x + _width;
---                     end
---                     if _y + _height > height then
---                         height = _y + _height;
---                     end
---                 end
+                for j = 1,#charArray,4 do
+                    local _x = charArray[j];
+                    local _y = charArray[j+1];
+                    local _width = charArray[j+2];
+                    local _height = charArray[j+3];
+                    if _x + _width > width then
+                        width = _x + _width;
+                    end
+                    if _y + _height > height then
+                        height = _y + _height;
+                    end
+                end
 
---                 if char == " " then
---                     local w,h = self:getCharSize('a',1);
---                     width = w;
---                     height = h;
---                 end
---                 self.sizeMap[char] = {width,height};
---             end
---             return self.sizeMap[char][1] * size,self.sizeMap[char][2] * size;
---         end
+                if char == " " then
+                    local w,h = self:getCharSize('a',1);
+                    width = w;
+                    height = h;
+                end
+                self.sizeMap[char] = {width,height};
+            end
+            return self.sizeMap[char][1] * size,self.sizeMap[char][2] * size;
+        end
 
---         function Font:getTextSize(text,size,letterspacing)
---             if type(text) == "string" then
---                 text = String:toTable(text);
---             end
---             local height = 0;
---             local width = 0;
---             for i = 1,#text do
---                 local w,h = self:getCharSize(text[i],size);
---                 width = width + w + letterspacing;
---                 if h > height  then
---                     height = h;
---                 end
---             end
---             return width-letterspacing,height;
---         end
---     end);
+        function Font:getTextSize(text,size,letterspacing)
+            if type(text) == "string" then
+                text = String:toTable(text);
+            end
+            local height = 0;
+            local width = 0;
+            for i = 1,#text do
+                local w,h = self:getCharSize(text[i],size);
+                width = width + w + letterspacing;
+                if h > height  then
+                    height = h;
+                end
+            end
+            return width-letterspacing,height;
+        end
+    end);
 
 --     Song = Font()
 
